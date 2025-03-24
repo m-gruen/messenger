@@ -1,0 +1,32 @@
+#!/bin/sh
+
+. "$(dirname "$0")/.env"
+
+set -e
+
+shutdown() {
+    echo -e "\rshutting down..."
+    docker-compose down > /dev/null 2>&1
+    exit 0
+}
+
+trap shutdown INT
+
+# install npm modules
+[ ! -d "./backend/node_modules" ] && npm i --prefix ./backend > /dev/null
+[ ! -d "./frontend/node_modules" ] && npm i --prefix ./frontend > /dev/null
+
+# spin up database from docker-compose
+docker-compose up -d postgres --build > /dev/null 2>&1
+
+# start backend in dev mode
+npm run dev --prefix ./backend > /dev/null &
+BACKEND_PID=$!
+
+# start frontend in dev mode
+npm run dev --prefix ./frontend > /dev/null &
+FRONTEND_PID=$!
+
+echo "running on http://localhost:$FRONTEND_PORT"
+
+wait $BACKEND_PID $FRONTEND_PID

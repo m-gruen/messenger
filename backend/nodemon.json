@@ -2,6 +2,7 @@
   "watch": [
     "./"
   ],
+  "delay": 500,
   "ext": "ts,tsx",
   "exec": "tsx app.ts"
 }
