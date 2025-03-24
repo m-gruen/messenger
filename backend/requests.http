@@ -1,0 +1,5 @@
+@baseUrl = http://localhost:3000
+
+### get user by uid
+
+GET {{baseUrl}}/user/1
