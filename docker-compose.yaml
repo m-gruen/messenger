@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:17
+    container_name: messenger_postgres
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -19,6 +20,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: messenger_backend
     environment:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
@@ -38,6 +40,7 @@ services:
       dockerfile: Dockerfile
       args:
         FRONTEND_PORT: ${FRONTEND_PORT}
+    container_name: messenger_frontend
     environment:
       FRONTEND_PORT: ${FRONTEND_PORT}
     ports:
