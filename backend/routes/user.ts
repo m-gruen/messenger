@@ -2,6 +2,7 @@ import express from 'express';
 import { DbSession } from '../db';
 import { StatusCodes } from 'http-status-codes';
 import argon2 from '@node-rs/argon2';
+import { User } from '../models/user';
 
 const passwordOptions = {
     memoryCost: 2 ** 16,
@@ -59,8 +60,9 @@ userRouter.post('/', async (req, res) => {
             return;
         }
 
+        const user: User = result.rows[0];
         await dbSession.complete(true);
-        res.status(StatusCodes.CREATED).send(result.rows[0]);
+        res.status(StatusCodes.CREATED).send(user);
     } catch (error) {
         await dbSession.complete(false);
         console.error(error);
@@ -80,7 +82,7 @@ userRouter.get('/:uid', async (req, res) => {
 
     try {
         const result = await dbSession.query(
-            'SELECT "username", "created_at" FROM "user" WHERE uid = $1',
+            'SELECT "uid", "username", "created_at" FROM "user" WHERE uid = $1',
             [uid]
         );
 
@@ -89,7 +91,8 @@ userRouter.get('/:uid', async (req, res) => {
             return;
         }
 
-        res.send(result.rows[0]);
+        const user: User = result.rows[0];
+        res.send(user);
     } catch (error) {
         console.error(error);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).send({ error: 'internal server error' });
