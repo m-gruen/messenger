@@ -15,7 +15,7 @@ export async function getContacts(ID: number): Promise<User[]> {
    const db = await DbSession.create(false);
    try {
       let query = `
-         SELECT uid from user where uid = $1 
+         SELECT uid from "user" where uid = $1 
       `;
 
       const userResult = await db.query(query, [ID]);
@@ -26,12 +26,15 @@ export async function getContacts(ID: number): Promise<User[]> {
 
       // Second query to get contacts
       query = `
-        SELECT DISTINCT u.* 
-        FROM users u
-          INNER JOIN messages m ON (m.sender_id = $1 AND m.receiver_id = u.id) 
-            OR (m.receiver_id = $1 AND m.sender_id = u.id)
-          WHERE u.id != $1
-        ORDER BY u.username ASC`;
+            SELECT DISTINCT u.uid, u.username, u.created_at 
+            FROM "user" u
+            INNER JOIN "message" m 
+               ON m.sender_uid = u.uid OR m.receiver_uid = u.uid
+               WHERE $1 IN (m.sender_uid, m.receiver_uid) 
+               AND u.uid != $1
+            ORDER BY u.username ASC
+  `;
+  
 
       const contactsResult = await db.query(query, [ID]);
 
@@ -45,7 +48,7 @@ export async function getContacts(ID: number): Promise<User[]> {
       console.error(error);
       return [];
    } finally {
-      await db.complete();
+      await db.complete(true);
    }
 
 }

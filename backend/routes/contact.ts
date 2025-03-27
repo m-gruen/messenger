@@ -6,7 +6,7 @@ import { getContacts } from '../utilities/contact';
 export const contactRouter = Router();
 
 
-contactRouter.get('/:id', async (req, res) =>{
+contactRouter.get('/:id', async (req, res) => {
    const id = req.params.id;
    // Validation beeing done in the get Contacts class
    try {

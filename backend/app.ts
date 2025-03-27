@@ -24,6 +24,8 @@ app.get('/', (_, res) => {
     res.send('success');
 });
 
+
+
 app.use('/user', userRouter);
 app.use('/contact', contactRouter)
 

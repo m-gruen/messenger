@@ -12,4 +12,4 @@ Content-Type: application/json
 
 ### get user by uid
 
-GET {{baseUrl}}/user/1
+GET {{baseUrl}}/contact/1

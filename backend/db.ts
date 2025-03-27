@@ -106,8 +106,9 @@ export class DbSession {
             for (const statement of statements) {
                 await unit.query(statement);
             }
-
             unit.complete(true);
+
+            
         } catch (error) {
             unit.complete(false);
             throw new Error(`failed creating tables: ${error}`);
