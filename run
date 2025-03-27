@@ -16,8 +16,22 @@ trap shutdown INT
 [ ! -d "./backend/node_modules" ] && npm i --prefix ./backend > /dev/null
 [ ! -d "./frontend/node_modules" ] && npm i --prefix ./frontend > /dev/null
 
+if ! docker volume ls | grep messenger_messengerdb > /dev/null; then
+    docker volume create messenger_messengerdb > /dev/null
+fi
+
 # spin up database from docker-compose
 docker-compose up -d postgres --build > /dev/null 2>&1
+
+retries=5
+while ! docker exec -it messenger-postgres-1 pg_isready -U postgres > /dev/null 2>&1; do
+    retries=$((retries-1))
+    if [ $retries -le 0 ]; then
+        echo "postgres is not ready, exiting..."
+        exit 1
+    fi
+    sleep 1
+done
 
 # start backend in dev mode
 npm run dev --prefix ./backend &
