@@ -45,7 +45,7 @@ userRouter.post('/', async (req, res) => {
         return;
     }
 
-    const dbSession = await DbSession.create(true);
+    const dbSession = await DbSession.create(false);
 
     try {
         const result = await dbSession.query(
