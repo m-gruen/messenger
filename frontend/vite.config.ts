@@ -2,8 +2,14 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import dotenv from 'dotenv'
 import path from 'path'
+import { fileURLToPath } from 'url';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') })
+dotenv.config({
+  path: path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../.env'
+  ),
+});
 
 if (!process.env.FRONTEND_PORT) {
   throw new Error('FRONTEND_PORT is not set')

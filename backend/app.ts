@@ -4,8 +4,14 @@ import cors from 'cors';
 import path from 'path';
 import { userRouter } from './routes/user';
 import { DbSession } from './db';
+import { fileURLToPath } from 'url';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({
+    path: path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '../.env'
+    ),
+});
 
 const app = express();
 
