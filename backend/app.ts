@@ -33,9 +33,6 @@ app.use('/contact', contactRouter);
 if (!process.env.BACKEND_PORT) {
     throw new Error('BACKEND_PORT is not set');
 }
-app.get('/', (req, res) => {
-    res.sendFile(join(staticHostingDir, 'index.html'));
-});
 
 app.listen(process.env.BACKEND_PORT, async () => {
     await DbSession.ensureTablesCreated();

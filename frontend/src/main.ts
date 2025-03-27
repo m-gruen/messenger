@@ -1,11 +1,6 @@
-import { createApp, ref } from 'vue'
-import './style.css'
+import { createApp } from 'vue'
 import App from './App.vue'
+import './style.css' // If you have global CSS
 
-createApp({
-  setup() {
-    return {
-      count: ref(0)
-    }
-  }
-}).mount('#App')
+// Create and mount the Vue application
+createApp(App).mount('#app')
