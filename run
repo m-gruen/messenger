@@ -20,11 +20,11 @@ trap shutdown INT
 docker-compose up -d postgres --build > /dev/null 2>&1
 
 # start backend in dev mode
-npm run dev --prefix ./backend > /dev/null &
+npm run dev --prefix ./backend &
 BACKEND_PID=$!
 
 # start frontend in dev mode
-npm run dev --prefix ./frontend > /dev/null &
+npm run dev --prefix ./frontend &
 FRONTEND_PID=$!
 
 echo "running on http://localhost:$FRONTEND_PORT"
