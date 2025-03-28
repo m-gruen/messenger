@@ -4,26 +4,24 @@ import { getContacts, ContactsResponse } from '../utilities/contact-utils';
 
 export const contactRouter = Router();
 
-contactRouter.get('/:id', async (req, res) => {
-   const idParam = req.params.id;
-   
-   if (!idParam || !/^\d+$/.test(idParam)) {
-      res.status(StatusCodes.BAD_REQUEST).json({ 
-         message: "Invalid user ID format. Must be a positive integer." 
+contactRouter.get('/:uid', async (req, res) => {
+   const uid: number = parseInt(req.params.uid);
+
+   if (isNaN(uid) || uid < 0 || !Number.isInteger(uid)) {
+      res.status(StatusCodes.BAD_REQUEST).send({
+         error: 'invalid user id'
       });
       return;
    }
-   
-   const id = parseInt(idParam, 10);
 
    try {
-      const response: ContactsResponse = await getContacts(id);
+      const response: ContactsResponse = await getContacts(uid);
       res.status(response.statusCode).json(
-         response.data !== null ? response.data : { message: response.message }
+         response.data !== null ? response.data : { error: response.error }
       );
    } catch (error) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
-         message: "An unexpected error occurred while processing your request" 
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         error: "An unexpected error occurred while processing your request"
       });
    }
 });

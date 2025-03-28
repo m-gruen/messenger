@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes';
 export interface ContactsResponse {
   statusCode: number;
   data: User[] | null;
-  message?: string;
+  error?: string;
 }
 
 /**
@@ -15,15 +15,16 @@ export interface ContactsResponse {
  */
 export async function getContacts(ID: number): Promise<ContactsResponse> {
    const db = await DbSession.create(true); 
+   
    try {
       const userQuery = `SELECT uid FROM "user" WHERE uid = $1`;
       const userResult = await db.query(userQuery, [ID]);
 
-      if (userResult.rows.length === 0) {
+      if (userResult.rowCount === 0) {
          return {
             statusCode: StatusCodes.NOT_FOUND,
             data: null,
-            message: 'User was not found'
+            error: 'User not found'
          };
       }
 
@@ -39,7 +40,7 @@ export async function getContacts(ID: number): Promise<ContactsResponse> {
       
       const contactsResult = await db.query(contactsQuery, [ID]);
 
-      const contacts = contactsResult.rows.map(row => ({
+      const contacts: User[] = contactsResult.rows.map(row => ({
          uid: row.uid,
          username: row.username,
          created_at: row.created_at
@@ -51,10 +52,11 @@ export async function getContacts(ID: number): Promise<ContactsResponse> {
       };
 
    } catch (error) {
+      console.error(error);
       return {
          statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
          data: null,
-         message: 'An error occurred while fetching contacts'
+         error: 'Internal server error occurred while fetching contacts'
       };
    } finally {
       await db.complete();
