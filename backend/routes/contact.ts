@@ -1,21 +1,27 @@
 import express, { Router } from 'express';
-import { DbSession } from '../db';
 import { StatusCodes } from 'http-status-codes';
-import { getContacts } from '../utilities/contact';
+import { getContacts, ContactsResponse } from '../utilities/contact-utils';
 
 export const contactRouter = Router();
 
+contactRouter.get('/:uid', async (req, res) => {
+   const uid: number = parseInt(req.params.uid);
 
-contactRouter.get('/:id', async (req, res) => {
-   const id = req.params.id;
-   // Validation beeing done in the get Contacts class
+   if (isNaN(uid) || uid < 0 || !Number.isInteger(uid)) {
+      res.status(StatusCodes.BAD_REQUEST).send({
+         error: 'invalid user id'
+      });
+      return;
+   }
+
    try {
-      const contacts = await getContacts(parseInt(id,10));
-
-      res.status(StatusCodes.OK).json(contacts)
+      const response: ContactsResponse = await getContacts(uid);
+      res.status(response.statusCode).json(
+         response.data !== null ? response.data : { error: response.error }
+      );
    } catch (error) {
-      res.status(StatusCodes.BAD_REQUEST).json({"Error" : "There was and error while getting the data form the DB : " + error})
-   } 
-
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         error: "An unexpected error occurred while processing your request"
+      });
+   }
 });
-
