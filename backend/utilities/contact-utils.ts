@@ -1,5 +1,5 @@
 import { DbSession } from '../db';
-import { User } from '../models/user';
+import { User } from '../models/user-model';
 
 /**
  * Gets the contacts of the Person which ID was provided 

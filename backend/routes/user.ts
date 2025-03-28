@@ -2,7 +2,7 @@ import express from 'express';
 import { DbSession } from '../db';
 import { StatusCodes } from 'http-status-codes';
 import argon2 from '@node-rs/argon2';
-import { User } from '../models/user';
+import { User } from '../models/user-model';
 
 const passwordOptions = {
     memoryCost: 2 ** 16,
