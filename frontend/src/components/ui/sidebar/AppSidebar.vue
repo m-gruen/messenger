@@ -6,7 +6,7 @@ interface User {
   created_at: string;
 }
 
-import { Calendar, Home, Inbox, Search, Settings, ChevronRight, ChevronLeft } from "lucide-vue-next"
+import { Calendar, Home, Inbox, Search, Settings, ChevronRight, ChevronLeft, X, Message } from "lucide-vue-next"
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,7 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const showContacts = ref(false)
 const sidebarCollapsed = ref(false)
+const selectedContact = ref<User | null>(null)
 
 async function fetchContacts(userId: number) {
   isLoading.value = true
@@ -66,6 +67,10 @@ function toggleSidebar() {
     '--sidebar-width', 
     sidebarCollapsed.value ? '48px' : '240px'
   )
+}
+
+function selectContact(contact: User) {
+  selectedContact.value = contact
 }
 </script>
 
@@ -151,7 +156,9 @@ function toggleSidebar() {
 
       <ul v-else class="space-y-2">
         <li v-for="contact in contacts" :key="contact.uid" 
-            class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer">
+            class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer"
+            @click="selectContact(contact)"
+        >
           <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
             {{ contact.username.charAt(0).toUpperCase() }}
           </div>
@@ -163,6 +170,78 @@ function toggleSidebar() {
           </div>
         </li>
       </ul>
+    </div>
+    
+    <!-- Contact Card (appears when a contact is selected) -->
+    <div 
+      v-if="selectedContact" 
+      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
+      :style="{ left: showContacts ? (sidebarCollapsed ? '368px' : '560px') : (sidebarCollapsed ? '48px' : 'var(--sidebar-width)') }"
+      :class="{ 'w-96': true }"
+    >
+      <!-- Contact Card Header -->
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">Contact Details</h2>
+        <button 
+          @click="selectedContact = null" 
+          class="rounded-full p-1 hover:bg-accent"
+        >
+          <X class="h-5 w-5" />
+        </button>
+      </div>
+      
+      <!-- Contact Card Content -->
+      <div class="space-y-4">
+        <!-- Avatar and Name -->
+        <div class="flex items-center">
+          <div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl">
+            {{ selectedContact.username.charAt(0).toUpperCase() }}
+          </div>
+          <div class="ml-4">
+            <div class="text-2xl font-bold">{{ selectedContact.username }}</div>
+            <div class="text-sm text-muted-foreground">
+              Joined {{ new Date(selectedContact.created_at).toLocaleDateString() }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- Contact Actions -->
+        <div class="flex gap-2">
+            <button class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90">
+            <FileText class="h-4 w-4" />
+            <span>Message</span>
+            </button>
+            <button class="flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-secondary-foreground hover:bg-secondary/90">
+            <Share class="h-4 w-4" />
+            <span>Share</span>
+          </button>
+        </div>
+        
+        <!-- Contact Details -->
+        <div class="space-y-2 border-t pt-4">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-sm font-medium">User ID</div>
+            <div class="col-span-2 text-sm">{{ selectedContact.uid }}</div>
+          </div>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-sm font-medium">Status</div>
+            <div class="col-span-2 text-sm">
+              <span class="inline-flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+              Online
+            </div>
+          </div>
+        </div>
+        
+        <!-- Conversation History -->
+        <div class="mt-6 space-y-4">
+          <h3 class="text-lg font-semibold">Recent Messages</h3>
+          <div class="space-y-2">
+            <div class="rounded-lg bg-accent p-3">
+              <p class="text-sm">This is where you would show recent messages...</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
