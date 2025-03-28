@@ -6,7 +6,10 @@ interface User {
   created_at: string;
 }
 
-import { Calendar, Home, Inbox, Search, Settings, ChevronRight, ChevronLeft, X, Message } from "lucide-vue-next"
+import { 
+  Calendar, Home, Inbox, Search, Settings, ChevronRight, 
+  ChevronLeft, X, Message, FileText, Share
+} from "lucide-vue-next"
 import {
   Sidebar,
   SidebarContent,
@@ -207,11 +210,11 @@ function selectContact(contact: User) {
         
         <!-- Contact Actions -->
         <div class="flex gap-2">
-            <button class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90">
+          <button class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90">
             <FileText class="h-4 w-4" />
             <span>Message</span>
-            </button>
-            <button class="flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-secondary-foreground hover:bg-secondary/90">
+          </button>
+          <button class="flex items-center gap-2 rounded-md bg-secondary px-3 py-2 text-secondary-foreground hover:bg-secondary/90">
             <Share class="h-4 w-4" />
             <span>Share</span>
           </button>
@@ -227,7 +230,7 @@ function selectContact(contact: User) {
             <div class="text-sm font-medium">Status</div>
             <div class="col-span-2 text-sm">
               <span class="inline-flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-              Online
+              Encrypted
             </div>
           </div>
         </div>
