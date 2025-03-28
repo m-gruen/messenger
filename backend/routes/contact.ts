@@ -1,21 +1,29 @@
 import express, { Router } from 'express';
-import { DbSession } from '../db';
 import { StatusCodes } from 'http-status-codes';
-import { getContacts } from '../utilities/contact-utils';
+import { getContacts, ContactsResponse } from '../utilities/contact-utils';
 
 export const contactRouter = Router();
 
-
 contactRouter.get('/:id', async (req, res) => {
-   const id = req.params.id;
-   // Validation beeing done in the get Contacts class
+   const idParam = req.params.id;
+   
+   if (!idParam || !/^\d+$/.test(idParam)) {
+      res.status(StatusCodes.BAD_REQUEST).json({ 
+         message: "Invalid user ID format. Must be a positive integer." 
+      });
+      return;
+   }
+   
+   const id = parseInt(idParam, 10);
+
    try {
-      const contacts = await getContacts(parseInt(id,10));
-
-      res.status(StatusCodes.OK).json(contacts)
+      const response: ContactsResponse = await getContacts(id);
+      res.status(response.statusCode).json(
+         response.data !== null ? response.data : { message: response.message }
+      );
    } catch (error) {
-      res.status(StatusCodes.BAD_REQUEST).json({"Error" : "There was and error while getting the data form the DB : " + error})
-   } 
-
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ 
+         message: "An unexpected error occurred while processing your request" 
+      });
+   }
 });
-
