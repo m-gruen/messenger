@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { SidebarProvider } from "@/components/ui/sidebar";
-import AppSidebar from "@/components/ui/sidebar/AppSidebar.vue";
+import AppSidebar from '@/components/ui/sidebar/AppSidebar.vue'
+import { SidebarProvider } from '@/components/ui/sidebar'
 </script>
 
 <template>
-  <SidebarProvider>
-    <AppSidebar />
-  </SidebarProvider>
+  <div class="flex min-h-screen">
+    <SidebarProvider>
+      <AppSidebar />
+      <main class="flex-1 ml-[var(--sidebar-width)]">
+        <RouterView />
+      </main>
+    </SidebarProvider>
+  </div>
 </template>
