@@ -4,14 +4,15 @@ interface User {
   uid: number;
   username: string;
   created_at: string;
-
 }
-import { Calendar, Home, Inbox, Search, Settings } from "lucide-vue-next"
+
+import { Calendar, Home, Inbox, Search, Settings, ChevronRight, ChevronLeft } from "lucide-vue-next"
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -28,7 +29,8 @@ const items = [
 const contacts = ref<User[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-const showContacts = ref(false) 
+const showContacts = ref(false)
+const sidebarCollapsed = ref(false)
 
 async function fetchContacts(userId: number) {
   isLoading.value = true
@@ -51,7 +53,6 @@ async function fetchContacts(userId: number) {
   }
 }
 
-// Function to toggle contact visibility and fetch contacts
 function toggleContacts() {
   showContacts.value = !showContacts.value
   if (showContacts.value) {
@@ -59,34 +60,80 @@ function toggleContacts() {
   }
 }
 
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  document.documentElement.style.setProperty(
+    '--sidebar-width', 
+    sidebarCollapsed.value ? '48px' : '240px'
+  )
+}
 </script>
 
 <template>
   <div class="flex">
 
-    <aside class="fixed inset-y-0 left-0 z-20 w-[var(--sidebar-width)] border-r border-border bg-sidebar">
+    <aside 
+      :class="[
+        'fixed inset-y-0 left-0 z-20 transition-all duration-300 ease-in-out border-r border-border bg-sidebar', 
+        sidebarCollapsed ? 'w-12' : 'w-[var(--sidebar-width)]'
+      ]"
+    >
+
+      <button 
+        @click="toggleSidebar"
+        class="absolute -right-3 top-5 bg-primary text-primary-foreground rounded-full p-1 shadow-md z-30"
+        :aria-label="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <ChevronLeft v-if="!sidebarCollapsed" class="h-4 w-4" />
+        <ChevronRight v-else class="h-4 w-4" />
+      </button>
+
+
       <div class="flex h-full flex-col">
         <div class="p-2">
-          <SidebarGroup>
-            <SidebarGroupLabel>Application</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem v-for="item in items" :key="item.title">
-                  <SidebarMenuButton asChild>
-                    <a :href="item.url" @click.prevent="item.action ? item.action() : null">
-                      <component :is="item.icon" />
-                      <span>{{item.title}}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <div class="relative w-full min-w-0 flex-col">
+            <!-- Group label (hidden when collapsed) -->
+            <div 
+              :class="[
+                'flex h-8 shrink-0 items-center px-2 text-xs font-medium text-sidebar-foreground/70',
+                sidebarCollapsed ? 'opacity-0' : 'opacity-100'
+              ]"
+              :style="{ transition: 'opacity 0.3s ease-in-out' }"
+            >
+              Application
+            </div>
+
+
+            <ul class="flex w-full min-w-0 flex-col gap-1">
+              <li v-for="item in items" :key="item.title" class="relative">
+                <a 
+                  :href="item.url" 
+                  @click.prevent="item.action ? item.action() : null"
+                  :title="item.title"
+                  class="flex items-center gap-2 overflow-hidden rounded-md p-2 text-left hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <component :is="item.icon" class="flex-shrink-0 h-5 w-5" />
+                  <span 
+                    :class="[
+                      'transition-opacity duration-300 truncate', 
+                      sidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                    ]"
+                  >
+                    {{ item.title }}
+                  </span>
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </aside>
-
-    <div v-if="showContacts" class="w-64 p-4">
+    <div 
+      v-if="showContacts" 
+      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
+      :style="{ left: sidebarCollapsed ? '48px' : 'var(--sidebar-width)' }"
+      :class="{ 'w-64': true }"
+    >
       <h2 class="text-xl font-bold mb-3">Contacts</h2>
 
       <div v-if="isLoading" class="flex items-center justify-center p-4">
@@ -102,9 +149,9 @@ function toggleContacts() {
         No contacts found.
       </div>
 
-      <ul v-else class="space">
+      <ul v-else class="space-y-2">
         <li v-for="contact in contacts" :key="contact.uid" 
-            class="p-2 rounded-md hover:bg-accent flex items-center">
+            class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer">
           <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
             {{ contact.username.charAt(0).toUpperCase() }}
           </div>
@@ -123,5 +170,27 @@ function toggleContacts() {
 <style>
 :root {
   --sidebar-width: 240px;
+}
+
+[data-collapsed=true] {
+  --sidebar-width: 48px;
+}
+[data-collapsed=true] [data-tooltip] {
+  position: relative;
+}
+
+[data-collapsed=true] [data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  z-index: 50;
+  margin-left: 0.5rem;
+  white-space: nowrap;
 }
 </style>

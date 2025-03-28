@@ -8,7 +8,6 @@ import { SidebarProvider } from '@/components/ui/sidebar'
     <SidebarProvider>
       <AppSidebar />
       <main class="flex-1 ml-[var(--sidebar-width)]">
-        <RouterView />
       </main>
     </SidebarProvider>
   </div>
