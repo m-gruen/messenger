@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import path from 'path';
+import path, { dirname, join } from 'path';
 import { userRouter } from './routes/user';
 import { DbSession } from './db';
 import { fileURLToPath } from 'url';
@@ -20,14 +20,15 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (_, res) => {
-    res.send('success');
-});
 
 
 
+const appRootDir: string = dirname(fileURLToPath(import.meta.url));
+const staticHostingDir: string = join(appRootDir, "../frontend");
+
+app.use(express.static(staticHostingDir, {extensions: ["html"]}));
 app.use('/user', userRouter);
-app.use('/contact', contactRouter)
+app.use('/contact', contactRouter);
 
 if (!process.env.BACKEND_PORT) {
     throw new Error('BACKEND_PORT is not set');
