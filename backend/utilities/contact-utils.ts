@@ -10,15 +10,23 @@ export interface ContactsResponse {
 
 /**
  * Gets the contacts of the User which ID was provided
- * @param ID The ID of the given User (must be already validated)
+ * @param uid The ID of the given User
  * @returns A ContactsResponse object containing statusCode, data, and optional error message
  */
-export async function getContacts(ID: number): Promise<ContactsResponse> {
+export async function getContacts(uid: number): Promise<ContactsResponse> {
+   if (isNaN(uid) || uid < 0 || !Number.isInteger(uid)) {
+      return {
+          statusCode: StatusCodes.BAD_REQUEST,
+          data: null,
+          error: 'Invalid user ID'
+      };
+  }
+
    const db = await DbSession.create(true); 
    
    try {
       const userQuery = `SELECT uid FROM "user" WHERE uid = $1`;
-      const userResult = await db.query(userQuery, [ID]);
+      const userResult = await db.query(userQuery, [uid]);
 
       if (userResult.rowCount === 0) {
          return {
@@ -38,7 +46,7 @@ export async function getContacts(ID: number): Promise<ContactsResponse> {
          ORDER BY u.username ASC
       `;
       
-      const contactsResult = await db.query(contactsQuery, [ID]);
+      const contactsResult = await db.query(contactsQuery, [uid]);
 
       const contacts: User[] = contactsResult.rows.map(row => ({
          uid: row.uid,

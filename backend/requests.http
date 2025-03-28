@@ -1,8 +1,6 @@
 @baseUrl = http://localhost:3000
 
 ### CREATE USER
-
-
 POST {{baseUrl}}/user
 Content-Type: application/json
 
@@ -10,6 +8,7 @@ Content-Type: application/json
     "username": "johndoe",
     "password": "johndoe"
 }
+
 ### GET USER BY UID
 GET {{baseUrl}}/user/1
 
