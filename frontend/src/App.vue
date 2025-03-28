@@ -1,11 +1,10 @@
-<!-- filepath: /home/henry/school/class_3/wmc/self-hosted-e2e-messenger/frontend/src/App.vue -->
 <script setup lang="ts">
 import { ref } from 'vue'
 
 // Reactive state
 const count = ref(0)
 
-function increment() {
+const increment = () => {
   count.value++
 }
 </script>

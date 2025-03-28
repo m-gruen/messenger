@@ -7,27 +7,7 @@
   <title>Messenger App</title>
 </head>
 <body>
-  <!-- Vue app container -->
-  <div id="app">
-    <button @click="count++">
-      Count is: {{ count }}
-    </button>
-  </div>
-  
-  <!-- Import Vue directly -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <script>
-    // Create Vue app
-    const app = Vue.createApp({
-      data() {
-        return {
-          count: 0
-        }
-      }
-    })
-    
-    // Mount the app
-    app.mount('#app')
-  </script>
+  <div id="app"></div>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
