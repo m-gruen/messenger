@@ -1,61 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './components/ui/accordion'
 
-// Reactive state
-const count = ref(0)
+const defaultValue = 'item-1'
 
-const increment = () => {
-  count.value++
-}
+const accordionItems = [
+  { value: 'item-1', title: 'Is it accessible?', content: 'Yes. It adheres to the WAI-ARIA design pattern.' },
+  { value: 'item-2', title: 'Is it unstyled?', content: 'Yes. It\'s unstyled by default, giving you freedom over the look and feel.' },
+  { value: 'item-3', title: 'Can it be animated?', content: 'Yes! You can use the transition prop to configure the animation.' },
+]
 </script>
 
 <template>
-  <div class="messenger-app">
-    <header>
-      <h1>Self-Hosted E2E Messenger</h1>
-    </header>
-    
-    <main>
-      <div class="counter-demo">
-        <button @click="increment">
-          Count is: {{ count }}
-        </button>
-      </div>
-    </main>
-  </div>
+  <Accordion type="single" class="w-full" collapsible :default-value="defaultValue">
+    <AccordionItem v-for="item in accordionItems" :key="item.value" :value="item.value">
+      <AccordionTrigger>{{ item.title }}</AccordionTrigger>
+      <AccordionContent>
+        {{ item.content }}
+      </AccordionContent>
+    </AccordionItem>
+  </Accordion>
 </template>
-
-<style scoped>
-.messenger-app {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: Arial, sans-serif;
-}
-
-header {
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.counter-demo {
-  display: flex;
-  justify-content: center;
-}
-
-button {
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-button:hover {
-  background-color: #45a049;
-}
-</style>
