@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 interface User {
   uid: number;
   username: string;
@@ -8,18 +8,8 @@ interface User {
 
 import { 
   Calendar, Home, Inbox, Search, Settings, ChevronRight, 
-  ChevronLeft, X, Message, FileText, Share
+  ChevronLeft, X, FileText, Share
 } from "lucide-vue-next"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"
 
 const items = [
   { title: "Home", url: "#", icon: Home },
