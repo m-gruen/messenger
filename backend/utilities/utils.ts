@@ -66,15 +66,28 @@ export abstract class Utils {
     /**
      * Validates a string against length and pattern requirements
      * @param value The string to validate
-     * @param minLength Minimum allowed length
-     * @param maxLength Maximum allowed length
+     * @param minLength Optional minimum allowed length
+     * @param maxLength Optional maximum allowed length
      * @param pattern Optional regex pattern to validate against
      * @returns True if valid, false otherwise
      */
-    protected isValidString(value: string, minLength: number, maxLength: number, pattern?: RegExp): boolean {
-        if (!value || typeof value !== 'string') { return false; }
-        if (value.length < minLength || value.length > maxLength) { return false; }
-        if (pattern && !pattern.test(value)) { return false; }
+    protected isValidString(value: string, minLength?: number, maxLength?: number, pattern?: RegExp): boolean {
+        if (!value || typeof value !== 'string') {
+            return false;
+        }
+
+        if (minLength !== undefined && value.length < minLength) {
+            return false;
+        }
+
+        if (maxLength !== undefined && value.length > maxLength) {
+            return false;
+        }
+        
+        if (pattern && !pattern.test(value)) {
+            return false;
+        }
+
         return true;
     }
 }
