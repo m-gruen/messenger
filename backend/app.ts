@@ -6,6 +6,7 @@ import { userRouter } from './routes/user';
 import { DbSession } from './db';
 import { fileURLToPath } from 'url';
 import { contactRouter } from './routes/contact';
+import { msgRouter } from './routes/message';
 
 dotenv.config({
     path: path.resolve(
@@ -29,6 +30,7 @@ const staticHostingDir: string = join(appRootDir, "../frontend");
 app.use(express.static(staticHostingDir, {extensions: ["html"]}));
 app.use('/user', userRouter);
 app.use('/contact', contactRouter);
+app.use('/message', msgRouter);
 
 if (!process.env.BACKEND_PORT) {
     throw new Error('BACKEND_PORT is not set');

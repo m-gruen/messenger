@@ -26,16 +26,16 @@ export class MessageUtils extends Utils {
       }
 
       const db = this.dbSession;
-      
+
       const messageQuery = `
-         SELECT m.mid, m.sender_uid, m.receiver_uid, m.content, m.created_at
+         SELECT m.mid, m.sender_uid, m.receiver_uid, m.content, m.timestamp
          FROM "message" m
          WHERE (m.sender_uid = $1 AND m.receiver_uid = $2) OR (m.sender_uid = $2 AND m.receiver_uid = $1)
-         ORDER BY m.created_at ASC
+         ORDER BY m.timestamp ASC
          `;
-      
+
       const messageResult = await db.query(messageQuery, [sender_uid, receiver_uid]);
-      
+
       const messages: IMessage[] = messageResult.rows.map(row => ({
          mid: row.mind,
          sender_uid: row.sender_uid,

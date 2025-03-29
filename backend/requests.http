@@ -14,3 +14,7 @@ GET {{baseUrl}}/user/1
 
 ### GET CONTACTS BY UID
 GET {{baseUrl}}/contact/1
+
+### GET MESSAGES BY SENDER AND RECEIVER UID
+GET http://localhost:3000/message?sender_uid=1&receiver_uid=2
+Content-Type: application/json
