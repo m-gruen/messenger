@@ -1,52 +1,45 @@
 import { DbSession } from '../db';
 import { User } from '../models/user-model';
 import { StatusCodes } from 'http-status-codes';
+import { Utils, BaseResponse } from './utils';
 
-export interface ContactsResponse {
-  statusCode: number;
-  data: User[] | null;
-  error?: string;
-}
+export type ContactsResponse = BaseResponse<User[]>;
 
-/**
- * Gets the contacts of the User which ID was provided
- * @param uid The ID of the given User
- * @returns A ContactsResponse object containing statusCode, data, and optional error message
- */
-export async function getContacts(uid: number): Promise<ContactsResponse> {
-   if (isNaN(uid) || uid < 0 || !Number.isInteger(uid)) {
-      return {
-          statusCode: StatusCodes.BAD_REQUEST,
-          data: null,
-          error: 'Invalid user ID'
-      };
-  }
+export class ContactUtils extends Utils {
+   /**
+    * Gets the contacts of the User which ID was provided
+    * @param uid The ID of the given User
+    * @returns A ContactsResponse object containing statusCode, data, and optional error message
+    */
+   public async getContacts(uid: number): Promise<ContactsResponse> {
+      if (!this.isValidUserId(uid)) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Invalid user ID'
+         );
+      }
 
-   const db = await DbSession.create(true); 
-   
-   try {
-      const userQuery = `SELECT uid FROM "user" WHERE uid = $1`;
-      const userResult = await db.query(userQuery, [uid]);
-
-      if (userResult.rowCount === 0) {
-         return {
-            statusCode: StatusCodes.NOT_FOUND,
-            data: null,
-            error: 'User not found'
-         };
+      const userExists = await this.userExists(uid);
+      if (!userExists) {
+         return this.createErrorResponse(
+            StatusCodes.NOT_FOUND,
+            'User not found'
+         );
       }
 
       const contactsQuery = `
-         SELECT DISTINCT u.uid, u.username, u.created_at 
+         SELECT DISTINCT u.uid, 
+                         u.username, 
+                         u.created_at 
          FROM "user" u
          INNER JOIN "message" m 
             ON m.sender_uid = u.uid OR m.receiver_uid = u.uid
          WHERE $1 IN (m.sender_uid, m.receiver_uid) 
             AND u.uid != $1
          ORDER BY u.username ASC
-      `;
-      
-      const contactsResult = await db.query(contactsQuery, [uid]);
+         `;
+
+      const contactsResult = await this.dbSession.query(contactsQuery, [uid]);
 
       const contacts: User[] = contactsResult.rows.map(row => ({
          uid: row.uid,
@@ -54,19 +47,6 @@ export async function getContacts(uid: number): Promise<ContactsResponse> {
          created_at: row.created_at
       }));
 
-      return {
-         statusCode: StatusCodes.OK,
-         data: contacts
-      };
-
-   } catch (error) {
-      console.error(error);
-      return {
-         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-         data: null,
-         error: 'Internal server error occurred while fetching contacts'
-      };
-   } finally {
-      await db.complete();
+      return this.createSuccessResponse(contacts);
    }
 }
