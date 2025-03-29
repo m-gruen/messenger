@@ -27,19 +27,16 @@ export class ContactUtils extends Utils {
          );
       }
 
-      const contactsQuery = `
-         SELECT DISTINCT u.uid, 
-                         u.username, 
-                         u.created_at 
-         FROM "user" u
-         INNER JOIN "message" m 
-            ON m.sender_uid = u.uid OR m.receiver_uid = u.uid
+      const contactsResult = await this.dbSession.query(`
+         SELECT DISTINCT a.uid, a.username, a.created_at 
+         FROM account a
+         INNER JOIN message m 
+            ON (m.sender_uid = a.uid OR m.receiver_uid = a.uid)
          WHERE $1 IN (m.sender_uid, m.receiver_uid) 
-            AND u.uid != $1
-         ORDER BY u.username ASC
-         `;
-
-      const contactsResult = await this.dbSession.query(contactsQuery, [uid]);
+           AND a.uid != $1
+         ORDER BY a.username ASC`,
+         [uid]
+     );
 
       const contacts: User[] = contactsResult.rows.map(row => ({
          uid: row.uid,

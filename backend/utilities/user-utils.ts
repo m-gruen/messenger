@@ -51,7 +51,6 @@ export class UserUtils extends Utils {
      * @returns A UserResponse object containing statusCode, data, and optional error message
      */
     public async createUser(username: string, password: string): Promise<UserResponse> {
-  
         if (!this.isValidString(username, 3, 20, /^[a-zA-Z0-9_]+$/)) {
             return this.createErrorResponse(
                 StatusCodes.BAD_REQUEST,
@@ -67,8 +66,10 @@ export class UserUtils extends Utils {
         }
 
         const hashedPassword = await this.hashPassword(password);
-        const result = await this.dbSession.query(
-            'INSERT INTO "user" (username, password_hash) VALUES ($1, $2) RETURNING uid, username, created_at',
+        const result = await this.dbSession.query(`
+            INSERT INTO account (username, password_hash)
+            VALUES ($1, $2) 
+            RETURNING uid, username, created_at`,
             [username, hashedPassword]
         );
 
@@ -96,8 +97,10 @@ export class UserUtils extends Utils {
             );
         }
 
-        const result = await this.dbSession.query(
-            'SELECT "uid", "username", "created_at" FROM "user" WHERE uid = $1',
+        const result = await this.dbSession.query(`
+            SELECT uid, username, created_at 
+            FROM account 
+            WHERE uid = $1`,
             [uid]
         );
 

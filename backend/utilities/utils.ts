@@ -33,7 +33,12 @@ export abstract class Utils {
      * @returns True if the user exists, false otherwise
      */
     public async userExists(uid: number): Promise<boolean> {
-        const result = await this.dbSession.query('SELECT 1 FROM "user" WHERE uid = $1', [uid]);
+        const result = await this.dbSession.query(`
+            SELECT 1 
+            FROM account 
+            WHERE uid = $1`,
+            [uid]
+        );
         return (result.rowCount ?? 0) > 0;
     }
 
@@ -83,7 +88,7 @@ export abstract class Utils {
         if (maxLength !== undefined && value.length > maxLength) {
             return false;
         }
-        
+
         if (pattern && !pattern.test(value)) {
             return false;
         }

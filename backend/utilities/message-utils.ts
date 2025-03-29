@@ -7,7 +7,10 @@ export type MessageResponse = BaseResponse<IMessage[]>
 export class MessageUtils extends Utils {
 
    /**
-    * 
+    * Fetches messages between two users
+    * @param sender_uid The ID of the sender
+    * @param receiver_uid The ID of the receiver
+    * @returns A MessageResponse object containing statusCode, data, and optional error message
     */
    public async fetchMessage(sender_uid: number, receiver_uid: number): Promise<MessageResponse> {
 
@@ -27,14 +30,14 @@ export class MessageUtils extends Utils {
 
       const db = this.dbSession;
 
-      const messageQuery = `
+      const messageResult = await this.dbSession.query(`
          SELECT m.mid, m.sender_uid, m.receiver_uid, m.content, m.timestamp
-         FROM "message" m
-         WHERE (m.sender_uid = $1 AND m.receiver_uid = $2) OR (m.sender_uid = $2 AND m.receiver_uid = $1)
-         ORDER BY m.timestamp ASC
-         `;
-
-      const messageResult = await db.query(messageQuery, [sender_uid, receiver_uid]);
+         FROM message m
+         WHERE (m.sender_uid = $1 AND m.receiver_uid = $2) 
+            OR (m.sender_uid = $2 AND m.receiver_uid = $1)
+         ORDER BY m.timestamp ASC`,
+         [sender_uid, receiver_uid]
+      );
 
       const messages: IMessage[] = messageResult.rows.map(row => ({
          mid: row.mind,
@@ -45,6 +48,5 @@ export class MessageUtils extends Utils {
       }));
 
       return this.createSuccessResponse(messages);
-
    }
 }
