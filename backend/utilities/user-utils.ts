@@ -2,12 +2,9 @@ import { DbSession } from '../db';
 import { User } from '../models/user-model';
 import { StatusCodes } from 'http-status-codes';
 import argon2 from '@node-rs/argon2';
+import { Utils, BaseResponse } from './utils';
 
-export interface UserResponse {
-  statusCode: number;
-  data: User | null;
-  error?: string;
-}
+export type UserResponse = BaseResponse<User>;
 
 const passwordOptions = {
     memoryCost: 2 ** 16,
@@ -17,124 +14,101 @@ const passwordOptions = {
     algorithm: argon2.Algorithm.Argon2id,
 };
 
-export async function hashPassword(password: string): Promise<string> {
-    try {
-        return await argon2.hash(password, passwordOptions);
-    } catch (error) {
-        console.error('Password hashing error:', error);
-        throw new Error(`Error hashing password: ${error}`);
-    }
-}
-
-export async function verifyPassword(hashed: string, password: string): Promise<boolean> {
-    try {
-        return await argon2.verify(hashed, password, passwordOptions);
-    } catch (error) {
-        console.error('Password verification error:', error);
-        throw new Error(`Error verifying password: ${error}`);
-    }
-}
-
-export async function createUser(username: string, password: string): Promise<UserResponse> {
-    if (!username || typeof username !== 'string' || username.length < 3 || username.length > 20) {
-        return {
-            statusCode: StatusCodes.BAD_REQUEST,
-            data: null,
-            error: 'Username must be valid string between 3 and 20 characters'
-        };
+export class UserUtils extends Utils {
+    /**
+     * Hashes a password using Argon2
+     * @param password The plain text password to hash
+     * @returns The hashed password
+     */
+    public async hashPassword(password: string): Promise<string> {
+        try {
+            return await argon2.hash(password, passwordOptions);
+        } catch (error) {
+            console.error('Password hashing error:', error);
+            throw new Error(`Error hashing password: ${error}`);
+        }
     }
 
-    if (!password || typeof password !== 'string') {
-        return {
-            statusCode: StatusCodes.BAD_REQUEST,
-            data: null,
-            error: 'Password must be valid string'
-        };
+    /**
+     * Verifies a password against a hash
+     * @param hashed The hashed password
+     * @param password The plain text password to verify
+     * @returns True if the password matches the hash, false otherwise
+     */
+    public async verifyPassword(hashed: string, password: string): Promise<boolean> {
+        try {
+            return await argon2.verify(hashed, password, passwordOptions);
+        } catch (error) {
+            console.error('Password verification error:', error);
+            throw new Error(`Error verifying password: ${error}`);
+        }
     }
 
-    if (!(/^[a-zA-Z0-9_]+$/.test(username))) {
-        return {
-            statusCode: StatusCodes.BAD_REQUEST,
-            data: null,
-            error: 'Username can only contain letters, numbers, and underscores'
-        };
-    }
+    /**
+     * Creates a new user
+     * @param username The username for the new user
+     * @param password The password for the new user
+     * @returns A UserResponse object containing statusCode, data, and optional error message
+     */
+    public async createUser(username: string, password: string): Promise<UserResponse> {
+  
+        if (!this.isValidString(username, 3, 20, /^[a-zA-Z0-9_]+$/)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Username must be valid string between 3 and 20 characters and can only contain letters, numbers, and underscores'
+            );
+        }
 
-    const dbSession = await DbSession.create(false);
-    
-    try {
-        const hashedPassword = await hashPassword(password);
-        const result = await dbSession.query(
+        if (!this.isValidString(password)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Password must be valid string'
+            );
+        }
+
+        const hashedPassword = await this.hashPassword(password);
+        const result = await this.dbSession.query(
             'INSERT INTO "user" (username, password_hash) VALUES ($1, $2) RETURNING uid, username, created_at',
             [username, hashedPassword]
         );
 
         if (result.rowCount === 0) {
-            await dbSession.complete(false);
-            return {
-                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                data: null,
-                error: 'Failed to create user'
-            };
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'Failed to create user'
+            );
         }
 
         const user: User = result.rows[0];
-        await dbSession.complete(true);
-        
-        return {
-            statusCode: StatusCodes.CREATED,
-            data: user
-        };
-    } catch (error) {
-        await dbSession.complete(false);
-        console.error('Error in createUser:', error);
-        return {
-            statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-            data: null,
-            error: 'Internal server error occurred while creating user'
-        };
-    }
-}
-
-export async function getUserById(uid: number): Promise<UserResponse> {
-    if (isNaN(uid) || uid < 0 || !Number.isInteger(uid)) {
-        return {
-            statusCode: StatusCodes.BAD_REQUEST,
-            data: null,
-            error: 'Invalid user ID'
-        };
+        return this.createSuccessResponse(user, StatusCodes.CREATED);
     }
 
-    const dbSession = await DbSession.create(true);
-    
-    try {
-        const result = await dbSession.query(
+    /**
+     * Gets a user by their ID
+     * @param uid The user ID to lookup
+     * @returns A UserResponse object containing statusCode, data, and optional error message
+     */
+    public async getUserById(uid: number): Promise<UserResponse> {
+        if (!this.isValidUserId(uid)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid user ID'
+            );
+        }
+
+        const result = await this.dbSession.query(
             'SELECT "uid", "username", "created_at" FROM "user" WHERE uid = $1',
             [uid]
         );
 
         if (result.rowCount === 0) {
-            return {
-                statusCode: StatusCodes.NOT_FOUND,
-                data: null,
-                error: 'User not found'
-            };
+            return this.createErrorResponse(
+                StatusCodes.NOT_FOUND,
+                'User not found'
+            );
         }
 
         const user: User = result.rows[0];
-        
-        return {
-            statusCode: StatusCodes.OK,
-            data: user
-        };
-    } catch (error) {
-        console.error('Error in getUserById:', error);
-        return {
-            statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-            data: null,
-            error: 'Internal server error occurred while fetching user'
-        };
-    } finally {
-        await dbSession.complete();
+        return this.createSuccessResponse(user);
     }
 }
