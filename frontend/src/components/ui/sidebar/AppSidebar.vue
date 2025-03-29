@@ -6,10 +6,22 @@ interface User {
   created_at: string;
 }
 
+interface Message {
+  uid: number;
+  sender_uid: number;
+  receiver_uid: number;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+}
+
 import { 
   Calendar, Home, Inbox, Search, Settings, ChevronRight, 
   ChevronLeft, X, FileText, Share
 } from "lucide-vue-next"
+
+// Current user ID (would typically come from auth)
+const currentUserId = 1;
 
 const items = [
   { title: "Home", url: "#", icon: Home },
@@ -25,6 +37,11 @@ const error = ref<string | null>(null)
 const showContacts = ref(false)
 const sidebarCollapsed = ref(false)
 const selectedContact = ref<User | null>(null)
+
+// Add new state for messages
+const messages = ref<Message[]>([])
+const isLoadingMessages = ref(false)
+const messagesError = ref<string | null>(null)
 
 async function fetchContacts(userId: number) {
   isLoading.value = true
@@ -47,10 +64,35 @@ async function fetchContacts(userId: number) {
   }
 }
 
+// Add new function to fetch messages
+async function fetchMessages(userId: number, contactId: number) {
+  isLoadingMessages.value = true
+  messagesError.value = null
+  
+  try {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
+    const response = await fetch(`${backendUrl}/message?sender_uid=${userId}&receiver_uid=${contactId}`)
+    
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`)
+    }
+    
+    const data = await response.json()
+    messages.value = data.sort((a: Message, b: Message) => {
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    })
+  } catch (err) {
+    messagesError.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    console.error('Error fetching messages:', err)
+  } finally {
+    isLoadingMessages.value = false
+  }
+}
+
 function toggleContacts() {
   showContacts.value = !showContacts.value
   if (showContacts.value) {
-    fetchContacts(1)
+    fetchContacts(currentUserId)
   }
 }
 
@@ -64,19 +106,27 @@ function toggleSidebar() {
 
 function selectContact(contact: User) {
   selectedContact.value = contact
+  messages.value = [] // Clear previous messages
+  fetchMessages(currentUserId, contact.uid)
+}
+
+// Helper function to format date
+function formatDate(dateString: string) {
+  const date = new Date(dateString)
+  return date.toLocaleString()
 }
 </script>
 
 <template>
   <div class="flex">
-
+    <!-- Sidebar code remains the same -->
     <aside 
       :class="[
         'fixed inset-y-0 left-0 z-20 transition-all duration-300 ease-in-out border-r border-border bg-sidebar', 
         sidebarCollapsed ? 'w-12' : 'w-[var(--sidebar-width)]'
       ]"
     >
-
+      <!-- Sidebar content remains the same -->
       <button 
         @click="toggleSidebar"
         class="absolute -right-3 top-5 bg-primary text-primary-foreground rounded-full p-1 shadow-md z-30"
@@ -85,7 +135,6 @@ function selectContact(contact: User) {
         <ChevronLeft v-if="!sidebarCollapsed" class="h-4 w-4" />
         <ChevronRight v-else class="h-4 w-4" />
       </button>
-
 
       <div class="flex h-full flex-col">
         <div class="p-2">
@@ -100,7 +149,6 @@ function selectContact(contact: User) {
             >
               Application
             </div>
-
 
             <ul class="flex w-full min-w-0 flex-col gap-1">
               <li v-for="item in items" :key="item.title" class="relative">
@@ -126,6 +174,8 @@ function selectContact(contact: User) {
         </div>
       </div>
     </aside>
+
+    <!-- Contacts panel code remains the same -->
     <div 
       v-if="showContacts" 
       class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
@@ -165,7 +215,7 @@ function selectContact(contact: User) {
       </ul>
     </div>
     
-    <!-- Contact Card (appears when a contact is selected) -->
+    <!-- Updated Contact Card with messages -->
     <div 
       v-if="selectedContact" 
       class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
@@ -225,12 +275,56 @@ function selectContact(contact: User) {
           </div>
         </div>
         
-        <!-- Conversation History -->
+        <!-- Conversation History - Updated section -->
         <div class="mt-6 space-y-4">
           <h3 class="text-lg font-semibold">Recent Messages</h3>
-          <div class="space-y-2">
-            <div class="rounded-lg bg-accent p-3">
-              <p class="text-sm">This is where you would show recent messages...</p>
+          
+          <!-- Loading state -->
+          <div v-if="isLoadingMessages" class="flex items-center justify-center py-8">
+            <div class="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
+            <span class="ml-2">Loading messages...</span>
+          </div>
+          
+          <!-- Error state -->
+          <div v-else-if="messagesError" class="bg-destructive/10 text-destructive p-4 rounded-md">
+            {{ messagesError }}
+          </div>
+          
+          <!-- Empty state -->
+          <div v-else-if="messages.length === 0" class="bg-muted p-4 rounded-md text-center">
+            <p>No messages yet</p>
+            <button class="mt-2 text-primary text-sm">Send first message</button>
+          </div>
+          
+          <!-- Messages list -->
+          <div v-else class="space-y-3">
+            <div 
+              v-for="message in messages.slice(0, 5)" 
+              :key="message.uid" 
+              class="rounded-lg p-3 text-sm"
+              :class="{
+                'bg-primary text-primary-foreground ml-8': message.sender_uid === currentUserId,
+                'bg-muted mr-8': message.sender_uid !== currentUserId
+              }"
+            >
+              <div class="flex justify-between mb-1">
+                <span class="font-medium">
+                  {{ message.sender_uid === currentUserId ? 'You' : selectedContact.username }}
+                </span>
+                <span class="text-xs opacity-80">
+                  {{ formatDate(message.timestamp) }}
+                </span>
+              </div>
+              <p>{{ message.content }}</p>
+              <div v-if="message.sender_uid === currentUserId" class="text-xs opacity-80 text-right mt-1">
+                {{ message.is_read ? 'Read' : 'Delivered' }}
+              </div>
+            </div>
+            
+            <div v-if="messages.length > 5" class="text-center text-sm">
+              <button class="text-primary hover:underline">
+                View all messages
+              </button>
             </div>
           </div>
         </div>
