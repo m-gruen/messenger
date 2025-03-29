@@ -82,35 +82,33 @@ export class DbSession {
     }
 
     public static async ensureTablesCreated(): Promise<void> {
-        const unit = await DbSession.create(false);
+        const dbSession = await DbSession.create(false);
 
         try {
             const statements = [
-                `CREATE TABLE IF NOT EXISTS "user" (
+                `CREATE TABLE IF NOT EXISTS account (
                     uid SERIAL PRIMARY KEY,
                     username VARCHAR(255) NOT NULL,
                     password_hash VARCHAR(255) NOT NULL,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )`,
-                `CREATE TABLE IF NOT EXISTS "message" (
+                `CREATE TABLE IF NOT EXISTS message (
                     mid SERIAL PRIMARY KEY,
                     sender_uid INTEGER NOT NULL,
                     receiver_uid INTEGER NOT NULL,
                     content TEXT NOT NULL,
                     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (sender_uid) REFERENCES "user"(uid),
-                    FOREIGN KEY (receiver_uid) REFERENCES "user"(uid)
+                    FOREIGN KEY (sender_uid) REFERENCES account(uid),
+                    FOREIGN KEY (receiver_uid) REFERENCES account(uid)
                 )`
             ];
-
-            for (const statement of statements) {
-                await unit.query(statement);
-            }
-            unit.complete(true);
-
             
+            for (const statement of statements) {
+                await dbSession.query(statement);
+            }
+            await dbSession.complete(true);
         } catch (error) {
-            unit.complete(false);
+            await dbSession.complete(false); 
             throw new Error(`failed creating tables: ${error}`);
         }
     }
