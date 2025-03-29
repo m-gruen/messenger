@@ -5,7 +5,7 @@
 !define column(x) <color:#efefef><&media-record></color> x
 !define table(x) entity x << (T, white) >>
 
-table(User) {
+table(Account) {
     primary_key(uid) : int
     --
     column(username) : varchar
@@ -23,7 +23,7 @@ table(Message) {
     column(timestamp) : datetime
 }
 
-User ||-right-o{ Message : sends
-User ||-right-o{ Message : receives
+Account ||-right-o{ Message : sends
+Account ||-right-o{ Message : receives
 
 @enduml
