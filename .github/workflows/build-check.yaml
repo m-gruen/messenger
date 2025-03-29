@@ -32,6 +32,8 @@ jobs:
   check-frontend:
     name: check frontend
     runs-on: ubuntu-latest
+    env:
+      FRONTEND_PORT: 8080
     
     steps:
       - uses: actions/checkout@v4
