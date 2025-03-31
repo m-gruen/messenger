@@ -44,7 +44,7 @@ export class MessageUtils extends Utils {
          sender_uid: row.sender_uid,
          receiver_uid: row.receiver_uid,
          content: row.content,
-         timestamp: row.created_at
+         timestamp: row.timestamp
       }));
 
       return this.createSuccessResponse(messages);
