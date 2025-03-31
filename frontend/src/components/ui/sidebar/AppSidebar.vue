@@ -7,12 +7,11 @@ interface User {
 }
 
 interface Message {
-  uid: number;
+  mid: number;
   sender_uid: number;
   receiver_uid: number;
   content: string;
-  created_at: string;
-  is_read: boolean;
+  timestamp: string;
 }
 
 import { 
@@ -77,7 +76,8 @@ async function fetchMessages(userId: number, contactId: number) {
       throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
     
-    const data = await response.json()
+    const data: Message[] = await response.json();
+    console.log('Fetched messages:', data)
     messages.value = data.sort((a: Message, b: Message) => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     })
@@ -112,6 +112,7 @@ function selectContact(contact: User) {
 
 // Helper function to format date
 function formatDate(dateString: string) {
+  console.log('Date string:', dateString)
   const date = new Date(dateString)
   return date.toLocaleString()
 }
@@ -300,7 +301,7 @@ function formatDate(dateString: string) {
           <div v-else class="space-y-3">
             <div 
               v-for="message in messages.slice(0, 5)" 
-              :key="message.uid" 
+              :key="message.mid" 
               class="rounded-lg p-3 text-sm"
               :class="{
                 'bg-primary text-primary-foreground ml-8': message.sender_uid === currentUserId,
@@ -312,13 +313,10 @@ function formatDate(dateString: string) {
                   {{ message.sender_uid === currentUserId ? 'You' : selectedContact.username }}
                 </span>
                 <span class="text-xs opacity-80">
-                  {{ formatDate(message.timestamp) }}
+                  {{ formatDate(message.timestamp)}}
                 </span>
               </div>
               <p>{{ message.content }}</p>
-              <div v-if="message.sender_uid === currentUserId" class="text-xs opacity-80 text-right mt-1">
-                {{ message.is_read ? 'Read' : 'Delivered' }}
-              </div>
             </div>
             
             <div v-if="messages.length > 5" class="text-center text-sm">
