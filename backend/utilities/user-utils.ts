@@ -3,6 +3,7 @@ import { User } from '../models/user-model';
 import { StatusCodes } from 'http-status-codes';
 import argon2 from '@node-rs/argon2';
 import { Utils, BaseResponse } from './utils';
+import { JwtUtils } from './jwt-utils';
 
 export type UserResponse = BaseResponse<User>;
 
@@ -113,5 +114,56 @@ export class UserUtils extends Utils {
 
         const user: User = result.rows[0];
         return this.createSuccessResponse(user);
+    }
+
+    /**
+     * Login a user and generate JWT token
+     */
+    async loginUser(username: string, password: string): Promise<UserResponse> {
+        try {
+            const query = `SELECT uid, username, password_hash, created_at FROM account WHERE username = $1`;
+            const result = await this.dbSession.query(query, [username]);
+
+            if (result.rows.length === 0) {
+                return {
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                    data: null,
+                    error: "Invalid username or password"
+                };
+            }
+
+            const user = result.rows[0];
+            const passwordValid = await this.verifyPassword(user.password_hash, password);
+
+            if (!passwordValid) {
+                return {
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                    data: null,
+                    error: "Invalid username or password"
+                };
+            }
+
+            const token = JwtUtils.generateToken({
+                uid: user.uid,
+                username: user.username
+            });
+
+            return {
+                statusCode: StatusCodes.OK,
+                data: {
+                    uid: user.uid,
+                    username: user.username,
+                    created_at: user.created_at,
+                    token: token
+                }
+            };
+        } catch (error) {
+            console.error('Error during login:', error);
+            return {
+                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+                data: null,
+                error: "Failed to process login request"
+            };
+        }
     }
 }
