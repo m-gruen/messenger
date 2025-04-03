@@ -36,7 +36,7 @@ export class ContactUtils extends Utils {
            AND a.uid != $1
          ORDER BY a.username ASC`,
          [uid]
-     );
+      );
 
       const contacts: User[] = contactsResult.rows.map(row => ({
          uid: row.uid,

@@ -1,11 +1,11 @@
 import { DbSession } from '../db';
-import { User } from '../models/user-model';
+import { AuthenticatedUser } from '../models/user-model';
 import { StatusCodes } from 'http-status-codes';
 import argon2 from '@node-rs/argon2';
 import { Utils, BaseResponse } from './utils';
 import { JwtUtils } from './jwt-utils';
 
-export type UserResponse = BaseResponse<User>;
+export type UserResponse = BaseResponse<AuthenticatedUser>;
 
 const passwordOptions = {
     memoryCost: 2 ** 16,
@@ -81,7 +81,7 @@ export class UserUtils extends Utils {
             );
         }
 
-        const user: User = result.rows[0];
+        const user: AuthenticatedUser = result.rows[0];
         return this.createSuccessResponse(user, StatusCodes.CREATED);
     }
 
@@ -112,7 +112,7 @@ export class UserUtils extends Utils {
             );
         }
 
-        const user: User = result.rows[0];
+        const user: AuthenticatedUser = result.rows[0];
         return this.createSuccessResponse(user);
     }
 
