@@ -9,11 +9,27 @@ Content-Type: application/json
     "password": "johndoe"
 }
 
+### login as user
+# @name login
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+    "username": "johndoe",
+    "password": "johndoe"
+}
+
+###
+@authToken = {{login.response.body.token}}
+
 ### GET USER BY UID
 GET {{baseUrl}}/user/1
+Authorization: Bearer {{authToken}}
+
 
 ### GET CONTACTS BY UID
 GET {{baseUrl}}/contact/1
+Authorization: Bearer {{authToken}}
 
 ### GET MESSAGES BY SENDER AND RECEIVER UID
 GET http://localhost:3000/message?sender_uid=1&receiver_uid=2
