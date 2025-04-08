@@ -35,9 +35,9 @@ const router = createRouter({
 })
 
 // Navigation guard to check if route requires authentication
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _, next) => {
   const isAuthenticated = localStorage.getItem('token') || sessionStorage.getItem('token')
-  
+
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login')
   } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
