@@ -28,6 +28,7 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_HOST=postgres
       - BACKEND_PORT=${BACKEND_PORT}
+      - JWT_SECRET=${JWT_SECRET}
     ports:
       - ${BACKEND_PORT}:${BACKEND_PORT}
     depends_on:
