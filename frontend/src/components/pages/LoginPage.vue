@@ -74,32 +74,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/AuthStore'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/AuthStore';
 
-const router = useRouter()
-const authStore = useAuthStore()
-const username = ref('')
-const password = ref('')
-const error = ref('')
-const isLoading = ref(false)
-const rememberMe = ref(false)
+const router = useRouter();
+const authStore = useAuthStore();
+const username = ref('');
+const password = ref('');
+const error = ref('');
+const isLoading = ref(false);
+const rememberMe = ref(false);
 
 async function handleLogin() {
-  // Reset error state
-  error.value = ''
+  error.value = '';
   
-  // Validate form
   if (!username.value || !password.value) {
-    error.value = 'Username and password are required'
-    return
+    error.value = 'Username and password are required';
+    return;
   }
   
-  // Submit form
-  isLoading.value = true
+  isLoading.value = true;
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
     const response = await fetch(`${backendUrl}/user/login`, {
       method: 'POST',
       headers: {
@@ -109,25 +106,23 @@ async function handleLogin() {
         username: username.value,
         password: password.value
       })
-    })
+    });
     
-    const data = await response.json()
+    const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || 'Login failed')
+      throw new Error(data.error || 'Login failed');
     }
     
-    // Store user data and token
-    authStore.setToken(data.token, rememberMe.value)
-    authStore.setUser(data.user, rememberMe.value)
+    authStore.setToken(data.token, rememberMe.value);
+    authStore.setUser(data.user, rememberMe.value);
     
-    // Redirect to dashboard/home
-    router.push('/')
+    router.push('/');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Login failed'
-    console.error('Login error:', err)
+    error.value = err instanceof Error ? err.message : 'Login failed';
+    console.error('Login error:', err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 </script>

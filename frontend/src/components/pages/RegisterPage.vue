@@ -84,38 +84,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/AuthStore'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '../../stores/AuthStore';
 
-const router = useRouter()
-const authStore = useAuthStore()
-const username = ref('')
-const password = ref('')
-const confirmPassword = ref('')
-const error = ref('')
-const isLoading = ref(false)
-const rememberMe = ref(false)
+const router = useRouter();
+const authStore = useAuthStore();
+const username = ref('');
+const password = ref('');
+const confirmPassword = ref('');
+const error = ref('');
+const isLoading = ref(false);
+const rememberMe = ref(false);
 
 async function handleRegister() {
-  // Reset error state
-  error.value = ''
+  error.value = '';
   
-  // Validate form
   if (!username.value || !password.value) {
-    error.value = 'Username and password are required'
-    return
+    error.value = 'Username and password are required';
+    return;
   }
   
   if (password.value !== confirmPassword.value) {
-    error.value = 'Passwords do not match'
-    return
+    error.value = 'Passwords do not match';
+    return;
   }
   
-  // Submit form
-  isLoading.value = true
+  isLoading.value = true;
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
     const response = await fetch(`${backendUrl}/user`, {
       method: 'POST',
       headers: {
@@ -125,15 +122,14 @@ async function handleRegister() {
         username: username.value,
         password: password.value
       })
-    })
+    });
     
-    const data = await response.json()
+    const data = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.error || 'Registration failed')
+      throw new Error(data.error || 'Registration failed');
     }
     
-    // Registration successful, now log in to get token
     const loginResponse = await fetch(`${backendUrl}/user/login`, {
       method: 'POST',
       headers: {
@@ -143,25 +139,23 @@ async function handleRegister() {
         username: username.value,
         password: password.value
       })
-    })
+    });
     
-    const loginData = await loginResponse.json()
+    const loginData = await loginResponse.json();
     
     if (!loginResponse.ok) {
-      throw new Error('Registration successful, but login failed. Please try logging in manually.')
+      throw new Error('Registration successful, but login failed. Please try logging in manually.');
     }
     
-    // Store user data and token
-    authStore.setToken(loginData.token, rememberMe.value)
-    authStore.setUser(loginData.user, rememberMe.value)
+    authStore.setToken(loginData.token, rememberMe.value);
+    authStore.setUser(loginData.user, rememberMe.value);
     
-    // Redirect to dashboard/home
-    router.push('/')
+    router.push('/');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Registration failed'
-    console.error('Registration error:', err)
+    error.value = err instanceof Error ? err.message : 'Registration failed';
+    console.error('Registration error:', err);
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 </script>
