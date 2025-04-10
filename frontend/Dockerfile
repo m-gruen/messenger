@@ -1,6 +1,7 @@
 FROM node:23-alpine AS build
 
 ARG FRONTEND_PORT
+ARG BACKEND_PORT
 
 WORKDIR /app
 

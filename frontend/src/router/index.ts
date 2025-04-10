@@ -1,10 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
 
-// Import components
-import LoginPage from '../components/pages/LoginPage.vue'
-import RegisterPage from '../components/pages/RegisterPage.vue'
-import AppSidebar from '../components/ui/sidebar/AppSidebar.vue'
+import LoginPage from '../components/pages/LoginPage.vue';
+import RegisterPage from '../components/pages/RegisterPage.vue';
+import AppSidebar from '../components/ui/sidebar/AppSidebar.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -27,24 +26,23 @@ const routes: RouteRecordRaw[] = [
     path: '/:pathMatch(.*)*',
     redirect: '/'
   }
-]
+];
 
 const router = createRouter({
   history: createWebHistory(),
   routes
-})
+});
 
-// Navigation guard to check if route requires authentication
 router.beforeEach((to, _, next) => {
-  const isAuthenticated = localStorage.getItem('token') || sessionStorage.getItem('token')
+  const isAuthenticated = localStorage.getItem('token') || sessionStorage.getItem('token');
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
+    next('/login');
   } else if ((to.path === '/login' || to.path === '/register') && isAuthenticated) {
-    next('/')
+    next('/');
   } else {
-    next()
+    next();
   }
-})
+});
 
-export default router
+export default router;
