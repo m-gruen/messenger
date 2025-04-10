@@ -128,54 +128,56 @@ export class UserUtils extends Utils {
         return this.createSuccessResponse(user);
     }
 
-    /**
-     * Login a user and generate JWT token
-     */
-    async loginUser(username: string, password: string): Promise<UserResponse> {
-        try {
-            const query = `SELECT uid, username, password_hash, created_at FROM account WHERE username = $1`;
-            const result = await this.dbSession.query(query, [username]);
-
-            if (result.rows.length === 0) {
-                return {
-                    statusCode: StatusCodes.UNAUTHORIZED,
-                    data: null,
-                    error: "Invalid username or password"
-                };
-            }
-
-            const user = result.rows[0];
-            const passwordValid = await this.verifyPassword(user.password_hash, password);
-
-            if (!passwordValid) {
-                return {
-                    statusCode: StatusCodes.UNAUTHORIZED,
-                    data: null,
-                    error: "Invalid username or password"
-                };
-            }
-
-            const token = JwtUtils.generateToken({
-                uid: user.uid,
-                username: user.username
-            });
-
-            return {
-                statusCode: StatusCodes.OK,
-                data: {
-                    uid: user.uid,
-                    username: user.username,
-                    created_at: user.created_at,
-                    token: token
-                }
-            };
-        } catch (error) {
-            console.error('Error during login:', error);
-            return {
-                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-                data: null,
-                error: "Failed to process login request"
-            };
-        }
+/**
+ * Login a user and generate JWT token
+ * @param username The username for login
+ * @param password The password to verify
+ * @returns A UserResponse object containing statusCode, data, and optional error message
+ */
+public async loginUser(username: string, password: string): Promise<UserResponse> {
+    if (!this.isValidString(username) || !this.isValidString(password)) {
+        return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Username and password are required'
+        );
     }
+
+    const result = await this.dbSession.query(`
+        SELECT uid, username, password_hash, created_at 
+        FROM account 
+        WHERE username = $1`,
+        [username]
+    );
+
+    if (result.rowCount === 0) {
+        return this.createErrorResponse(
+            StatusCodes.UNAUTHORIZED,
+            'Invalid username or password'
+        );
+    }
+
+    const user = result.rows[0];
+    const passwordValid = await this.verifyPassword(user.password_hash, password);
+
+    if (!passwordValid) {
+        return this.createErrorResponse(
+            StatusCodes.UNAUTHORIZED,
+            'Invalid username or password'
+        );
+    }
+
+    const token = JwtUtils.generateToken({
+        uid: user.uid,
+        username: user.username
+    });
+
+    const userData: AuthenticatedUser = {
+        uid: user.uid,
+        username: user.username,
+        created_at: user.created_at,
+        token: token
+    };
+
+    return this.createSuccessResponse(userData);
+}
 }

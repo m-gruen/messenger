@@ -53,27 +53,20 @@ userRouter.get('/:uid', authenticateToken, async (req: Request, res: Response) =
 
 userRouter.post('/login', async (req: Request, res: Response) => {
     const { username, password } = req.body;
-
-    if (!username || !password) {
-        res.status(StatusCodes.BAD_REQUEST).json({
-            error: "username and password are required"
-        });
-        return;
-    }
-
+    
     let dbSession = await DbSession.create(true);
     try {
         const userUtils = new UserUtils(dbSession);
-
+        
         const response: UserResponse = await userUtils.loginUser(username, password);
-
+        
         res.status(response.statusCode).json(
             response.data !== null ? response.data : { error: response.error }
         );
     } catch (error) {
         console.error(error);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            error: "an unexpected error occurred while processing your request"
+            error: "An unexpected error occurred while processing your request"
         });
     } finally {
         await dbSession.complete();
