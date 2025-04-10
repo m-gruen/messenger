@@ -40,9 +40,11 @@ services:
       dockerfile: Dockerfile
       args:
         FRONTEND_PORT: ${FRONTEND_PORT}
+        BACKEND_PORT: ${BACKEND_PORT}
     container_name: messenger_frontend
     environment:
       FRONTEND_PORT: ${FRONTEND_PORT}
+      BACKEND_PORT: ${BACKEND_PORT}
     ports:
       - ${FRONTEND_PORT}:80
     depends_on:

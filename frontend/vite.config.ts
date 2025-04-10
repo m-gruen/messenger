@@ -18,6 +18,10 @@ if (!process.env.FRONTEND_PORT) {
   throw new Error('FRONTEND_PORT is not set')
 }
 
+if (!process.env.BACKEND_PORT) {
+  throw new Error('BACKEND_PORT is not set')
+}
+
 // https://vitejs.dev/config/
 
 export default defineConfig({
