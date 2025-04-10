@@ -66,6 +66,18 @@ export class UserUtils extends Utils {
             );
         }
 
+        const existingUser = await this.dbSession.query(
+            `SELECT username FROM account WHERE username = $1`,
+            [username]
+        );
+
+        if ((existingUser.rowCount ?? 0) > 0) {
+            return this.createErrorResponse(
+                StatusCodes.CONFLICT,
+                'Username already exists'
+            );
+        }
+
         const hashedPassword = await this.hashPassword(password);
         const result = await this.dbSession.query(`
             INSERT INTO account (username, password_hash)
