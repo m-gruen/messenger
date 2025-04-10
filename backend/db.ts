@@ -100,6 +100,17 @@ export class DbSession {
                     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (sender_uid) REFERENCES account(uid),
                     FOREIGN KEY (receiver_uid) REFERENCES account(uid)
+                )`,
+                `CREATE TABLE IF NOT EXISTS contact (
+                    contact_id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    contact_user_id INTEGER NOT NULL,
+                    status VARCHAR(20) NOT NULL DEFAULT 'accepted',
+                    blocked BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES account(uid),
+                    FOREIGN KEY (contact_user_id) REFERENCES account(uid),
+                    UNIQUE (user_id, contact_user_id)
                 )`
             ];
             

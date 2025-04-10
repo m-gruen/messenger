@@ -26,11 +26,103 @@ Content-Type: application/json
 GET {{baseUrl}}/user/1
 Authorization: Bearer {{authToken}}
 
-
-### GET CONTACTS BY UID
-GET {{baseUrl}}/contact/1
-Authorization: Bearer {{authToken}}
-
 ### GET MESSAGES BY SENDER AND RECEIVER UID
 GET http://localhost:3000/message?sender_uid=1&receiver_uid=2
 Content-Type: application/json
+
+### CONTACT ROUTER TEST CASES
+
+### Get all contacts for user (authorized)
+GET {{baseUrl}}/contact/1
+Authorization: Bearer {{authToken}}
+
+### Get all contacts for user (unauthorized/wrong user)
+GET {{baseUrl}}/contact/2
+Authorization: Bearer {{authToken}}
+
+### Get all contacts without authentication
+GET {{baseUrl}}/contact/1
+
+### Add new contact
+POST {{baseUrl}}/contact/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "contactUserId": 2
+}
+
+### Add invalid contact (yourself)
+POST {{baseUrl}}/contact/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "contactUserId": 1
+}
+
+### Add non-existent contact
+POST {{baseUrl}}/contact/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "contactUserId": 999
+}
+
+### Add contact (unauthorized)
+POST {{baseUrl}}/contact/2
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "contactUserId": 1
+}
+
+### Block a contact
+PUT {{baseUrl}}/contact/1/2/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": true
+}
+
+### Unblock a contact
+PUT {{baseUrl}}/contact/1/2/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": false
+}
+
+### Block contact with invalid blocked value
+PUT {{baseUrl}}/contact/1/2/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": "not-a-boolean"
+}
+
+### Block non-existent contact
+PUT {{baseUrl}}/contact/1/999/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": true
+}
+
+### Delete a contact
+DELETE {{baseUrl}}/contact/1/2
+Authorization: Bearer {{authToken}}
+
+### Delete non-existent contact
+DELETE {{baseUrl}}/contact/1/999
+Authorization: Bearer {{authToken}}
+
+### Delete contact (unauthorized)
+DELETE {{baseUrl}}/contact/2/1
+Authorization: Bearer {{authToken}}
