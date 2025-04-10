@@ -36,4 +36,7 @@ export default defineConfig({
     port: parseInt(process.env.FRONTEND_PORT),
     strictPort: true,
   },
+  define: {
+    'import.meta.env.BACKEND_PORT': JSON.stringify(process.env.BACKEND_PORT),
+  },
 })

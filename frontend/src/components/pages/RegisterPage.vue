@@ -87,6 +87,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/AuthStore';
+import { getBackendUrl } from '../../lib/config';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -112,7 +113,7 @@ async function handleRegister() {
   
   isLoading.value = true;
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    const backendUrl = getBackendUrl();
     const response = await fetch(`${backendUrl}/user`, {
       method: 'POST',
       headers: {
