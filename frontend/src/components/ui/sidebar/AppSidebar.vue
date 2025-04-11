@@ -28,7 +28,7 @@ const currentUserId = 1;
 const items = [
   { title: "Home", url: "#", icon: Home },
   { title: "Contacts", url: "#", icon: Inbox, action: toggleContacts },
-  { title: "Messages", url: "#", icon: MessageSquare },
+  { title: "Messages", url: "#", icon: MessageSquare, action: toogleMsg },
   { title: "Search", url: "#", icon: Search },
   { title: "Settings", url: "#", icon: Settings },
 ];
@@ -130,7 +130,12 @@ function selectContact(contact: User) {
   }
 }
 
-
+function toogleMsg() {
+  showContacts.value = !showContacts.value
+  if (showContacts.value) {
+    fetchContacts(currentUserId)
+  }
+}
 function formatDate(dateString: string) {
   
   const date = new Date(dateString)
