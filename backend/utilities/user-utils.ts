@@ -128,56 +128,106 @@ export class UserUtils extends Utils {
         return this.createSuccessResponse(user);
     }
 
-/**
- * Login a user and generate JWT token
- * @param username The username for login
- * @param password The password to verify
- * @returns A UserResponse object containing statusCode, data, and optional error message
- */
-public async loginUser(username: string, password: string): Promise<UserResponse> {
-    if (!this.isValidString(username) || !this.isValidString(password)) {
-        return this.createErrorResponse(
-            StatusCodes.BAD_REQUEST,
-            'Username and password are required'
-        );
-    }
+    /**
+     * Login a user and generate JWT token
+     * @param username The username for login
+     * @param password The password to verify
+     * @returns A UserResponse object containing statusCode, data, and optional error message
+     */
+    public async loginUser(username: string, password: string): Promise<UserResponse> {
+        if (!this.isValidString(username) || !this.isValidString(password)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Username and password are required'
+            );
+        }
 
-    const result = await this.dbSession.query(`
+        const result = await this.dbSession.query(`
         SELECT uid, username, password_hash, created_at 
         FROM account 
         WHERE username = $1`,
-        [username]
-    );
-
-    if (result.rowCount === 0) {
-        return this.createErrorResponse(
-            StatusCodes.UNAUTHORIZED,
-            'Invalid username or password'
+            [username]
         );
+
+        if (result.rowCount === 0) {
+            return this.createErrorResponse(
+                StatusCodes.UNAUTHORIZED,
+                'Invalid username or password'
+            );
+        }
+
+        const user = result.rows[0];
+        const passwordValid = await this.verifyPassword(user.password_hash, password);
+
+        if (!passwordValid) {
+            return this.createErrorResponse(
+                StatusCodes.UNAUTHORIZED,
+                'Invalid username or password'
+            );
+        }
+
+        const token = JwtUtils.generateToken({
+            uid: user.uid,
+            username: user.username
+        });
+
+        const userData: AuthenticatedUser = {
+            uid: user.uid,
+            username: user.username,
+            created_at: user.created_at,
+            token: token
+        };
+
+        return this.createSuccessResponse(userData);
     }
 
-    const user = result.rows[0];
-    const passwordValid = await this.verifyPassword(user.password_hash, password);
+    /**
+     * Deletes a user account by their ID
+     * @param uid The user ID to delete
+     * @returns A BaseResponse object containing statusCode and optional error message
+     */
+    public async deleteUser(uid: number): Promise<BaseResponse<null>> {
+        if (!this.isValidUserId(uid)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid user ID'
+            );
+        }
 
-    if (!passwordValid) {
-        return this.createErrorResponse(
-            StatusCodes.UNAUTHORIZED,
-            'Invalid username or password'
+        const userExists = await this.dbSession.query(
+            `SELECT uid FROM account WHERE uid = $1`,
+            [uid]
         );
+
+        if (userExists.rowCount === 0) {
+            return this.createErrorResponse(
+                StatusCodes.NOT_FOUND,
+                'User not found'
+            );
+        }
+
+        await this.dbSession.query(
+            `DELETE FROM contact WHERE user_id = $1 OR contact_user_id = $1`,
+            [uid]
+        );
+
+        await this.dbSession.query(
+            `DELETE FROM message WHERE sender_uid = $1 OR receiver_uid = $1`,
+            [uid]
+        );
+
+        const result = await this.dbSession.query(
+            `DELETE FROM account WHERE uid = $1`,
+            [uid]
+        );
+
+        if (result.rowCount === 0) {
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'Failed to delete user'
+            );
+        }
+
+        return this.createSuccessResponse(null);
     }
-
-    const token = JwtUtils.generateToken({
-        uid: user.uid,
-        username: user.username
-    });
-
-    const userData: AuthenticatedUser = {
-        uid: user.uid,
-        username: user.username,
-        created_at: user.created_at,
-        token: token
-    };
-
-    return this.createSuccessResponse(userData);
-}
 }

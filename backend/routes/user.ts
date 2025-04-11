@@ -72,3 +72,35 @@ userRouter.post('/login', async (req: Request, res: Response) => {
         await dbSession.complete();
     }
 });
+
+userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const uid = parseInt(req.params.uid);
+    
+    if (uid !== req.user?.uid) {
+        res.status(StatusCodes.FORBIDDEN).json({
+            error: 'You can only delete your own account'
+        });
+        return;
+    }
+    
+    let dbSession = await DbSession.create(false);
+    try {
+        const userUtils = new UserUtils(dbSession);
+        
+        const result = await userUtils.deleteUser(uid);
+        
+        await dbSession.complete(result.statusCode === StatusCodes.OK);
+
+        if (result.statusCode === StatusCodes.OK) {
+           res.sendStatus(result.statusCode);
+        } else {
+           res.status(result.statusCode).json({ error: result.error });
+        }
+    } catch (error) {
+        console.error(error);
+        await dbSession.complete(false);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: "An unexpected error occurred while processing your request"
+        });
+    }
+});
