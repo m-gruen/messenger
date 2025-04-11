@@ -126,3 +126,45 @@ Authorization: Bearer {{authToken}}
 ### Delete contact (unauthorized)
 DELETE {{baseUrl}}/contact/2/1
 Authorization: Bearer {{authToken}}
+
+### USER UPDATE AND DELETE TEST CASES
+
+### Update user (authorized) - Change username
+PUT {{baseUrl}}/user/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "username": "johndoe_updated"
+}
+
+### Update user (authorized) - Change password
+PUT {{baseUrl}}/user/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "password": "new_password123"
+}
+
+### Update user (authorized) - Change both username and password
+PUT {{baseUrl}}/user/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "username": "johndoe_new",
+  "password": "secure_password"
+}
+
+### Update user without any data to update
+PUT {{baseUrl}}/user/1
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+}
+
+### Delete user (authorized)
+DELETE {{baseUrl}}/user/1
+Authorization: Bearer {{authToken}}
