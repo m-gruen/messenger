@@ -172,10 +172,11 @@ Authorization: Bearer {{authToken}}
 
 ### Send message 
 POST {{baseUrl}}/message
+Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
     "sender_uid": 1,
     "receiver_uid": 2,
-    "content": "Hello, this is antoher  a test message."
+    "content": "Hello, this is another test message."
 }
