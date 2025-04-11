@@ -7,6 +7,54 @@ export type MessageResponse = BaseResponse<IMessage[]>
 export class MessageUtils extends Utils {
 
    /**
+    * Send a message from one user to another to the database unencrypted 
+    * @param sender_uid Sender User ID 
+    * @param receiver_uid Receiver User ID
+    * @param content Message content
+    * @returns A MessageResponse object containing statusCode, data, and optional error message
+    */
+   async sendMessage(sender_uid: any, receiver_uid: any, content: any): Promise<MessageResponse> {
+
+      if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Invalid UID'
+         );
+      }
+      if (!this.userExists(sender_uid) || !this.userExists(receiver_uid)) {
+         return this.createErrorResponse(
+            StatusCodes.NOT_FOUND,
+            'User not found'
+         );
+      }
+
+
+      const db = this.dbSession;
+
+      const stmt = `
+         INSERT INTO message (sender_uid, receiver_uid, content)
+         VALUES ($1, $2, $3)
+         RETURNING mid, sender_uid, receiver_uid, content, timestamp
+         `;
+      const result = await db.query(stmt, [sender_uid, receiver_uid, content]);
+      if (result.rowCount === 0) {
+         return this.createErrorResponse(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            'Failed to send message'
+         );
+      };
+
+      const message: IMessage = {
+         mid: result.rows[0].mid,
+         sender_uid: result.rows[0].sender_uid,
+         receiver_uid: result.rows[0].receiver_uid,
+         content: result.rows[0].content,
+         timestamp: result.rows[0].timestamp
+      };
+      return this.createSuccessResponse([message]);
+   }
+
+   /**
     * Fetches messages between two users
     * @param sender_uid The ID of the sender
     * @param receiver_uid The ID of the receiver

@@ -30,3 +30,30 @@ msgRouter.get('/', async (req, res) => {
       await dbSession.complete();
    }
 });
+
+msgRouter.post('/', async (req, res) => {
+   const { sender_uid, receiver_uid, content } = req.body;
+   let dbSession = await DbSession.create(true);
+
+   try {
+      const msgUtils = new MessageUtils(dbSession);
+
+      const response: MessageResponse = await msgUtils.sendMessage(sender_uid, receiver_uid, content);
+
+      res.status(response.statusCode).json(
+         response.data !== null ? response.data : { error: response.error }
+      );
+
+   } catch (error) {
+      console.error(error);
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+         error: 'Internal server error occurred while sending message'
+      });
+   } finally {
+      await dbSession.complete();
+   }
+
+
+});
+
+
