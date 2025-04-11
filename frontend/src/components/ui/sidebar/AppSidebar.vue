@@ -6,6 +6,7 @@ interface User {
   contactUserId: number;
   userId: number;
   createdAt: string;
+  status: string;
 }
 
 interface Message {
@@ -284,15 +285,22 @@ function formatDate(dateString: string) {
         <div class="space-y-2 border-t pt-4">
           <div class="grid grid-cols-3 gap-4">
             <div class="text-sm font-medium">User ID</div>
-            <div class="col-span-2 text-sm">{{ selectedContact.uid }}</div>
-          </div>
-          <div class="grid grid-cols-3 gap-4">
+            <div class="col-span-2 text-sm">{{ selectedContact.contactUserId   }}</div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
             <div class="text-sm font-medium">Status</div>
             <div class="col-span-2 text-sm">
-              <span class="inline-flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-              Encrypted
+              <span 
+              class="inline-flex h-2 w-2 rounded-full mr-2"
+              :class="{
+                'bg-green-500': selectedContact.status === 'accepted',
+                'bg-yellow-500': selectedContact.status === 'pending',
+                'bg-red-500': selectedContact.status === 'blocked'
+              }"
+              ></span>
+              {{ selectedContact.status[0].toUpperCase() + selectedContact.status.slice(1) }}
             </div>
-          </div>
+            </div>
         </div>
         
         <!-- Conversation History - Updated section -->
