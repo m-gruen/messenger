@@ -19,7 +19,7 @@ import {
   ChevronLeft, X, FileText, Share
 } from "lucide-vue-next"
 
-// Current user ID (would typically come from auth)
+
 const currentUserId = 1;
 
 const items = [
@@ -37,7 +37,7 @@ const showContacts = ref(false)
 const sidebarCollapsed = ref(false)
 const selectedContact = ref<User | null>(null)
 
-// Add new state for messages
+
 const messages = ref<Message[]>([])
 const isLoadingMessages = ref(false)
 const messagesError = ref<string | null>(null)
@@ -55,14 +55,14 @@ async function fetchContacts(userId: number) {
       }
     })
     
-    console.log('Response:', response.uid)
+    
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
     
     contacts.value = await response.json()
 
-    console.log('Fetched contacts:', contacts.value)
+    
     contacts.value = contacts.value.sort((a: User, b: User) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
@@ -74,7 +74,7 @@ async function fetchContacts(userId: number) {
   }
 }
 
-// Add new function to fetch messages
+
 async function fetchMessages(userId: number, contactId: number) {
   isLoadingMessages.value = true
   messagesError.value = null
@@ -88,7 +88,7 @@ async function fetchMessages(userId: number, contactId: number) {
     }
     
     const data: Message[] = await response.json();
-    console.log('Fetched messages:', data)
+    
     messages.value = data.sort((a: Message, b: Message) => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     })
@@ -117,19 +117,19 @@ function toggleSidebar() {
 
 function selectContact(contact: User) {
   selectedContact.value = contact
-  messages.value = [] // Clear previous messages
+  messages.value = [] 
   if (contact && contact.userId) {
-    fetchMessages(currentUserId, contact.userId)
+    fetchMessages(currentUserId, contact.contactUserId)
   } else {
-    console.log(contact)
+    
     console.error('Invalid contact selected, missing userId')
     messagesError.value = 'Cannot load messages: Invalid contact'
   }
 }
 
-// Helper function to format date
+
 function formatDate(dateString: string) {
-  console.log('Date string:', dateString)
+  
   const date = new Date(dateString)
   return date.toLocaleString()
 }
