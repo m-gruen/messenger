@@ -114,10 +114,11 @@ async function sendMessage() {
   
   try {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const response = await fetch(`${backendUrl}/message/`, {
+    const response = await fetch(`${backendUrl}/message`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionStorage.getItem('token') || ''}`
       },
       body: JSON.stringify({
         sender_uid: currentUserId,
@@ -130,8 +131,8 @@ async function sendMessage() {
       throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
 
-    const newMessageObj = await response.json();
-    messages.value = [newMessageObj, ...messages.value];
+    const newMessageObj = await response.json();  
+    messages.value.push(newMessageObj);
     newMessage.value = '';
   } catch (err) {
     messagesError.value = err instanceof Error ? err.message : 'Failed to send message'
