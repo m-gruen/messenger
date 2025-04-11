@@ -3,7 +3,9 @@ import { ref } from 'vue'
 interface User {
   uid: number;
   username: string;
-  created_at: string;
+  contactUserId: number;
+  userId: number;
+  createdAt: string;
 }
 
 interface Message {
