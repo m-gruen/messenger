@@ -19,7 +19,7 @@ interface Message {
 
 import { 
   Calendar, Home, Inbox, Search, Settings, ChevronRight, 
-  ChevronLeft, X, FileText, Share
+  ChevronLeft, X, FileText, Share ,MessageSquare
 } from "lucide-vue-next"
 
 
@@ -28,7 +28,7 @@ const currentUserId = 1;
 const items = [
   { title: "Home", url: "#", icon: Home },
   { title: "Contacts", url: "#", icon: Inbox, action: toggleContacts },
-  { title: "Calendar", url: "#", icon: Calendar },
+  { title: "Messages", url: "#", icon: MessageSquare },
   { title: "Search", url: "#", icon: Search },
   { title: "Settings", url: "#", icon: Settings },
 ];
@@ -140,14 +140,14 @@ function formatDate(dateString: string) {
 
 <template>
   <div class="flex">
-    <!-- Sidebar code remains the same -->
+    
     <aside 
       :class="[
         'fixed inset-y-0 left-0 z-20 transition-all duration-300 ease-in-out border-r border-border bg-sidebar', 
         sidebarCollapsed ? 'w-12' : 'w-[var(--sidebar-width)]'
       ]"
     >
-      <!-- Sidebar content remains the same -->
+      
       <button 
         @click="toggleSidebar"
         class="absolute -right-3 top-5 bg-primary text-primary-foreground rounded-full p-1 shadow-md z-30"
@@ -160,7 +160,7 @@ function formatDate(dateString: string) {
       <div class="flex h-full flex-col">
         <div class="p-2">
           <div class="relative w-full min-w-0 flex-col">
-            <!-- Group label (hidden when collapsed) -->
+            
             <div 
               :class="[
                 'flex h-8 shrink-0 items-center px-2 text-xs font-medium text-sidebar-foreground/70',
@@ -196,7 +196,7 @@ function formatDate(dateString: string) {
       </div>
     </aside>
 
-    <!-- Contacts panel code remains the same -->
+    
     <div 
       v-if="showContacts" 
       class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
@@ -236,14 +236,14 @@ function formatDate(dateString: string) {
       </ul>
     </div>
     
-    <!-- Updated Contact Card with messages -->
+    
     <div 
       v-if="selectedContact" 
       class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
       :style="{ left: showContacts ? (sidebarCollapsed ? '368px' : '560px') : (sidebarCollapsed ? '48px' : 'var(--sidebar-width)') }"
       :class="{ 'w-96': true }"
     >
-      <!-- Contact Card Header -->
+      
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold">Contact Details</h2>
         <button 
@@ -254,9 +254,9 @@ function formatDate(dateString: string) {
         </button>
       </div>
       
-      <!-- Contact Card Content -->
+      
       <div class="space-y-4">
-        <!-- Avatar and Name -->
+        
         <div class="flex items-center">
           <div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl">
             {{ selectedContact.username.charAt(0).toUpperCase() }}
@@ -269,7 +269,7 @@ function formatDate(dateString: string) {
           </div>
         </div>
         
-        <!-- Contact Actions -->
+        
         <div class="flex gap-2">
           <button class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground hover:bg-primary/90">
             <FileText class="h-4 w-4" />
@@ -281,7 +281,7 @@ function formatDate(dateString: string) {
           </button>
         </div>
         
-        <!-- Contact Details -->
+        
         <div class="space-y-2 border-t pt-4">
           <div class="grid grid-cols-3 gap-4">
             <div class="text-sm font-medium">User ID</div>
@@ -303,28 +303,28 @@ function formatDate(dateString: string) {
             </div>
         </div>
         
-        <!-- Conversation History - Updated section -->
+        
         <div class="mt-6 space-y-4">
           <h3 class="text-lg font-semibold">Recent Messages</h3>
           
-          <!-- Loading state -->
+          
           <div v-if="isLoadingMessages" class="flex items-center justify-center py-8">
             <div class="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
             <span class="ml-2">Loading messages...</span>
           </div>
           
-          <!-- Error state -->
+          
           <div v-else-if="messagesError" class="bg-destructive/10 text-destructive p-4 rounded-md">
             {{ messagesError }}
           </div>
           
-          <!-- Empty state -->
+          
           <div v-else-if="messages.length === 0" class="bg-muted p-4 rounded-md text-center">
             <p>No messages yet</p>
             <button class="mt-2 text-primary text-sm">Send first message</button>
           </div>
           
-          <!-- Messages list -->
+          
           <div v-else class="space-y-3">
             <div 
               v-for="message in messages.slice(0, 5)" 
