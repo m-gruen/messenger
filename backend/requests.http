@@ -168,3 +168,14 @@ Content-Type: application/json
 ### Delete user (authorized)
 DELETE {{baseUrl}}/user/1
 Authorization: Bearer {{authToken}}
+
+
+### Send message 
+POST {{baseUrl}}/message
+Content-Type: application/json
+
+{
+    "sender_uid": 1,
+    "receiver_uid": 2,
+    "content": "Hello, this is antoher  a test message."
+}
