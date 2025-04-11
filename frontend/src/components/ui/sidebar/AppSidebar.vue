@@ -48,13 +48,24 @@ async function fetchContacts(userId: number) {
   
   try {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const response = await fetch(`${backendUrl}/contact/${userId}`)
+    const response = await fetch(`${backendUrl}/contact/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sessionStorage.getItem('token') || ''}`
+      }
+    })
     
+    console.log('Response:', response.uid)
     if (!response.ok) {
       throw new Error(`Error ${response.status}: ${response.statusText}`)
     }
     
     contacts.value = await response.json()
+
+    console.log('Fetched contacts:', contacts.value)
+    contacts.value = contacts.value.sort((a: User, b: User) => {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unknown error occurred'
     console.error('Error fetching contacts:', err)
@@ -107,7 +118,13 @@ function toggleSidebar() {
 function selectContact(contact: User) {
   selectedContact.value = contact
   messages.value = [] // Clear previous messages
-  fetchMessages(currentUserId, contact.uid)
+  if (contact && contact.userId) {
+    fetchMessages(currentUserId, contact.userId)
+  } else {
+    console.log(contact)
+    console.error('Invalid contact selected, missing userId')
+    messagesError.value = 'Cannot load messages: Invalid contact'
+  }
 }
 
 // Helper function to format date
@@ -209,7 +226,7 @@ function formatDate(dateString: string) {
           <div class="ml-3">
             <div class="font-medium">{{ contact.username }}</div>
             <div class="text-xs text-muted-foreground">
-              Joined {{ new Date(contact.created_at).toLocaleDateString() }}
+              Joined {{ new Date(contact.createdAt).toLocaleDateString() }}
             </div>
           </div>
         </li>
@@ -244,7 +261,7 @@ function formatDate(dateString: string) {
           <div class="ml-4">
             <div class="text-2xl font-bold">{{ selectedContact.username }}</div>
             <div class="text-sm text-muted-foreground">
-              Joined {{ new Date(selectedContact.created_at).toLocaleDateString() }}
+              Joined {{ new Date(selectedContact.createdAt).toLocaleDateString() }}
             </div>
           </div>
         </div>
