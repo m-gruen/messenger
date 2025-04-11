@@ -104,3 +104,43 @@ userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, 
         });
     }
 });
+
+userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const uid = parseInt(req.params.uid);
+    const { username, password } = req.body;
+    
+    if (uid !== req.user?.uid) {
+        res.status(StatusCodes.FORBIDDEN).json({
+            error: 'You can only update your own account'
+        });
+        return;
+    }
+    
+    if (!username && !password) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+            error: 'Must provide either username or password to update'
+        });
+        return;
+    }
+    
+    let dbSession = await DbSession.create(false);
+    try {
+        const userUtils = new UserUtils(dbSession);
+        
+        const result = await userUtils.updateUser(uid, username, password);
+        
+        await dbSession.complete(result.statusCode === StatusCodes.OK);
+
+        if (result.statusCode === StatusCodes.OK) {
+            res.status(result.statusCode).json(result.data);
+        } else {
+            res.status(result.statusCode).json({ error: result.error });
+        }
+    } catch (error) {
+        console.error(error);
+        await dbSession.complete(false);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: "An unexpected error occurred while processing your request"
+        });
+    }
+});

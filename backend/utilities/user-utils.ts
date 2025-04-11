@@ -230,4 +230,102 @@ export class UserUtils extends Utils {
 
         return this.createSuccessResponse(null);
     }
+
+    /**
+     * Updates a user's username and/or password
+     * @param uid The user ID to update
+     * @param username Optional new username
+     * @param password Optional new password
+     * @returns A UserResponse object containing statusCode, data, and optional error message
+     */
+    public async updateUser(uid: number, username?: string, password?: string): Promise<UserResponse> {
+        if (!this.isValidUserId(uid)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid user ID'
+            );
+        }
+
+        if (username !== undefined) {
+            if (!this.isValidString(username, 3, 20, /^[a-zA-Z0-9_]+$/)) {
+                return this.createErrorResponse(
+                    StatusCodes.BAD_REQUEST,
+                    'Username must be valid string between 3 and 20 characters and can only contain letters, numbers, and underscores'
+                );
+            }
+
+            const existingUser = await this.dbSession.query(
+                `SELECT username FROM account WHERE username = $1 AND uid != $2`,
+                [username, uid]
+            );
+
+            if ((existingUser.rowCount ?? 0) > 0) {
+                return this.createErrorResponse(
+                    StatusCodes.CONFLICT,
+                    'Username already exists'
+                );
+            }
+        }
+
+        if (password !== undefined && !this.isValidString(password)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Password must be valid string'
+            );
+        }
+
+        const userQuery = await this.dbSession.query(
+            `SELECT uid FROM account WHERE uid = $1`,
+            [uid]
+        );
+
+        if (userQuery.rowCount === 0) {
+            return this.createErrorResponse(
+                StatusCodes.NOT_FOUND,
+                'User not found'
+            );
+        }
+
+        let updateQuery = 'UPDATE account SET';
+        const updateParams: any[] = [];
+        const updateFields: string[] = [];
+
+        if (username !== undefined) {
+            updateParams.push(username);
+            updateFields.push(`username = $${updateParams.length}`);
+        }
+
+        if (password !== undefined) {
+            const hashedPassword = await this.hashPassword(password);
+            updateParams.push(hashedPassword);
+            updateFields.push(`password_hash = $${updateParams.length}`);
+        }
+
+        updateQuery += ` ${updateFields.join(', ')} WHERE uid = $${updateParams.length + 1} RETURNING uid, username, created_at`;
+        updateParams.push(uid);
+
+        const result = await this.dbSession.query(updateQuery, updateParams);
+
+        if (result.rowCount === 0) {
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'Failed to update user'
+            );
+        }
+
+        const user = result.rows[0];
+        const token = JwtUtils.generateToken({
+            uid: user.uid,
+            username: user.username
+        });
+
+        const userData: AuthenticatedUser = {
+            uid: user.uid,
+            username: user.username,
+            created_at: user.created_at,
+            token: token
+        };
+
+        return this.createSuccessResponse(userData);
+    }
 }
