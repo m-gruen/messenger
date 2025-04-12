@@ -1,0 +1,209 @@
+@baseUrl = http://localhost:3000
+
+### CREATE FIRST USER (User 1)
+# @name createUser1
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+    "username": "user1",
+    "password": "password123"
+}
+
+### CREATE SECOND USER (User 2)
+# @name createUser2
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+    "username": "user2",
+    "password": "password123"
+}
+
+### CREATE THIRD USER (User 3)
+# @name createUser3
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+    "username": "user3",
+    "password": "password123"
+}
+
+### LOGIN AS USER 1
+# @name login
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+    "username": "user1",
+    "password": "password123"
+}
+
+### Define variables
+@authToken1 = {{login.response.body.token}}
+@userId = {{login.response.body.uid}}
+
+### CONTACT ROUTER TEST CASES
+
+### Get all contacts for User 1 (authorized)
+GET {{baseUrl}}/contact/{{userId}}
+Authorization: Bearer {{authToken1}}
+
+### Get contacts for User 2 (unauthorized/wrong user)
+GET {{baseUrl}}/contact/3
+Authorization: Bearer {{authToken1}}
+
+### User 1 adds User 2 as contact
+POST {{baseUrl}}/contact/{{userId}}
+Authorization: Bearer {{authToken1}}
+Content-Type: application/json
+
+{
+  "contactUserId": 3
+}
+
+### User 1 adds User 3 as contact
+POST {{baseUrl}}/contact/{{userId}}
+Authorization: Bearer {{authToken1}}
+Content-Type: application/json
+
+{
+  "contactUserId": 4
+}
+
+### Invalid operation: User 1 adds self as contact
+POST {{baseUrl}}/contact/{{userId}}
+Authorization: Bearer {{authToken1}}
+Content-Type: application/json
+
+{
+  "contactUserId": {{userId}}
+}
+
+### Invalid operation: User 1 adds non-existent user
+POST {{baseUrl}}/contact/{{userId}}
+Authorization: Bearer {{authToken1}}
+Content-Type: application/json
+
+{
+  "contactUserId": 999
+}
+
+### Get incoming requests for User 1
+GET {{baseUrl}}/contact/{{userId}}/requests/incoming
+Authorization: Bearer {{authToken1}}
+
+### Get outgoing requests for User 1
+GET {{baseUrl}}/contact/{{userId}}/requests/outgoing
+Authorization: Bearer {{authToken1}}
+
+### LOGIN AS USER 2 TO ACCEPT REQUEST
+# @name loginUser2
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+    "username": "user2",
+    "password": "password123"
+}
+
+###
+@authToken2 = {{loginUser2.response.body.token}}
+@userId2 = {{loginUser2.response.body.uid}}
+
+### Get all contacts for User 2 (authorized)
+GET {{baseUrl}}/contact/{{userId2}}
+Authorization: Bearer {{authToken2}}
+
+### Get incoming requests for User 2
+GET {{baseUrl}}/contact/{{userId2}}/requests/incoming
+Authorization: Bearer {{authToken2}}
+
+### Get outgoing requests for User 2
+GET {{baseUrl}}/contact/{{userId2}}/requests/outgoing
+Authorization: Bearer {{authToken2}}
+
+### User 2 accepts contact request from User 1
+PUT {{baseUrl}}/contact/{{userId2}}/requests/2/accept
+Authorization: Bearer {{authToken2}}
+
+### LOGIN BACK AS USER 1
+# @name loginAgain
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+    "username": "user1",
+    "password": "password123"
+}
+
+###
+@authToken = {{loginAgain.response.body.token}}
+
+### User 1 blocks User 2
+PUT {{baseUrl}}/contact/{{userId}}/3/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": true
+}
+
+### User 1 unblocks User 2
+PUT {{baseUrl}}/contact/{{userId}}/3/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": false
+}
+
+### Invalid operation: Block with invalid value
+PUT {{baseUrl}}/contact/{{userId}}/2/block
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "blocked": "not-a-boolean"
+}
+
+### User 1 deletes contact with User 2
+DELETE {{baseUrl}}/contact/{{userId}}/3
+Authorization: Bearer {{authToken}}
+
+### Invalid operation: Delete non-existent contact
+DELETE {{baseUrl}}/contact/{{userId}}/999
+Authorization: Bearer {{authToken}}
+
+### Invalid operation: Delete another user's contact
+DELETE {{baseUrl}}/contact/3/3
+Authorization: Bearer {{authToken}}
+
+### LOGIN AS USER 3
+# @name loginUser3
+POST {{baseUrl}}/user/login
+Content-Type: application/json
+
+{
+    "username": "user3",
+    "password": "password123"
+}
+
+###
+@authToken3 = {{loginUser3.response.body.token}}
+@userId3 = {{loginUser3.response.body.uid}}
+
+### User 3 rejects contact request from User 1
+PUT {{baseUrl}}/contact/{{userId3}}/requests/2/reject
+Authorization: Bearer {{authToken3}}
+
+### Get all contacts for User 3 (authorized)
+GET {{baseUrl}}/contact/{{userId3}}
+Authorization: Bearer {{authToken3}}
+
+### User 3 deletes contact with User 1
+DELETE {{baseUrl}}/contact/{{userId3}}/2
+Authorization: Bearer {{authToken3}}
+
+
