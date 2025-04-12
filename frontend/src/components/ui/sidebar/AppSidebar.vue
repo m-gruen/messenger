@@ -103,7 +103,7 @@ async function fetchMessages(userId: number, contactId: number) {
     setTimeout(() => {
       const messageContainer = document.querySelector('.flex.flex-col-reverse.space-y-reverse.space-y-4');
       if (messageContainer) {
-      messageContainer.scrollIntoView({
+        messageContainer.scrollIntoView({
           behavior: 'instant',
           block: 'end',
           inline: 'nearest'

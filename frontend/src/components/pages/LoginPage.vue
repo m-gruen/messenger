@@ -5,65 +5,52 @@
         <h1 class="text-2xl font-bold">Welcome Back</h1>
         <p class="text-muted-foreground mt-2">Login to your secure messenger</p>
       </div>
-      
+
       <form @submit.prevent="handleLogin" class="space-y-4">
         <div class="space-y-2">
           <label for="username" class="text-sm font-medium">Username</label>
-          <input
-            id="username"
-            v-model="username"
-            type="text"
-            placeholder="Enter username"
+          <input id="username" v-model="username" type="text" placeholder="Enter username"
             class="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            required
-          />
+            required />
         </div>
-        
+
         <div class="space-y-2">
           <label for="password" class="text-sm font-medium">Password</label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            placeholder="Enter password"
+          <input id="password" v-model="password" type="password" placeholder="Enter password"
             class="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            required
-          />
+            required />
         </div>
-        
+
         <div class="flex items-center justify-between">
           <div class="flex items-center">
-            <input
-              id="remember-me"
-              v-model="rememberMe"
-              type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
+            <input id="remember-me" v-model="rememberMe" type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
             <label for="remember-me" class="ml-2 block text-sm text-muted-foreground">
               Remember me
             </label>
           </div>
         </div>
-        
+
         <div v-if="error" class="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
           {{ error }}
         </div>
-        
-        <button
-          type="submit"
+
+        <button type="submit"
           class="w-full bg-primary text-primary-foreground py-2 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          :disabled="isLoading"
-        >
+          :disabled="isLoading">
           <span v-if="isLoading" class="flex items-center justify-center">
-            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-primary-foreground" xmlns="http://www.w3.org/2000/svg"
+              fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
             </svg>
             Logging in...
           </span>
           <span v-else>Login</span>
         </button>
-        
+
         <div class="text-center text-sm">
           Don't have an account?
           <router-link to="/register" class="text-primary hover:underline">Register</router-link>
@@ -90,12 +77,12 @@ const rememberMe = ref(false);
 
 async function handleLogin() {
   error.value = '';
-  
+
   if (!username.value || !password.value) {
     error.value = 'Username and password are required';
     return;
   }
-  
+
   isLoading.value = true;
   try {
     const backendUrl = getBackendUrl();
@@ -109,25 +96,25 @@ async function handleLogin() {
         password: password.value
       })
     });
-    
+
     const data = await response.json();
-    
+
     const user: AuthenticatedUser = {
-        uid: data.uid,
-        username : data.username,
-        created_at: data.created_at,
-        token: data.token
+      uid: data.uid,
+      username: data.username,
+      created_at: data.created_at,
+      token: data.token
     };
 
     console.log(data);
-    
+
     if (!response.ok) {
       throw new Error(data.error || 'Login failed');
     }
-    
+
     authStore.setToken(data.token, rememberMe.value);
     authStore.setUser(user, rememberMe.value);
-    
+
     router.push('/');
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Login failed';
