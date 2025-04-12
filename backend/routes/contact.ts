@@ -29,7 +29,7 @@ contactRouter.get('/:userId', authenticateToken, async (req: AuthenticatedReques
    } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    } finally {
       await dbSession.complete();
@@ -63,7 +63,7 @@ contactRouter.post('/:userId', authenticateToken, async (req: AuthenticatedReque
       console.error(error);
       await dbSession.complete(false);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    }
 });
@@ -104,7 +104,7 @@ contactRouter.put('/:userId/:contactUserId/block', authenticateToken, async (req
       console.error(error);
       await dbSession.complete(false);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    }
 });
@@ -135,7 +135,7 @@ contactRouter.delete('/:userId/:contactUserId', authenticateToken, async (req: A
    } catch (error) {
       await dbSession.complete(false);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    }
 });
@@ -162,7 +162,7 @@ contactRouter.get('/:userId/requests/incoming', authenticateToken, async (req: A
    } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    } finally {
       await dbSession.complete();
@@ -191,7 +191,7 @@ contactRouter.get('/:userId/requests/outgoing', authenticateToken, async (req: A
    } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    } finally {
       await dbSession.complete();
@@ -226,7 +226,7 @@ contactRouter.put('/:userId/requests/:contactUserId/accept', authenticateToken, 
       console.error(error);
       await dbSession.complete(false);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    }
 });
@@ -259,7 +259,7 @@ contactRouter.put('/:userId/requests/:contactUserId/reject', authenticateToken, 
       console.error(error);
       await dbSession.complete(false);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: "an unexpected error occurred while processing your request"
+         error: "An unexpected error occurred while processing your request"
       });
    }
 });
