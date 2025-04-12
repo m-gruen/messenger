@@ -1,8 +1,15 @@
+export enum ContactStatus {
+    INCOMING_REQUEST = 'incoming_request',
+    OUTGOING_REQUEST = 'outgoing_request',
+    ACCEPTED = 'accepted',
+    REJECTED = 'rejected',
+    BLOCKED = 'blocked'
+}
+
 export interface Contact {
     contactId: number;
     userId: number;
     contactUserId: number;
-    status: string;
-    blocked: boolean;
+    status: ContactStatus;
     createdAt: Date;
 }
