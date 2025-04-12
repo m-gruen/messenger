@@ -3,7 +3,8 @@ export enum ContactStatus {
     OUTGOING_REQUEST = 'outgoing_request',
     ACCEPTED = 'accepted',
     REJECTED = 'rejected',
-    BLOCKED = 'blocked'
+    BLOCKED = 'blocked',
+    DELETED = 'deleted'
 }
 
 export interface Contact {
