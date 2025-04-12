@@ -24,7 +24,7 @@ import {
 } from "lucide-vue-next"
 
 
-const currentUserId = ref<number>(parseInt(sessionStorage.getItem('userId') || '0', 10))
+const currentUserId = (parseInt(sessionStorage.getItem('userId') || '0', 10))
 
 const items = [
   { title: "Home", url: "#", icon: Home },
