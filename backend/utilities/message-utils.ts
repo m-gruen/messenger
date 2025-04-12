@@ -34,7 +34,7 @@ export class MessageUtils extends Utils {
             'Cannot send message to self'
          );
       }
-      
+
       if (!await this.hasContactWith(sender_uid, receiver_uid)) {
          return this.createErrorResponse(
             StatusCodes.FORBIDDEN,

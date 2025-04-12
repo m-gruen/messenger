@@ -205,5 +205,3 @@ Authorization: Bearer {{authToken3}}
 ### User 3 deletes contact with User 1
 DELETE {{baseUrl}}/contact/{{userId3}}/2
 Authorization: Bearer {{authToken3}}
-
-

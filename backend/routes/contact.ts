@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { ContactsResponse, ContactUtils } from '../utilities/contact-utils.js';
-import { BaseResponse } from '../utilities/utils.js';
+import { ContactsResponse, ContactUtils } from '../utilities/contact-utils';
+import { BaseResponse } from '../utilities/utils';
 import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-middleware';
-import { DbSession } from '../db.js';
+import { DbSession } from '../db';
 
 export const contactRouter = Router();
 

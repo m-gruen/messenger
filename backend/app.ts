@@ -21,8 +21,6 @@ app.use(express.json());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 
-
-
 app.use('/user', userRouter);
 app.use('/contact', contactRouter);
 app.use('/message', msgRouter);

@@ -53,13 +53,13 @@ userRouter.get('/:uid', authenticateToken, async (req: Request, res: Response) =
 
 userRouter.post('/login', async (req: Request, res: Response) => {
     const { username, password } = req.body;
-    
+
     let dbSession = await DbSession.create(true);
     try {
         const userUtils = new UserUtils(dbSession);
-        
+
         const response: UserResponse = await userUtils.loginUser(username, password);
-        
+
         res.status(response.statusCode).json(
             response.data !== null ? response.data : { error: response.error }
         );
@@ -75,26 +75,26 @@ userRouter.post('/login', async (req: Request, res: Response) => {
 
 userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid = parseInt(req.params.uid);
-    
+
     if (uid !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).json({
             error: 'You can only delete your own account'
         });
         return;
     }
-    
+
     let dbSession = await DbSession.create(false);
     try {
         const userUtils = new UserUtils(dbSession);
-        
+
         const result = await userUtils.deleteUser(uid);
-        
+
         await dbSession.complete(result.statusCode === StatusCodes.OK);
 
         if (result.statusCode === StatusCodes.OK) {
-           res.sendStatus(result.statusCode);
+            res.sendStatus(result.statusCode);
         } else {
-           res.status(result.statusCode).json({ error: result.error });
+            res.status(result.statusCode).json({ error: result.error });
         }
     } catch (error) {
         console.error(error);
@@ -108,27 +108,27 @@ userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, 
 userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid = parseInt(req.params.uid);
     const { username, password } = req.body;
-    
+
     if (uid !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).json({
             error: 'You can only update your own account'
         });
         return;
     }
-    
+
     if (!username && !password) {
         res.status(StatusCodes.BAD_REQUEST).json({
             error: 'Must provide either username or password to update'
         });
         return;
     }
-    
+
     let dbSession = await DbSession.create(false);
     try {
         const userUtils = new UserUtils(dbSession);
-        
+
         const result = await userUtils.updateUser(uid, username, password);
-        
+
         await dbSession.complete(result.statusCode === StatusCodes.OK);
 
         if (result.statusCode === StatusCodes.OK) {

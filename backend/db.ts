@@ -113,13 +113,13 @@ export class DbSession {
                     CHECK (status IN ('incoming_request', 'outgoing_request', 'accepted', 'rejected', 'blocked', 'deleted'))
                 )`
             ];
-            
+
             for (const statement of statements) {
                 await dbSession.query(statement);
             }
             await dbSession.complete(true);
         } catch (error) {
-            await dbSession.complete(false); 
+            await dbSession.complete(false);
             throw new Error(`failed creating tables: ${error}`);
         }
     }
