@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { ContactsResponse, ContactUtils } from '../utilities/contact-utils';
 import { BaseResponse } from '../utilities/utils';
@@ -7,7 +7,7 @@ import { DbSession } from '../db';
 
 export const contactRouter = Router();
 
-contactRouter.get('/:userId', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.get('/:userId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
 
    if (userId !== req.user?.uid) {
@@ -36,7 +36,7 @@ contactRouter.get('/:userId', authenticateToken, async (req: AuthenticatedReques
    }
 });
 
-contactRouter.post('/:userId', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.post('/:userId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
    const contactUserId = parseInt(req.body.contactUserId);
 
@@ -68,7 +68,7 @@ contactRouter.post('/:userId', authenticateToken, async (req: AuthenticatedReque
    }
 });
 
-contactRouter.put('/:userId/:contactUserId/block', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.put('/:userId/:contactUserId/block', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
    const contactUserId = parseInt(req.params.contactUserId);
    const { blocked } = req.body;
@@ -109,7 +109,7 @@ contactRouter.put('/:userId/:contactUserId/block', authenticateToken, async (req
    }
 });
 
-contactRouter.delete('/:userId/:contactUserId', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.delete('/:userId/:contactUserId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
    const contactUserId = parseInt(req.params.contactUserId);
 
@@ -140,7 +140,7 @@ contactRouter.delete('/:userId/:contactUserId', authenticateToken, async (req: A
    }
 });
 
-contactRouter.get('/:userId/requests/incoming', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.get('/:userId/requests/incoming', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
 
    if (userId !== req.user?.uid) {
@@ -169,7 +169,7 @@ contactRouter.get('/:userId/requests/incoming', authenticateToken, async (req: A
    }
 });
 
-contactRouter.get('/:userId/requests/outgoing', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.get('/:userId/requests/outgoing', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
 
    if (userId !== req.user?.uid) {
@@ -198,7 +198,7 @@ contactRouter.get('/:userId/requests/outgoing', authenticateToken, async (req: A
    }
 });
 
-contactRouter.put('/:userId/requests/:contactUserId/accept', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.put('/:userId/requests/:contactUserId/accept', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
    const contactUserId = parseInt(req.params.contactUserId);
 
@@ -231,7 +231,7 @@ contactRouter.put('/:userId/requests/:contactUserId/accept', authenticateToken, 
    }
 });
 
-contactRouter.put('/:userId/requests/:contactUserId/reject', authenticateToken, async (req: AuthenticatedRequest, res) => {
+contactRouter.put('/:userId/requests/:contactUserId/reject', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
    const userId = parseInt(req.params.userId);
    const contactUserId = parseInt(req.params.contactUserId);
 

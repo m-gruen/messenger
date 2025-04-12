@@ -1,10 +1,10 @@
-import express, { Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { UserUtils, UserResponse } from '../utilities/user-utils';
 import { DbSession } from '../db';
 import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-middleware';
 
-export const userRouter = express.Router();
+export const userRouter = Router();
 
 userRouter.post('/', async (req: Request, res: Response) => {
     const { username, password } = req.body;

@@ -1,12 +1,11 @@
-import express, { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { ContactUtils, ContactsResponse } from '../utilities/contact-utils';
 import { DbSession } from '../db';
 import { MessageResponse, MessageUtils } from '../utilities/message-utils';
 
 export const msgRouter = Router();
 
-msgRouter.get('/', async (req, res) => {
+msgRouter.get('/', async (req: Request, res: Response) => {
    const sender_uid: number = parseInt(req.query.sender_uid as string);
    const receiver_uid: number = parseInt(req.query.receiver_uid as string);
 
@@ -30,7 +29,7 @@ msgRouter.get('/', async (req, res) => {
    }
 });
 
-msgRouter.post('/', async (req, res) => {
+msgRouter.post('/', async (req: Request, res: Response) => {
    const { sender_uid, receiver_uid, content } = req.body;
 
    let dbSession = await DbSession.create(false);
