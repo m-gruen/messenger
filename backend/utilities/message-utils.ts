@@ -27,6 +27,21 @@ export class MessageUtils extends Utils {
             'User not found'
          );
       }
+      
+      if (await this.hasContactWith(sender_uid, receiver_uid) === false) {
+         return this.createErrorResponse(
+            StatusCodes.FORBIDDEN,
+            'Users are not contacts'
+         );
+      }
+      if (await this.isUserBlocked(sender_uid, receiver_uid) === true) {
+         return this.createErrorResponse(
+            StatusCodes.FORBIDDEN,
+            'User is blocked'
+         );
+      }
+
+      
 
 
       const db = this.dbSession;

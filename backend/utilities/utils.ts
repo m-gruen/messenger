@@ -43,6 +43,35 @@ export abstract class Utils {
     }
 
     /**
+     * hasContactWith
+     */
+    public async hasContactWith(sender_uid:number, receiver_uid:number): Promise<boolean> {
+        return await this.dbSession.query(`
+            SELECT contact_id
+            FROM contact 
+            WHERE (user_id = $1 AND contact_user_id = $2)`,
+            [sender_uid, receiver_uid]
+        ).then(result => (result.rowCount ?? 0) > 0);
+        
+    }
+
+    /**
+     * Checks if the user is blocked or not accepted
+     * @param sender_uid The sender's user ID
+     * @param receiver_uid The receiver's user ID
+     * @returns True if the user is blocked, false otherwise
+     */
+    public async isUserBlocked(sender_uid: number, receiver_uid: number): Promise<boolean> {
+        return await this.dbSession.query(`
+            SELECT contact_id
+            FROM contact 
+            WHERE (user_id = $1 AND contact_user_id = $2)
+            AND (status = 'blocked' OR status = 'pending')`,
+            [sender_uid, receiver_uid]
+        ).then(result => (result.rowCount ?? 0) > 0);
+    }
+
+    /**
      * Creates a standardized error response
      * @param statusCode HTTP status code
      * @param errorMessage Error message

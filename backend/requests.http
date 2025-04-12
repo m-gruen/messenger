@@ -180,3 +180,28 @@ Content-Type: application/json
     "receiver_uid": 2,
     "content": "Hello, this is another test message."
 }
+
+### Send message to no contact user
+POST {{baseUrl}}/message
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "sender_uid": 1,
+    "receiver_uid": 5,
+    "content": "Hello, this is a test message with a different content."
+}
+
+
+### Send message to blocked user 
+
+POST {{baseUrl}}/message
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "sender_uid": 1,
+    "receiver_uid": 4,
+    "content": "Hello, this is a test message to a blocked user."
+}
+
