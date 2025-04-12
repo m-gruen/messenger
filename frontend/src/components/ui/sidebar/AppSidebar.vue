@@ -195,6 +195,7 @@ function formatDate(dateString: string) {
       <!-- Toggle Sidebar Button -->
       <button @click="toggleSidebar"
         class="absolute -right-3 top-5 bg-primary text-primary-foreground rounded-full p-1 shadow-md z-30"
+        id="sidebar-toggle"
         :aria-label="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
         <ChevronLeft v-if="!sidebarCollapsed" class="h-4 w-4" />
         <ChevronRight v-else class="h-4 w-4" />
