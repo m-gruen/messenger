@@ -34,13 +34,22 @@ export abstract class Utils {
      * @returns True if the user exists, false otherwise
      */
     public async userExists(uid: number): Promise<boolean> {
-        const result = await this.dbSession.query(`
-            SELECT 1 
-            FROM account 
-            WHERE uid = $1`,
-            [uid]
-        );
-        return (result.rowCount ?? 0) > 0;
+        if (!this.isValidUserId(uid)) {
+            return false;
+        }
+
+        try {
+            const result = await this.dbSession.query(`
+                SELECT 1 
+                FROM account 
+                WHERE uid = $1`,
+                [uid]
+            );
+            return (result.rowCount ?? 0) > 0;
+        } catch (error) {
+            console.error('Error checking user existence:', error);
+            return false;
+        }
     }
 
     /**
@@ -50,13 +59,23 @@ export abstract class Utils {
      * @returns True if a contact relationship exists, false otherwise
      */
     public async hasContactWith(sender_uid: number, receiver_uid: number): Promise<boolean> {
-        const result = await this.dbSession.query(`
-        SELECT contact_id
-        FROM contact 
-        WHERE (user_id = $1 AND contact_user_id = $2)`,
-            [sender_uid, receiver_uid]
-        );
-        return (result.rowCount ?? 0) > 0;
+        if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
+            return false;
+        }
+
+        try {
+            const result = await this.dbSession.query(`
+                SELECT contact_id
+                FROM contact 
+                WHERE user_id = $1 AND contact_user_id = $2`,
+                [sender_uid, receiver_uid]
+            );
+
+            return (result.rowCount ?? 0) > 0;
+        } catch (error) {
+            console.error('Error checking contact relationship:', error);
+            return false;
+        }
     }
 
     /**
@@ -66,14 +85,38 @@ export abstract class Utils {
      * @returns True if the user can send messages, false otherwise
      */
     public async canSendMessage(sender_uid: number, receiver_uid: number): Promise<boolean> {
-        const result = await this.dbSession.query(`
-        SELECT contact_id
-        FROM contact 
-        WHERE (user_id = $1 AND contact_user_id = $2)
-        AND (status = $3 OR status = $4 OR status = $5 OR status = $6)`,
-            [sender_uid, receiver_uid, ContactStatus.BLOCKED, ContactStatus.INCOMING_REQUEST, ContactStatus.OUTGOING_REQUEST, ContactStatus.DELETED]
-        );
-        return (result.rowCount ?? 0) === 0;
+        if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
+            return false;
+        }
+
+        try {
+            const contactQuery = await this.dbSession.query(`
+                SELECT status 
+                FROM contact 
+                WHERE user_id = $1 AND contact_user_id = $2`,
+                [sender_uid, receiver_uid]
+            );
+
+            if (contactQuery.rowCount === 0) {
+                return false;
+            }
+
+            const status = contactQuery.rows[0].status;
+
+            if (
+                status === ContactStatus.BLOCKED ||
+                status === ContactStatus.INCOMING_REQUEST ||
+                status === ContactStatus.OUTGOING_REQUEST ||
+                status === ContactStatus.DELETED
+            ) {
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error checking if user can send messages:', error);
+            return false;
+        }
     }
 
     /**
