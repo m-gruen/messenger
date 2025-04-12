@@ -1,5 +1,6 @@
 import { DbSession } from '../db';
 import { StatusCodes } from 'http-status-codes';
+import { ContactStatus } from '../models/contact-model';
 
 export interface BaseResponse<T> {
     statusCode: number;
@@ -43,32 +44,47 @@ export abstract class Utils {
     }
 
     /**
-     * hasContactWith
+     * Checks if a user has a contact relationship with another user
+     * @param sender_uid The first user's ID
+     * @param receiver_uid The second user's ID
+     * @returns True if a contact relationship exists, false otherwise
      */
-    public async hasContactWith(sender_uid:number, receiver_uid:number): Promise<boolean> {
-        return await this.dbSession.query(`
-            SELECT contact_id
-            FROM contact 
-            WHERE (user_id = $1 AND contact_user_id = $2)`,
+    public async hasContactWith(sender_uid: number, receiver_uid: number): Promise<boolean> {
+        const result = await this.dbSession.query(`
+        SELECT contact_id
+        FROM contact 
+        WHERE (user_id = $1 AND contact_user_id = $2)`,
             [sender_uid, receiver_uid]
-        ).then(result => (result.rowCount ?? 0) > 0);
-        
+        );
+        return (result.rowCount ?? 0) > 0;
     }
 
     /**
+     * Checks if a user can send messages to another user
+     * @param sender_uid The sender's user ID
+     * @param receiver_uid The receiver's user ID
+     * @returns True if the user can send messages, false otherwise
+     */
+    public async canSendMessage(sender_uid: number, receiver_uid: number): Promise<boolean> {
+        const result = await this.dbSession.query(`
+        SELECT contact_id
+        FROM contact 
+        WHERE (user_id = $1 AND contact_user_id = $2)
+        AND (status = $3 OR status = $4 OR status = $5 OR status = $6)`,
+            [sender_uid, receiver_uid, ContactStatus.BLOCKED, ContactStatus.INCOMING_REQUEST, ContactStatus.OUTGOING_REQUEST, ContactStatus.DELETED]
+        );
+        return (result.rowCount ?? 0) === 0;
+    }
+
+    /**
+     * @deprecated Use canSendMessage instead
      * Checks if the user is blocked or not accepted
      * @param sender_uid The sender's user ID
      * @param receiver_uid The receiver's user ID
-     * @returns True if the user is blocked, false otherwise
+     * @returns True if the user is blocked or has a pending request
      */
     public async isUserBlocked(sender_uid: number, receiver_uid: number): Promise<boolean> {
-        return await this.dbSession.query(`
-            SELECT contact_id
-            FROM contact 
-            WHERE (user_id = $1 AND contact_user_id = $2)
-            AND (status = 'blocked' OR status = 'pending')`,
-            [sender_uid, receiver_uid]
-        ).then(result => (result.rowCount ?? 0) > 0);
+        return !(await this.canSendMessage(sender_uid, receiver_uid));
     }
 
     /**

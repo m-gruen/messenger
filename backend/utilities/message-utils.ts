@@ -14,35 +14,40 @@ export class MessageUtils extends Utils {
     * @returns A MessageResponse object containing statusCode, data, and optional error message
     */
    async sendMessage(sender_uid: any, receiver_uid: any, content: any): Promise<MessageResponse> {
-
       if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
          return this.createErrorResponse(
             StatusCodes.BAD_REQUEST,
             'Invalid UID'
          );
       }
+
       if (!this.userExists(sender_uid) || !this.userExists(receiver_uid)) {
          return this.createErrorResponse(
             StatusCodes.NOT_FOUND,
             'User not found'
          );
       }
+
+      if (sender_uid === receiver_uid) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Cannot send message to self'
+         );
+      }
       
-      if (await this.hasContactWith(sender_uid, receiver_uid) === false) {
+      if (!await this.hasContactWith(sender_uid, receiver_uid)) {
          return this.createErrorResponse(
             StatusCodes.FORBIDDEN,
             'Users are not contacts'
          );
       }
-      if (await this.isUserBlocked(sender_uid, receiver_uid) === true) {
+
+      if (!await this.canSendMessage(sender_uid, receiver_uid)) {
          return this.createErrorResponse(
             StatusCodes.FORBIDDEN,
-            'User is blocked'
+            'Cannot send message to this user'
          );
       }
-
-      
-
 
       const db = this.dbSession;
 
@@ -76,7 +81,6 @@ export class MessageUtils extends Utils {
     * @returns A MessageResponse object containing statusCode, data, and optional error message
     */
    public async fetchMessage(sender_uid: number, receiver_uid: number): Promise<MessageResponse> {
-
       if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
          return this.createErrorResponse(
             StatusCodes.BAD_REQUEST,
@@ -88,6 +92,13 @@ export class MessageUtils extends Utils {
          return this.createErrorResponse(
             StatusCodes.NOT_FOUND,
             'User not found'
+         );
+      }
+
+      if (sender_uid === receiver_uid) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Cannot fetch messages with self'
          );
       }
 
