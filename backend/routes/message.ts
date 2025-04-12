@@ -10,7 +10,6 @@ msgRouter.get('/', async (req, res) => {
    const sender_uid: number = parseInt(req.query.sender_uid as string);
    const receiver_uid: number = parseInt(req.query.receiver_uid as string);
 
-
    let dbSession = await DbSession.create(true);
    try {
       const msgUtils = new MessageUtils(dbSession);
@@ -24,7 +23,7 @@ msgRouter.get('/', async (req, res) => {
    } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: 'Internal server error occurred while fetching contacts'
+         error: 'An unexpected error occurred while fetching messages'
       });
    } finally {
       await dbSession.complete();
@@ -33,27 +32,23 @@ msgRouter.get('/', async (req, res) => {
 
 msgRouter.post('/', async (req, res) => {
    const { sender_uid, receiver_uid, content } = req.body;
-   let dbSession = await DbSession.create(true);
 
+   let dbSession = await DbSession.create(false);
    try {
-   
       const msgUtils = new MessageUtils(dbSession);
 
       const response: MessageResponse = await msgUtils.sendMessage(sender_uid, receiver_uid, content);
 
+      await dbSession.complete(response.statusCode === StatusCodes.OK);
+
       res.status(response.statusCode).json(
          response.data !== null ? response.data : { error: response.error }
       );
-
    } catch (error) {
-      await dbSession.complete(false);
       console.error(error);
+      await dbSession.complete(false);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-         error: 'Internal server error occurred while sending message'
+         error: "An unexpected error occurred while processing your request"
       });
-   } finally {
-      await dbSession.complete(true);
    }
-
-
 });
