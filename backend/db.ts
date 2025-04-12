@@ -110,7 +110,7 @@ export class DbSession {
                     FOREIGN KEY (user_id) REFERENCES account(uid),
                     FOREIGN KEY (contact_user_id) REFERENCES account(uid),
                     UNIQUE (user_id, contact_user_id),
-                    CHECK (status IN ('incoming_request', 'outgoing_request', 'accepted', 'rejected', 'blocked'))
+                    CHECK (status IN ('incoming_request', 'outgoing_request', 'accepted', 'rejected', 'blocked', 'deleted'))
                 )`
             ];
             
