@@ -8,22 +8,36 @@
 table(Account) {
     primary_key(uid) : int
     --
-    column(username) : varchar
-    column(password_hash) : varchar
-    column(created_at) : datetime
+    column(username) : varchar(255) <<unique>>
+    column(password_hash) : varchar(255)
+    column(created_at) : timestamp
 }
 
 table(Message) {
     primary_key(mid) : int
     --
-    foreign_key(sender_uid) : int
-    foreign_key(receiver_uid) : int
+    foreign_key(sender_uid) : int <<FK>>
+    foreign_key(receiver_uid) : int <<FK>>
     --
-    column(content) : varchar
-    column(timestamp) : datetime
+    column(content) : text
+    column(timestamp) : timestamp
 }
 
-Account ||-right-o{ Message : sends
-Account ||-right-o{ Message : receives
+table(Contact) {
+    primary_key(contact_id) : int
+    --
+    foreign_key(user_id) : int <<FK>>
+    foreign_key(contact_user_id) : int <<FK>>
+    --
+    column(status) : varchar(20) <<enum>>
+    column(created_at) : timestamp
+}
+
+Account ||--o{ Message : sends
+Account ||--o{ Message : receives
+Account ||--o{ Contact : has
+Account ||--o{ Contact : is contacted by
+
+
 
 @enduml
