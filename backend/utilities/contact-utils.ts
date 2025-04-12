@@ -145,11 +145,19 @@ export class ContactUtils extends Utils {
 
          const currentStatus = contactQuery.rows[0].status;
 
-         if (currentStatus !== ContactStatus.ACCEPTED && blocked) {
+         if (blocked && currentStatus === ContactStatus.BLOCKED) {
+            return this.createSuccessResponse(null);
+         }
+
+         if (blocked && currentStatus !== ContactStatus.ACCEPTED) {
             return this.createErrorResponse(
                StatusCodes.BAD_REQUEST,
                'Only accepted contacts can be blocked'
             );
+         }
+
+         if (!blocked && currentStatus !== ContactStatus.BLOCKED) {
+            return this.createSuccessResponse(null);
          }
 
          const newStatus = blocked ? ContactStatus.BLOCKED : ContactStatus.ACCEPTED;
