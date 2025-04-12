@@ -29,7 +29,7 @@ export class ContactUtils extends Utils {
       }
 
       const contactsResult = await this.dbSession.query(`
-         SELECT a.uid, a.username, a.created_at, c.status
+         SELECT c.contact_id, a.uid, a.username, a.created_at, c.status
          FROM contact c
          JOIN account a ON c.contact_user_id = a.uid
          WHERE c.user_id = $1
@@ -205,20 +205,28 @@ export class ContactUtils extends Utils {
             );
          }
 
-         const deleteResult = await this.dbSession.query(
+         await this.dbSession.query(
             'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
             [userId, contactUserId]
          );
 
-         await this.dbSession.query(
-            `UPDATE contact 
-          SET status = $3
-          WHERE user_id = $1 AND contact_user_id = $2`,
-            [contactUserId, userId, ContactStatus.DELETED]
+         const reverseContactExists = await this.dbSession.query(
+            'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+            [contactUserId, userId]
          );
+
+         if ((reverseContactExists.rowCount ?? 0) > 0) {
+            await this.dbSession.query(`
+               UPDATE contact 
+               SET status = $3
+               WHERE user_id = $1 AND contact_user_id = $2`,
+               [contactUserId, userId, ContactStatus.DELETED]
+            );
+         }
 
          return this.createSuccessResponse(null);
       } catch (error) {
+         console.error('Error deleting contact:', error);
          return this.createErrorResponse(
             StatusCodes.INTERNAL_SERVER_ERROR,
             `Failed to delete contact relationship.`
