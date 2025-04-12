@@ -33,7 +33,8 @@ describe('AppSidebar.vue', () => {
   
   vi.mock('import.meta', () => ({
     env: {
-      VITE_BACKEND_URL: 'http://test-api.com',
+      VITE_BACKEND_URL: 'http://localhost:3000',
+      
     },
   }));
   
@@ -45,7 +46,7 @@ describe('AppSidebar.vue', () => {
     Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
     sessionStorageMock.getItem.mockImplementation((key) => {
       if (key === 'uid') return '1';
-      if (key === 'token') return 'fake-token';
+      if (key === 'token') return '';
       return null;
     });
     
@@ -60,8 +61,28 @@ describe('AppSidebar.vue', () => {
     vi.resetAllMocks();
   });
 
-  it('renders the sidebar component', () => {
+  it('check if the sidebar is rendered correctly', async () => {
     const wrapper = mount(AppSidebar);
+    await flushPromises();
     expect(wrapper.exists()).toBe(true);
   });
+  it('check if the sidebar is closed by default', async () => {
+    const wrapper = mount(AppSidebar);
+    await flushPromises();
+    expect(document.getElementsByTagName('html')[0].style.length).toBe(0);
+  });
+  it('check if sidebar closes when button is clicked', async () => {
+    const wrapper = mount(AppSidebar);
+    await flushPromises()
+
+    const button = wrapper.find('#sidebar-toggle');
+    await button.trigger('click');
+    await nextTick();
+
+    expect(document.getElementsByTagName('html')[0].style.length).toBe(1);
+    expect(document.getElementsByTagName('html')[0].style.getPropertyValue('--sidebar-width')).toBe('48px');
+
+  });
+  
+
 });
