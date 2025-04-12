@@ -78,6 +78,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/AuthStore';
 import { getBackendUrl } from '../../lib/config';
+import type { AuthenticatedUser, User } from '@/models/user-model';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -111,12 +112,21 @@ async function handleLogin() {
     
     const data = await response.json();
     
+    const user: AuthenticatedUser = {
+        uid: data.uid,
+        username : data.username,
+        created_at: data.created_at,
+        token: data.token
+    };
+
+    console.log(data);
+    
     if (!response.ok) {
       throw new Error(data.error || 'Login failed');
     }
     
     authStore.setToken(data.token, rememberMe.value);
-    authStore.setUser(data.user, rememberMe.value);
+    authStore.setUser(user, rememberMe.value);
     
     router.push('/');
   } catch (err) {
