@@ -145,7 +145,6 @@ export class ContactUtils extends Utils {
 
          const currentStatus = contactQuery.rows[0].status;
 
-         // Only allow blocking/unblocking for ACCEPTED contacts
          if (currentStatus !== ContactStatus.ACCEPTED && blocked) {
             return this.createErrorResponse(
                StatusCodes.BAD_REQUEST,
@@ -153,8 +152,6 @@ export class ContactUtils extends Utils {
             );
          }
 
-         // If current status is BLOCKED and we're unblocking, set to ACCEPTED
-         // If current status is ACCEPTED and we're blocking, set to BLOCKED
          const newStatus = blocked ? ContactStatus.BLOCKED : ContactStatus.ACCEPTED;
 
          await this.dbSession.query(
@@ -217,6 +214,138 @@ export class ContactUtils extends Utils {
          return this.createErrorResponse(
             StatusCodes.INTERNAL_SERVER_ERROR,
             `Failed to delete contact relationship.`
+         );
+      }
+   }
+
+   /**
+    * Accepts a pending contact request
+    * @param userId The ID of the user accepting the request
+    * @param contactUserId The ID of the user who sent the request
+    * @returns A BaseResponse indicating success or failure
+    */
+   public async acceptContact(userId: number, contactUserId: number): Promise<BaseResponse<null>> {
+      if (!this.isValidUserId(userId) || !this.isValidUserId(contactUserId)) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Invalid user ID'
+         );
+      }
+
+      try {
+         const contactQuery = await this.dbSession.query(
+            'SELECT status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+            [userId, contactUserId]
+         );
+
+         if (contactQuery.rowCount === 0) {
+            return this.createErrorResponse(
+               StatusCodes.NOT_FOUND,
+               'Contact not found'
+            );
+         }
+
+         const currentStatus = contactQuery.rows[0].status;
+
+         if (currentStatus !== ContactStatus.INCOMING_REQUEST) {
+            return this.createErrorResponse(
+               StatusCodes.BAD_REQUEST,
+               'Only incoming contact requests can be accepted'
+            );
+         }
+
+         const recipientResult = await this.dbSession.query(
+            `UPDATE contact
+            SET status = $3
+            WHERE user_id = $1 AND contact_user_id = $2 AND status = $4`,
+            [userId, contactUserId, ContactStatus.ACCEPTED, ContactStatus.INCOMING_REQUEST]
+         );
+
+         const initiatorResult = await this.dbSession.query(
+            `UPDATE contact
+            SET status = $3
+            WHERE user_id = $1 AND contact_user_id = $2 AND status = $4`,
+            [contactUserId, userId, ContactStatus.ACCEPTED, ContactStatus.OUTGOING_REQUEST]
+         );
+
+         if (recipientResult.rowCount === 0) {
+            return this.createErrorResponse(
+               StatusCodes.NOT_FOUND,
+               'No pending contact request found'
+            );
+         }
+
+         return this.createSuccessResponse(null);
+      } catch (error) {
+         return this.createErrorResponse(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `Failed to accept contact request.`
+         );
+      }
+   }
+
+   /**
+    * Rejects a pending contact request
+    * @param userId The ID of the user rejecting the request
+    * @param contactUserId The ID of the user who sent the request
+    * @returns A BaseResponse indicating success or failure
+    */
+   public async rejectContact(userId: number, contactUserId: number): Promise<BaseResponse<null>> {
+      if (!this.isValidUserId(userId) || !this.isValidUserId(contactUserId)) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Invalid user ID'
+         );
+      }
+
+      try {
+         const contactQuery = await this.dbSession.query(
+            'SELECT status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+            [userId, contactUserId]
+         );
+
+         if (contactQuery.rowCount === 0) {
+            return this.createErrorResponse(
+               StatusCodes.NOT_FOUND,
+               'Contact not found'
+            );
+         }
+
+         const currentStatus = contactQuery.rows[0].status;
+
+         if (currentStatus !== ContactStatus.INCOMING_REQUEST) {
+            return this.createErrorResponse(
+               StatusCodes.BAD_REQUEST,
+               'Only incoming contact requests can be rejected'
+            );
+         }
+
+         const recipientResult = await this.dbSession.query(
+            `UPDATE contact
+            SET status = $3
+            WHERE user_id = $1 AND contact_user_id = $2 AND status = $4`,
+            [userId, contactUserId, ContactStatus.REJECTED, ContactStatus.INCOMING_REQUEST]
+         );
+
+         const initiatorResult = await this.dbSession.query(
+            `UPDATE contact
+            SET status = $3
+            WHERE user_id = $1 AND contact_user_id = $2 AND status = $4`,
+            [contactUserId, userId, ContactStatus.REJECTED, ContactStatus.OUTGOING_REQUEST]
+         );
+
+         if (recipientResult.rowCount === 0) {
+            return this.createErrorResponse(
+               StatusCodes.NOT_FOUND,
+               'No pending contact request found'
+            );
+         }
+
+         return this.createSuccessResponse(null);
+      } catch (error) {
+         return this.createErrorResponse(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `Failed to reject contact request.`
          );
       }
    }
