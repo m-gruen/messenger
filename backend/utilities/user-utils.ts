@@ -123,7 +123,8 @@ export class UserUtils extends Utils {
                 'User not found'
             );
         }
-
+        
+        
         const user: AuthenticatedUser = result.rows[0];
         return this.createSuccessResponse(user);
     }

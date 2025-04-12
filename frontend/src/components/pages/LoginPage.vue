@@ -78,7 +78,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/AuthStore';
 import { getBackendUrl } from '../../lib/config';
-import type { AuthenticatedUser, User } from '@/models/user-model';
+import type { AuthenticatedUser } from '@/models/user-model';
 
 const router = useRouter();
 const authStore = useAuthStore();
