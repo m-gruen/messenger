@@ -2,23 +2,30 @@ import { Router, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
 import { DbSession } from '../db';
 import { MessageResponse, MessageUtils } from '../utilities/message-utils';
+import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-middleware';
 
 export const msgRouter = Router();
 
-msgRouter.get('/', async (req: Request, res: Response) => {
-   const sender_uid: number = parseInt(req.query.sender_uid as string);
-   const receiver_uid: number = parseInt(req.query.receiver_uid as string);
-
+msgRouter.get('/:userId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+   const userId = parseInt(req.params.userId);
+   const receiverId = parseInt(req.query.receiverId as string);
+   
+   if (userId !== req.user?.uid) {
+      res.status(StatusCodes.FORBIDDEN).send({
+         error: 'You can only access your own messages'
+      });
+      return;
+   }
+   
    let dbSession = await DbSession.create(true);
    try {
       const msgUtils = new MessageUtils(dbSession);
 
-      const response: MessageResponse = await msgUtils.fetchMessage(sender_uid, receiver_uid);
+      const response: MessageResponse = await msgUtils.fetchMessage(userId, receiverId);
 
       res.status(response.statusCode).json(
          response.data !== null ? response.data : { error: response.error }
       );
-
    } catch (error) {
       console.error(error);
       res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
@@ -29,14 +36,23 @@ msgRouter.get('/', async (req: Request, res: Response) => {
    }
 });
 
-msgRouter.post('/', async (req: Request, res: Response) => {
-   const { sender_uid, receiver_uid, content } = req.body;
+msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+   const userId = parseInt(req.params.userId);
+   const receiverId = parseInt(req.params.receiverId);
+   const { content } = req.body;
+
+   if (userId !== req.user?.uid) {
+      res.status(StatusCodes.FORBIDDEN).send({
+         error: 'You can only send messages as yourself'
+      });
+      return;
+   }
 
    let dbSession = await DbSession.create(false);
    try {
       const msgUtils = new MessageUtils(dbSession);
 
-      const response: MessageResponse = await msgUtils.sendMessage(sender_uid, receiver_uid, content);
+      const response: MessageResponse = await msgUtils.sendMessage(userId, receiverId, content);
 
       await dbSession.complete(response.statusCode === StatusCodes.OK);
 
