@@ -1,6 +1,6 @@
 import { DbSession } from '../db';
 import { User } from '../models/user-model';
-import { Contact } from "../models/contact-model.js";
+import { Contact, ContactStatus } from "../models/contact-model";
 import { StatusCodes } from 'http-status-codes';
 import { Utils, BaseResponse } from './utils';
 
@@ -29,7 +29,7 @@ export class ContactUtils extends Utils {
       }
 
       const contactsResult = await this.dbSession.query(`
-         SELECT a.uid, a.username, a.created_at, c.blocked, c.status
+         SELECT a.uid, a.username, a.created_at, c.status
          FROM contact c
          JOIN account a ON c.contact_user_id = a.uid
          WHERE c.user_id = $1
@@ -39,11 +39,10 @@ export class ContactUtils extends Utils {
 
       const contacts: Contact[] = contactsResult.rows.map(row => ({
          contactId: row.contact_id,
-         userId: uid, 
+         userId: uid,
          contactUserId: row.uid,
          username: row.username,
          createdAt: row.created_at,
-         blocked: row.blocked,
          status: row.status
       }));
 
@@ -73,7 +72,7 @@ export class ContactUtils extends Utils {
 
       const userExists = await this.userExists(userId);
       const contactExists = await this.userExists(contactUserId);
-      
+
       if (!userExists || !contactExists) {
          return this.createErrorResponse(
             StatusCodes.NOT_FOUND,
@@ -95,9 +94,15 @@ export class ContactUtils extends Utils {
          }
 
          await this.dbSession.query(
-            `INSERT INTO contact (user_id, contact_user_id)
-            VALUES ($1, $2)`,
-            [userId, contactUserId]
+            `INSERT INTO contact (user_id, contact_user_id, status)
+            VALUES ($1, $2, $3)`,
+            [userId, contactUserId, ContactStatus.OUTGOING_REQUEST]
+         );
+
+         await this.dbSession.query(
+            `INSERT INTO contact (user_id, contact_user_id, status)
+            VALUES ($1, $2, $3)`,
+            [contactUserId, userId, ContactStatus.INCOMING_REQUEST]
          );
 
          return this.createSuccessResponse(null, StatusCodes.CREATED);
@@ -111,10 +116,10 @@ export class ContactUtils extends Utils {
    }
 
    /**
-    * Updates the blocked status of a contact
+    * Updates the contact status to blocked or accepted
     * @param userId The ID of the user
     * @param contactUserId The ID of the contact to update
-    * @param blocked The new blocked status
+    * @param blocked Whether to block the contact (true) or unblock (false)
     * @returns A BaseResponse indicating success or failure
     */
    public async updateContactBlockStatus(userId: number, contactUserId: number, blocked: boolean): Promise<BaseResponse<null>> {
@@ -126,19 +131,38 @@ export class ContactUtils extends Utils {
       }
 
       try {
-         const result = await this.dbSession.query(
-            `UPDATE contact
-            SET blocked = $3
-            WHERE user_id = $1 AND contact_user_id = $2`,
-            [userId, contactUserId, blocked]
+         const contactQuery = await this.dbSession.query(
+            'SELECT status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+            [userId, contactUserId]
          );
 
-         if (result.rowCount === 0) {
+         if (contactQuery.rowCount === 0) {
             return this.createErrorResponse(
                StatusCodes.NOT_FOUND,
                'Contact not found'
             );
          }
+
+         const currentStatus = contactQuery.rows[0].status;
+
+         // Only allow blocking/unblocking for ACCEPTED contacts
+         if (currentStatus !== ContactStatus.ACCEPTED && blocked) {
+            return this.createErrorResponse(
+               StatusCodes.BAD_REQUEST,
+               'Only accepted contacts can be blocked'
+            );
+         }
+
+         // If current status is BLOCKED and we're unblocking, set to ACCEPTED
+         // If current status is ACCEPTED and we're blocking, set to BLOCKED
+         const newStatus = blocked ? ContactStatus.BLOCKED : ContactStatus.ACCEPTED;
+
+         await this.dbSession.query(
+            `UPDATE contact
+          SET status = $3
+          WHERE user_id = $1 AND contact_user_id = $2`,
+            [userId, contactUserId, newStatus]
+         );
 
          return this.createSuccessResponse(null);
       } catch (error) {
@@ -150,8 +174,8 @@ export class ContactUtils extends Utils {
    }
 
    /**
-    * Deletes a contact
-    * @param userId The ID of the user
+    * Deletes a contact relationship for the requesting user and marks it as deleted for the other user
+    * @param userId The ID of the user requesting deletion
     * @param contactUserId The ID of the contact to delete
     * @returns A BaseResponse indicating success or failure
     */
@@ -164,24 +188,35 @@ export class ContactUtils extends Utils {
       }
 
       try {
-         const result = await this.dbSession.query(
-            `DELETE FROM contact
-            WHERE user_id = $1 AND contact_user_id = $2`,
+         const contactExists = await this.dbSession.query(
+            'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
             [userId, contactUserId]
          );
 
-         if (result.rowCount === 0) {
+         if (contactExists.rowCount === 0) {
             return this.createErrorResponse(
                StatusCodes.NOT_FOUND,
                'Contact not found'
             );
          }
 
+         const deleteResult = await this.dbSession.query(
+            'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+            [userId, contactUserId]
+         );
+
+         await this.dbSession.query(
+            `UPDATE contact 
+          SET status = $3
+          WHERE user_id = $1 AND contact_user_id = $2`,
+            [contactUserId, userId, ContactStatus.DELETED]
+         );
+
          return this.createSuccessResponse(null);
       } catch (error) {
          return this.createErrorResponse(
             StatusCodes.INTERNAL_SERVER_ERROR,
-            `Failed to delete contact.`
+            `Failed to delete contact relationship.`
          );
       }
    }

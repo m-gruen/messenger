@@ -105,12 +105,12 @@ export class DbSession {
                     contact_id SERIAL PRIMARY KEY,
                     user_id INTEGER NOT NULL,
                     contact_user_id INTEGER NOT NULL,
-                    status VARCHAR(20) NOT NULL DEFAULT 'accepted',
-                    blocked BOOLEAN NOT NULL DEFAULT FALSE,
+                    status VARCHAR(20) NOT NULL DEFAULT 'incoming_request',
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES account(uid),
                     FOREIGN KEY (contact_user_id) REFERENCES account(uid),
-                    UNIQUE (user_id, contact_user_id)
+                    UNIQUE (user_id, contact_user_id),
+                    CHECK (status IN ('incoming_request', 'outgoing_request', 'accepted', 'rejected', 'blocked'))
                 )`
             ];
             
