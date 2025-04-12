@@ -21,19 +21,16 @@ Content-Type: application/json
 
 ###
 @authToken = {{login.response.body.token}}
+@userId = {{login.response.body.uid}}
 
 ### GET USER BY UID
-GET {{baseUrl}}/user/1
+GET {{baseUrl}}/user/{{userId}}
 Authorization: Bearer {{authToken}}
-
-### GET MESSAGES BY SENDER AND RECEIVER UID
-GET http://localhost:3000/message?sender_uid=1&receiver_uid=2
-Content-Type: application/json
 
 ### USER UPDATE AND DELETE TEST CASES
 
 ### Update user (authorized) - Change username
-PUT {{baseUrl}}/user/1
+PUT {{baseUrl}}/user/{{userId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
@@ -42,7 +39,7 @@ Content-Type: application/json
 }
 
 ### Update user (authorized) - Change password
-PUT {{baseUrl}}/user/1
+PUT {{baseUrl}}/user/{{userId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
@@ -51,7 +48,7 @@ Content-Type: application/json
 }
 
 ### Update user (authorized) - Change both username and password
-PUT {{baseUrl}}/user/1
+PUT {{baseUrl}}/user/{{userId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
@@ -61,7 +58,7 @@ Content-Type: application/json
 }
 
 ### Update user without any data to update
-PUT {{baseUrl}}/user/1
+PUT {{baseUrl}}/user/{{userId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
@@ -69,41 +66,55 @@ Content-Type: application/json
 }
 
 ### Delete user (authorized)
-DELETE {{baseUrl}}/user/1
+DELETE {{baseUrl}}/user/{{userId}}
 Authorization: Bearer {{authToken}}
 
 ### MESSAGE TEST CASES
 
-### Send message 
-POST {{baseUrl}}/message
+### Get messages with another user
+GET {{baseUrl}}/message/{{userId}}?receiverId=2
+Authorization: Bearer {{authToken}}
+
+### Get messages (unauthorized - wrong user)
+GET {{baseUrl}}/message/2?receiverId=1
+Authorization: Bearer {{authToken}}
+
+### Send message
+POST {{baseUrl}}/message/{{userId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-    "sender_uid": 1,
-    "receiver_uid": 2,
-    "content": "Hello, this is another test message."
+    "receiverId": 2,
+    "content": "Hello, this is a test message."
 }
 
-### Send message to no contact user
-POST {{baseUrl}}/message
+### Send message (unauthorized - wrong user)
+POST {{baseUrl}}/message/2
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-    "sender_uid": 1,
-    "receiver_uid": 5,
-    "content": "Hello, this is a test message with a different content."
+    "receiverId": 1,
+    "content": "This should fail because we're trying to send as user 2."
 }
 
-### Send message to blocked user 
-POST {{baseUrl}}/message
+### Send message to non-contact user
+POST {{baseUrl}}/message/{{userId}}
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
 {
-    "sender_uid": 1,
-    "receiver_uid": 4,
+    "receiverId": 5,
+    "content": "Hello, this is a test message to a non-contact."
+}
+
+### Send message to blocked user
+POST {{baseUrl}}/message/{{userId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "receiverId": 4,
     "content": "Hello, this is a test message to a blocked user."
 }
-
