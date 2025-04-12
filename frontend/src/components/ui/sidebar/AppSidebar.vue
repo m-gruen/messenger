@@ -24,7 +24,7 @@ import {
 } from "lucide-vue-next"
 
 
-const currentUserId = (parseInt(sessionStorage.getItem('userId') || '0', 10))
+const currentUserId = (parseInt(sessionStorage.getItem('uid') || '0', 10))
 
 const items = [
   { title: "Home", url: "#", icon: Home },
@@ -50,7 +50,6 @@ const messagesError = ref<string | null>(null)
 async function fetchContacts(userId: number) {
   isLoading.value = true
   error.value = null
-
   try {
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
     const response = await fetch(`${backendUrl}/contact/${userId}`, {
