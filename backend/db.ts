@@ -90,7 +90,11 @@ export class DbSession {
                     uid SERIAL PRIMARY KEY,
                     username VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
-                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    display_name VARCHAR(255),
+                    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+                    shadow_mode BOOLEAN NOT NULL DEFAULT FALSE,
+                    full_name_search BOOLEAN NOT NULL DEFAULT FALSE
                 )`,
                 `CREATE TABLE IF NOT EXISTS message (
                     mid SERIAL PRIMARY KEY,
