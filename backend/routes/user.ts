@@ -7,13 +7,17 @@ import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-midd
 export const userRouter = Router();
 
 userRouter.post('/', async (req: Request, res: Response) => {
-    const { username, password } = req.body;
+    const { username, password, displayName } = req.body;
 
     let dbSession = await DbSession.create(false);
     try {
         const userUtils = new UserUtils(dbSession);
 
-        const response: UserResponse = await userUtils.createUser(username, password);
+        const response: UserResponse = await userUtils.createUser(
+            username, 
+            password, 
+            displayName
+        );
 
         res.status(response.statusCode).json(
             response.data !== null ? response.data : { error: response.error }
@@ -107,7 +111,7 @@ userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, 
 
 userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid = parseInt(req.params.uid);
-    const { username, password } = req.body;
+    const { username, password, displayName, shadowMode, fullNameSearch } = req.body;
 
     if (uid !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).json({
@@ -116,9 +120,13 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
         return;
     }
 
-    if (!username && !password) {
+    if (username === undefined && 
+        password === undefined && 
+        displayName === undefined && 
+        shadowMode === undefined && 
+        fullNameSearch === undefined) {
         res.status(StatusCodes.BAD_REQUEST).json({
-            error: 'Must provide either username or password to update'
+            error: 'Must provide at least one field to update'
         });
         return;
     }
@@ -127,7 +135,13 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
     try {
         const userUtils = new UserUtils(dbSession);
 
-        const result = await userUtils.updateUser(uid, username, password);
+        const result = await userUtils.updateUser(uid, {
+            username,
+            password,
+            displayName,
+            shadowMode,
+            fullNameSearch
+        });
 
         await dbSession.complete(result.statusCode === StatusCodes.OK);
 
