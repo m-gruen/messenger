@@ -130,7 +130,7 @@ export class UserUtils extends Utils {
                 full_name_search: result.rows[0].full_name_search,
                 token: token
             };
-            
+
             return this.createSuccessResponse(user, StatusCodes.CREATED);
         } catch (error) {
             console.error('Error creating user:', error);
@@ -242,7 +242,7 @@ export class UserUtils extends Utils {
     }
 
     /**
-     * Soft deletes a user account by marking them as deleted rather than removing them
+     * Soft deletes a user account by scrubbing their data and marking them as deleted
      * @param uid The user ID to delete
      * @returns A BaseResponse object containing statusCode and optional error message
      */
@@ -265,14 +265,20 @@ export class UserUtils extends Utils {
         try {
             const randomString = Math.random().toString(36).substring(2, 10);
             const deletedUsername = `Deleted User #${randomString}`;
-
+            
+            const impossibleHash = '$argon2id$v=99$IMPOSSIBLE-HASH-NOT-VALID$' + randomString;
+            
             const result = await this.dbSession.query(`
             UPDATE account 
-            SET is_deleted = TRUE, 
-                username = $2, 
-                display_name = NULL 
+            SET is_deleted = TRUE,
+                username = $2,
+                display_name = NULL,
+                password_hash = $3,
+                created_at = TO_TIMESTAMP(0),
+                shadow_mode = FALSE,
+                full_name_search = FALSE
             WHERE uid = $1`,
-                [uid, deletedUsername]
+                [uid, deletedUsername, impossibleHash]
             );
 
             if (result.rowCount === 0) {
