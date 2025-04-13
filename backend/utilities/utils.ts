@@ -25,7 +25,25 @@ export abstract class Utils {
      * @returns True if valid, false otherwise
      */
     public isValidUserId(uid: number): boolean {
-        return !isNaN(uid) && uid > 0 && Number.isInteger(uid);
+        return this.isValidId(uid);
+    }
+
+    /**
+     * Validates if a contact ID is in the correct format
+     * @param contactId The contact ID to validate
+     * @returns True if valid, false otherwise
+     */
+    public isValidContactId(contactId: number): boolean {
+        return this.isValidId(contactId);
+    }
+
+    /**
+     * Validates if an ID is in the correct format
+     * @param id The id to validate
+     * @returns True if valid, false otherwise
+     */
+    public isValidId(id: number): boolean {
+        return !isNaN(id) && id > 0 && Number.isInteger(id);
     }
 
     /**
