@@ -1,4 +1,4 @@
-import { AuthenticatedUser } from '../models/user-model';
+import { AuthenticatedUser, User } from '../models/user-model';
 import { StatusCodes } from 'http-status-codes';
 import argon2 from '@node-rs/argon2';
 import { Utils, BaseResponse } from './utils';
@@ -265,9 +265,9 @@ export class UserUtils extends Utils {
         try {
             const randomString = Math.random().toString(36).substring(2, 10);
             const deletedUsername = `Deleted User #${randomString}`;
-            
+
             const impossibleHash = '$argon2id$v=99$IMPOSSIBLE-HASH-NOT-VALID$' + randomString;
-            
+
             const result = await this.dbSession.query(`
             UPDATE account 
             SET is_deleted = TRUE,
@@ -465,6 +465,57 @@ export class UserUtils extends Utils {
             return this.createErrorResponse(
                 StatusCodes.INTERNAL_SERVER_ERROR,
                 'An unexpected error occurred while updating the user.'
+            );
+        }
+    }
+
+    /**
+     * Searches for users based on username query with privacy considerations
+     * @param query The search query to find users by username
+     * @param limit Maximum number of results to return
+     * @returns A BaseResponse containing user search results
+     */
+    public async searchUsers(query: string, limit: number): Promise<BaseResponse<User[]>> {
+        if (!this.isValidString(query)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Search query is required'
+            );
+        }
+
+        if (!this.isValidId(limit) || limit <= 0 || limit > 100) {
+            limit = 20;
+        }
+
+        try {
+            const searchResults = await this.dbSession.query(`
+                SELECT uid, username, display_name, created_at
+                FROM account
+                WHERE 
+                    (shadow_mode IS NULL OR shadow_mode = false)
+                    AND (is_deleted IS NULL OR is_deleted = false)
+                    AND (
+                        ((full_name_search IS NULL OR full_name_search = false) AND username ILIKE $1)
+                        OR
+                        (full_name_search = true AND username = $2)
+                    )
+                ORDER BY username ASC
+                LIMIT $3
+            `, [`%${query}%`, query, limit]);
+
+            const users: User[] = searchResults.rows.map(row => ({
+                uid: row.uid,
+                username: row.username,
+                display_name: row.display_name,
+                created_at: row.created_at
+            }));
+
+            return this.createSuccessResponse(users);
+        } catch (error) {
+            console.error('Error searching for users:', error);
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'Failed to search for users'
             );
         }
     }
