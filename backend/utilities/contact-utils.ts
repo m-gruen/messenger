@@ -137,6 +137,23 @@ export class ContactUtils extends Utils {
          );
       }
 
+      if (userId === contactUserId) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Cannot block or unblock yourself'
+         );
+      }
+
+      const userExists = await this.userExists(userId);
+      const contactExists = await this.userExists(contactUserId);
+
+      if (!userExists || !contactExists) {
+         return this.createErrorResponse(
+            StatusCodes.NOT_FOUND,
+            'User not found'
+         );
+      }
+
       try {
          const contactQuery = await this.dbSession.query(
             'SELECT status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
@@ -200,6 +217,23 @@ export class ContactUtils extends Utils {
          );
       }
 
+      if (userId === contactUserId) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Cannot delete yourself as a contact'
+         );
+      }
+
+      const userExists = await this.userExists(userId);
+      const contactExists = await this.userExists(contactUserId);
+
+      if (!userExists || !contactExists) {
+         return this.createErrorResponse(
+            StatusCodes.NOT_FOUND,
+            'User not found'
+         );
+      }
+
       try {
          const contactExists = await this.dbSession.query(
             'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
@@ -229,6 +263,63 @@ export class ContactUtils extends Utils {
                SET status = $3
                WHERE user_id = $1 AND contact_user_id = $2`,
                [contactUserId, userId, ContactStatus.DELETED]
+            );
+         }
+
+         return this.createSuccessResponse(null);
+      } catch (error) {
+         console.error('Error deleting contact:', error);
+         return this.createErrorResponse(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            `Failed to delete contact relationship.`
+         );
+      }
+   }
+
+   /**
+    * Deletes a contact relationship by contact ID
+    * @param contactId The ID of the contact to delete
+    * @returns A BaseResponse indicating success or failure
+    */
+   public async deleteContactViaContactId(contactId: number): Promise<BaseResponse<null>> {
+      if (!this.isValidContactId(contactId)) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Invalid contact ID'
+         );
+      }
+
+      try {
+         const contactQuery = await this.dbSession.query(
+            'SELECT user_id, contact_user_id FROM contact WHERE contact_id = $1',
+            [contactId]
+         );
+
+         if (contactQuery.rowCount === 0) {
+            return this.createErrorResponse(
+               StatusCodes.NOT_FOUND,
+               'Contact not found'
+            );
+         }
+
+         const { user_id, contact_user_id } = contactQuery.rows[0];
+
+         await this.dbSession.query(
+            'DELETE FROM contact WHERE contact_id = $1',
+            [contactId]
+         );
+
+         const reverseContactExists = await this.dbSession.query(
+            'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+            [contact_user_id, user_id]
+         );
+
+         if ((reverseContactExists.rowCount ?? 0) > 0) {
+            await this.dbSession.query(`
+            UPDATE contact 
+            SET status = $3
+            WHERE user_id = $1 AND contact_user_id = $2`,
+               [contact_user_id, user_id, ContactStatus.DELETED]
             );
          }
 
@@ -356,6 +447,22 @@ export class ContactUtils extends Utils {
          );
       }
 
+      if (userId === contactUserId) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Cannot accept your own contact request'
+         );
+      }
+
+      const userExists = await this.userExists(userId);
+      const contactExists = await this.userExists(contactUserId);
+      if (!userExists || !contactExists) {
+         return this.createErrorResponse(
+            StatusCodes.NOT_FOUND,
+            'User not found'
+         );
+      }
+
       try {
          const contactQuery = await this.dbSession.query(
             'SELECT status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
@@ -420,6 +527,23 @@ export class ContactUtils extends Utils {
          return this.createErrorResponse(
             StatusCodes.BAD_REQUEST,
             'Invalid user ID'
+         );
+      }
+
+      if (userId === contactUserId) {
+         return this.createErrorResponse(
+            StatusCodes.BAD_REQUEST,
+            'Cannot reject your own contact request'
+         );
+      }
+
+      const userExists = await this.userExists(userId);
+      const contactExists = await this.userExists(contactUserId);
+
+      if (!userExists || !contactExists) {
+         return this.createErrorResponse(
+            StatusCodes.NOT_FOUND,
+            'User not found'
          );
       }
 
