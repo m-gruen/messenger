@@ -11,6 +11,10 @@ table(Account) {
     column(username) : varchar(255) <<unique>>
     column(password_hash) : varchar(255)
     column(created_at) : timestamp
+    column(display_name) : varchar(255)
+    column(is_deleted) : boolean
+    column(shadow_mode) : boolean
+    column(full_name_search) : boolean
 }
 
 table(Message) {
@@ -37,7 +41,5 @@ Account ||--o{ Message : sends
 Account ||--o{ Message : receives
 Account ||--o{ Contact : has
 Account ||--o{ Contact : is contacted by
-
-
 
 @enduml
