@@ -339,4 +339,138 @@ describe('ContactUtils', () => {
             ]);
         });
     });
+
+    describe('acceptContact', () => {
+        it('should return an error response for invalid user IDs', async () => {
+            const result = await contactUtils.acceptContact(-1, 2);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if user tries to accept their own request', async () => {
+            const result = await contactUtils.acceptContact(1, 1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Cannot accept your own contact request');
+        });
+
+        it('should return an error response if user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValue({ rowCount: 0 });
+            const result = await contactUtils.acceptContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an error response if contact does not exist', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 0 }); // no existing contact
+
+            const result = await contactUtils.acceptContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('Contact not found');
+        });
+
+        it('should return an error response if contact is not in incoming request status', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.ACCEPTED }] }); // contact already accepted
+
+            const result = await contactUtils.acceptContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Only incoming contact requests can be accepted');
+        });
+
+        it('should return an error response if no pending contact request is found', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.INCOMING_REQUEST }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 0 }); // no pending contact request
+
+            const result = await contactUtils.acceptContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('No pending contact request found');
+        });
+
+        it('should accept the contact request and return a success response', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.INCOMING_REQUEST }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // update query
+
+            const result = await contactUtils.acceptContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+        });
+    });
+
+    describe('rejectContact', () => {
+        it('should return an error response for invalid user IDs', async () => {
+            const result = await contactUtils.rejectContact(-1, 2);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if user tries to reject their own request', async () => {
+            const result = await contactUtils.rejectContact(1, 1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Cannot reject your own contact request');
+        });
+
+        it('should return an error response if user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValue({ rowCount: 0 });
+            const result = await contactUtils.rejectContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an error response if contact does not exist', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 0 }); // no existing contact
+
+            const result = await contactUtils.rejectContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('Contact not found');
+        });
+
+        it('should return an error response if contact is not in incoming request status', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.ACCEPTED }] }); // contact already accepted
+
+            const result = await contactUtils.rejectContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Only incoming contact requests can be rejected');
+        });
+
+        it('should return an error response if no pending contact request is found', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.INCOMING_REQUEST }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 0 }); // no pending contact request
+
+            const result = await contactUtils.rejectContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('No pending contact request found');
+        });
+
+        it('should reject the contact request and return a success response', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.INCOMING_REQUEST }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // update query
+
+            const result = await contactUtils.rejectContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+        });
+    });
 });
