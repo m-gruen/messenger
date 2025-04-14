@@ -257,4 +257,86 @@ describe('ContactUtils', () => {
             expect(result.data).toBeNull();
         });
     });
+
+    describe('getIncomingRequests', () => {
+        it('should return an error response for invalid user ID', async () => {
+            const result = await contactUtils.getIncomingRequests(-1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValue({ rowCount: 0 });
+            const result = await contactUtils.getIncomingRequests(1);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an empty list if the user has no incoming requests', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 })
+                .mockResolvedValueOnce({ rows: [] }); // No incoming requests
+
+            const result = await contactUtils.getIncomingRequests(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toEqual([]);
+        });
+
+        it('should return a success response with incoming requests', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 })
+                .mockResolvedValueOnce({
+                    rows: [
+                        { contact_id: 1, uid: 2, username: 'John', created_at: '2023-01-01', status: ContactStatus.INCOMING_REQUEST }
+                    ]
+                });
+
+            const result = await contactUtils.getIncomingRequests(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toEqual([
+                { contactId: 1, userId: 1, contactUserId: 2, username: 'John', createdAt: '2023-01-01', status: ContactStatus.INCOMING_REQUEST }
+            ]);
+        });
+    });
+
+    describe('getOutgoingRequests', () => {
+        it('should return an error response for invalid user ID', async () => {
+            const result = await contactUtils.getOutgoingRequests(-1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValue({ rowCount: 0 });
+            const result = await contactUtils.getOutgoingRequests(1);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an empty list if the user has no outgoing requests', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 })
+                .mockResolvedValueOnce({ rows: [] }); // No outgoing requests
+
+            const result = await contactUtils.getOutgoingRequests(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toEqual([]);
+        });
+
+        it('should return a success response with outgoing requests', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 })
+                .mockResolvedValueOnce({
+                    rows: [
+                        { contact_id: 1, uid: 2, username: 'John', created_at: '2023-01-01', status: ContactStatus.OUTGOING_REQUEST }
+                    ]
+                });
+
+            const result = await contactUtils.getOutgoingRequests(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toEqual([
+                { contactId: 1, userId: 1, contactUserId: 2, username: 'John', createdAt: '2023-01-01', status: ContactStatus.OUTGOING_REQUEST }
+            ]);
+        });
+    });
 });
