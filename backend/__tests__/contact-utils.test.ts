@@ -15,6 +15,145 @@ describe('ContactUtils', () => {
         contactUtils = new ContactUtils(dbSessionMock);
     });
 
+    describe('Database error handling', () => {
+        it('should handle database query errors when fetching contacts', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // User exists
+                .mockRejectedValueOnce(new Error('Database connection error'));
+
+            const result = await contactUtils.getContacts(1);
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('Failed to fetch contacts.');
+        });
+
+        it('should handle database query errors when adding a contact', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 0 }) // No existing contact
+                .mockRejectedValueOnce(new Error('Database transaction failed'));
+
+            const result = await contactUtils.addContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('Failed to add contact.');
+        });
+
+        it('should handle database query errors when updating block status', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockRejectedValueOnce(new Error('Database timeout'));
+
+            const result = await contactUtils.updateContactBlockStatus(1, 2, true);
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('Failed to update contact.');
+        });
+    });
+
+    describe('Data mapping validation', () => {
+        it('should correctly map DB response with null values to Contact objects', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // User exists
+                .mockResolvedValueOnce({
+                    rows: [
+                        {
+                            contact_id: 1,
+                            uid: 2,
+                            username: 'John',
+                            created_at: null,  // null date
+                            status: ContactStatus.ACCEPTED
+                        }
+                    ]
+                });
+
+            const result = await contactUtils.getContacts(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeDefined();
+            // Use non-null assertion operator since we've verified data exists
+            expect(result.data![0].createdAt).toBeNull();
+        });
+
+        it('should handle incomplete DB response row data', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // User exists
+                .mockResolvedValueOnce({
+                    rows: [
+                        {
+                            contact_id: 1,
+                            userId: 2,
+                            // contactUser is missing
+                            created_at: '2023-01-01',
+                            status: ContactStatus.ACCEPTED
+                        }
+                    ]
+                });
+
+            const result = await contactUtils.getContacts(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeDefined();
+            expect(result.data![0].contactUserId).toBeUndefined();
+        });
+    });
+
+    describe('Invalid status transitions', () => {
+        it('should return an error when trying to block a contact with OUTGOING_REQUEST status', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.OUTGOING_REQUEST }] }); // outgoing request
+
+            const result = await contactUtils.updateContactBlockStatus(1, 2, true);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Only accepted contacts can be blocked');
+        });
+
+        it('should return an error when trying to accept a contact that is not in INCOMING_REQUEST status', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.OUTGOING_REQUEST }] }); // wrong status
+
+            const result = await contactUtils.acceptContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Only incoming contact requests can be accepted');
+        });
+
+        it('should return an error when trying to reject a contact that is not in INCOMING_REQUEST status', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.BLOCKED }] }); // wrong status
+
+            const result = await contactUtils.rejectContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Only incoming contact requests can be rejected');
+        });
+    });
+
+    describe('Authorization edge cases', () => {
+        it('should not find contact when querying with incorrect user ID combination', async () => {
+            // Setup: contact exists between users 1 and 2, but we're trying to access with user 3
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId 3
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId 2
+                .mockResolvedValueOnce({ rowCount: 0 }); // No contact record for user 3 and 2
+
+            const result = await contactUtils.deleteContact(3, 2);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('Contact not found');
+        });
+
+        it('should not find the contact when accessing a contact ID that belongs to another user', async () => {
+            // Setup: contact_id 1 exists but doesn't belong to requesting user
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 0 }); // No contact found with that ID for this user
+
+            const result = await contactUtils.deleteContactViaContactId(1);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('Contact not found');
+        });
+    });
+
     describe('getContacts', () => {
         it('should return an error response for invalid user ID', async () => {
             const result = await contactUtils.getContacts(-1);
