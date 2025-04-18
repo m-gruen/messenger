@@ -11,6 +11,7 @@ export interface Contact {
     contactId: number;
     userId: number;
     contactUserId: number;
+    username: string;
     status: ContactStatus;
     createdAt: Date;
 }
