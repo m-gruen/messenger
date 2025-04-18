@@ -134,4 +134,105 @@ describe('UserUtils', () => {
             expect(result.error).toBe('An unexpected error occurred while creating the user.');
         });
     });
+
+    describe('getUserById', () => {
+        it('should return an error response for an invalid user ID', async () => {
+            const result = await userUtils.getUserById(-1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if the user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0 });
+            const result = await userUtils.getUserById(1);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return a success response with user data', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ uid: 1, username: 'testUser', created_at: new Date(), display_name: 'Test User', is_deleted: false, shadow_mode: false, full_name_search: false }]
+            });
+            const result = await userUtils.getUserById(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data?.username).toBe('testUser');
+        });
+    });
+
+    describe('loginUser', () => {
+        it('should return an error response for invalid username or password', async () => {
+            const result = await userUtils.loginUser('', '');
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Username and password are required');
+        });
+
+        it('should return an error response for an incorrect password', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ uid: 1, username: 'testUser', password_hash: 'hashed-password' }]
+            });
+            (argon2.verify as jest.Mock).mockResolvedValue(false);
+            const result = await userUtils.loginUser('testUser', 'wrong-password');
+            expect(result.statusCode).toBe(StatusCodes.UNAUTHORIZED);
+            expect(result.error).toBe('Invalid username or password');
+        });
+
+        it('should return a success response with user data and token', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ uid: 1, username: 'testUser', password_hash: 'hashed-password', created_at: new Date() }]
+            });
+            (argon2.verify as jest.Mock).mockResolvedValue(true);
+            const result = await userUtils.loginUser('testUser', 'password123');
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data?.username).toBe('testUser');
+        });
+    });
+
+    describe('deleteUser', () => {
+        it('should return an error response for an invalid user ID', async () => {
+            const result = await userUtils.deleteUser(-1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if the user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0 });
+            const result = await userUtils.deleteUser(1);
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an error response if the user deletion fails', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({
+                    rowCount: 1,
+                    rows: [{ uid: 1, username: 'testUser', created_at: new Date(), display_name: 'Test User', is_deleted: false, shadow_mode: false, full_name_search: false }]
+                })
+                .mockRejectedValue(new Error('Database error'));
+
+            const result = await userUtils.deleteUser(1);
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('An unexpected error occurred while deleting the user.');
+        });
+
+        it('should return a success response for a valid user ID', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({
+                    rowCount: 1,
+                    rows: [{ uid: 1, username: 'testUser', created_at: new Date(), display_name: 'Test User', is_deleted: false, shadow_mode: false, full_name_search: false }]
+                }) // user exists
+                .mockResolvedValueOnce({ rowCount: 1 }) // Mock for user update query
+                .mockResolvedValueOnce({
+                    rowCount: 1,
+                    rows: [{ contact_id: 123 }]
+                }) // Mock for contact deletion query
+                .mockResolvedValueOnce({ rowCount: 1 }); // Mock for user deletion query
+
+            const result = await userUtils.deleteUser(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBe(null);
+        });
+    });
 });
