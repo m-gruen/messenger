@@ -65,7 +65,6 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/AuthStore';
 import { apiService } from '../../services/api.service';
-import type { AuthenticatedUser } from '@/models/user-model';
 
 const router = useRouter();
 const authStore = useAuthStore();

@@ -1,18 +1,11 @@
-import type { AuthenticatedUser } from '@/models/user-model';
+import { type AuthenticatedUser } from '@/models/user-model';
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { storageService } from '@/services/storage.service';
 
-interface User {
-  uid: number;
-  username: string;
-  created_at: Date | string;
-  token: string;
-}
-
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(null);
-  const user = ref<User | null>(null);
+  const user = ref<AuthenticatedUser | null>(null);
 
   // Initialize from storage
   const storedToken = storageService.getToken();

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
+import { storageService } from '@/services/storage.service';
 
 import LoginPage from '../components/pages/LoginPage.vue';
 import RegisterPage from '../components/pages/RegisterPage.vue';
@@ -34,7 +35,7 @@ const router = createRouter({
 });
 
 router.beforeEach((to, _, next) => {
-    const isAuthenticated = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const isAuthenticated = storageService.isAuthenticated();
 
     if (to.meta.requiresAuth && !isAuthenticated) {
         next('/login');

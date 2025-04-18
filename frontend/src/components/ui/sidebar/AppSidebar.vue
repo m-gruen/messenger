@@ -41,10 +41,8 @@ async function fetchContacts(userId: number) {
   error.value = null
   
   try {
-    // Use API service instead of direct fetch
     contacts.value = await apiService.getContacts(userId, token);
     
-    // Sort contacts by creation date
     contacts.value = contacts.value.sort((a, b) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
@@ -61,10 +59,8 @@ async function fetchMessages(userId: number, contactId: number) {
   isLoadingMessages.value = true;
   
   try {
-    // Use API service instead of direct fetch
     messages.value = await apiService.getMessages(userId, contactId, token);
     
-    // Sort messages by timestamp
     messages.value = messages.value.sort((a, b) => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     })
@@ -91,7 +87,6 @@ async function sendMessage() {
   if (!newMessage.value.trim() || !selectedContact.value) return;
   
   try {
-    // Use API service instead of direct fetch
     const sentMessage = await apiService.sendMessage(
       currentUserId,
       selectedContact.value.contactUserId,
@@ -99,7 +94,6 @@ async function sendMessage() {
       token
     );
     
-    // Add the new message to the list and refresh messages
     messages.value.push(sentMessage);
     fetchMessages(currentUserId, selectedContact.value.contactUserId);
     newMessage.value = '';
@@ -142,7 +136,6 @@ function formatDate(dateString: string | Date) {
   return date.toLocaleString()
 }
 
-// Helper function to get color class based on contact status
 function getStatusColorClass(status: ContactStatus | string): string {
   switch(status) {
     case ContactStatus.ACCEPTED:
@@ -160,21 +153,20 @@ function getStatusColorClass(status: ContactStatus | string): string {
   }
 }
 
-// Helper function to format status text for display
 function formatStatusText(status: ContactStatus | string): string {
-  if (typeof status === 'string') {
-    // Convert snake_case to Title Case (e.g., incoming_request -> Incoming Request)
-    return status
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  }
+  let statusString: string;
   
-  // If it's an enum value, convert it the same way
-  const statusString = status.toString();
+  if (status === ContactStatus.ACCEPTED) statusString = 'accepted';
+  else if (status === ContactStatus.INCOMING_REQUEST) statusString = 'incoming_request';
+  else if (status === ContactStatus.OUTGOING_REQUEST) statusString = 'outgoing_request';
+  else if (status === ContactStatus.REJECTED) statusString = 'rejected';
+  else if (status === ContactStatus.BLOCKED) statusString = 'blocked';
+  else if (status === ContactStatus.DELETED) statusString = 'deleted';
+  else statusString = status as string;
+  
   return statusString
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 }
 </script>

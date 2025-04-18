@@ -113,10 +113,8 @@ async function handleRegister() {
 
   isLoading.value = true;
   try {
-    // Register the user and get the token directly from registration
     const user = await apiService.register(username.value, password.value);
     
-    // Save authentication data
     authStore.setToken(user.token, rememberMe.value);
     authStore.setUser(user, rememberMe.value);
 
