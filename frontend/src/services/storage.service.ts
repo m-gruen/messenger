@@ -1,15 +1,12 @@
 import type { AuthenticatedUser } from '@/models/user-model';
 
-/**
- * Service responsible for handling all storage operations (localStorage and sessionStorage)
- */
 export class StorageService {
     /**
      * Store token in localStorage (persistent) or sessionStorage (temporary)
      * @param token JWT token
      * @param persistent Whether to store in localStorage (true) or sessionStorage (false)
      */
-    storeToken(token: string, persistent: boolean = false): void {
+    public storeToken(token: string, persistent: boolean = false): void {
         if (persistent) {
             localStorage.setItem('token', token);
         } else {
@@ -22,7 +19,7 @@ export class StorageService {
      * @param user User data to store
      * @param persistent Whether to store in localStorage (true) or sessionStorage (false)
      */
-    storeUser(user: AuthenticatedUser, persistent: boolean = false): void {
+    public storeUser(user: AuthenticatedUser, persistent: boolean = false): void {
         if (persistent) {
             localStorage.setItem('user', JSON.stringify(user));
         } else {
@@ -39,7 +36,7 @@ export class StorageService {
      * Get token from localStorage or sessionStorage
      * @returns Token string or null if not found
      */
-    getToken(): string | null {
+    public getToken(): string | null {
         return localStorage.getItem('token') || sessionStorage.getItem('token');
     }
 
@@ -47,7 +44,7 @@ export class StorageService {
      * Get user data from localStorage or sessionStorage
      * @returns User object or null if not found
      */
-    getUser(): AuthenticatedUser | null {
+    public getUser(): AuthenticatedUser | null {
         const userFromLocal = localStorage.getItem('user');
         const userFromSession = sessionStorage.getItem('user');
 
@@ -84,14 +81,14 @@ export class StorageService {
      * Check if user is authenticated
      * @returns True if token exists
      */
-    isAuthenticated(): boolean {
+    public isAuthenticated(): boolean {
         return !!this.getToken();
     }
 
     /**
      * Clear all authentication data from both storages
      */
-    clearAuth(): void {
+    public clearAuth(): void {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
 

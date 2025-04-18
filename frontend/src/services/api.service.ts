@@ -3,9 +3,6 @@ import type { AuthenticatedUser } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 
-/**
- * Service responsible for handling all API calls to the backend
- */
 export class ApiService {
     private baseUrl: string;
 
