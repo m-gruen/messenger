@@ -6,6 +6,7 @@ import { JwtUtils } from './jwt-utils';
 import { ContactUtils } from './contact-utils';
 
 export type UserResponse = BaseResponse<AuthenticatedUser>;
+export type BasicUserResponse = BaseResponse<User>;
 
 const passwordOptions = {
     memoryCost: 2 ** 16,
@@ -144,13 +145,21 @@ export class UserUtils extends Utils {
     /**
      * Gets a user by their ID
      * @param uid The user ID to lookup
-     * @returns A UserResponse object containing statusCode, data, and optional error message
+     * @param requestingUserId The ID of the user making the request
+     * @returns A BasicUserResponse object containing statusCode, data, and optional error message
      */
-    public async getUserById(uid: number): Promise<UserResponse> {
+    public async getUserById(uid: number, requestingUserId: number): Promise<BasicUserResponse> {
         if (!this.isValidUserId(uid)) {
             return this.createErrorResponse(
                 StatusCodes.BAD_REQUEST,
                 'Invalid user ID'
+            );
+        }
+
+        if (!this.isValidUserId(requestingUserId)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid requesting user ID'
             );
         }
 
@@ -169,8 +178,36 @@ export class UserUtils extends Utils {
                 );
             }
 
-            const user: AuthenticatedUser = result.rows[0];
-            return this.createSuccessResponse(user);
+            const user = result.rows[0];
+            
+            if (uid === requestingUserId) {
+                return this.createSuccessResponse({
+                    uid: user.uid,
+                    username: user.username,
+                    display_name: user.display_name,
+                    created_at: user.created_at
+                });
+            }
+            
+            if (user.shadow_mode || user.full_name_search) {
+                const hasContact = await this.hasContactWith(requestingUserId, uid);
+                
+                if (!hasContact) {
+                    return this.createErrorResponse(
+                        StatusCodes.FORBIDDEN,
+                        'You do not have permission to view this user profile'
+                    );
+                }
+            }
+            
+            const userData: User = {
+                uid: user.uid,
+                username: user.username,
+                display_name: user.display_name,
+                created_at: user.created_at
+            };
+
+            return this.createSuccessResponse(userData);
         } catch (error) {
             console.error('Error getting user by ID:', error);
             return this.createErrorResponse(
