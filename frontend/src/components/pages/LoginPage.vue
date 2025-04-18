@@ -64,7 +64,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/AuthStore';
-import { getBackendUrl } from '../../lib/config';
+import { apiService } from '../../services/api.service';
 import type { AuthenticatedUser } from '@/models/user-model';
 
 const router = useRouter();
@@ -85,34 +85,9 @@ async function handleLogin() {
 
   isLoading.value = true;
   try {
-    const backendUrl = getBackendUrl();
-    const response = await fetch(`${backendUrl}/user/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
-    });
-
-    const data = await response.json();
-
-    const user: AuthenticatedUser = {
-      uid: data.uid,
-      username: data.username,
-      created_at: data.created_at,
-      token: data.token
-    };
-
-    console.log(data);
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Login failed');
-    }
-
-    authStore.setToken(data.token, rememberMe.value);
+    const user = await apiService.login(username.value, password.value);
+    
+    authStore.setToken(user.token, rememberMe.value);
     authStore.setUser(user, rememberMe.value);
 
     router.push('/');

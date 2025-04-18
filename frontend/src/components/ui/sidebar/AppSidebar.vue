@@ -1,21 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-interface User {
-  uid: number;
-  username: string;
-  contactUserId: number;
-  userId: number;
-  createdAt: string;
-  status: string;
-}
-
-interface Message {
-  mid: number;
-  sender_uid: number;
-  receiver_uid: number;
-  content: string;
-  timestamp: string;
-}
+import type { IMessage } from '@/models/message-model';
+import { type Contact, ContactStatus } from '@/models/contact-model';
+import { apiService } from '@/services/api.service';
+import { storageService } from '@/services/storage.service';
 
 import {
   Home, Inbox, Search, Settings, ChevronRight,
@@ -23,8 +11,10 @@ import {
   Send, ArrowLeft
 } from "lucide-vue-next"
 
-
-const currentUserId = (parseInt(sessionStorage.getItem('uid') || '0', 10))
+// Get user ID and token from storage service
+const user = storageService.getUser();
+const currentUserId = user?.uid || 0;
+const token = storageService.getToken() || '';
 
 const items = [
   { title: "Home", url: "#", icon: Home },
@@ -33,41 +23,29 @@ const items = [
   { title: "Settings", url: "#", icon: Settings },
 ];
 
-const contacts = ref<User[]>([])
+const contacts = ref<Contact[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const showContacts = ref(false)
 const sidebarCollapsed = ref(false)
-const selectedContact = ref<User | null>(null)
+const selectedContact = ref<Contact | null>(null)
 const showChat = ref(false)
 const newMessage = ref('')
 
-
-const messages = ref<Message[]>([])
+const messages = ref<IMessage[]>([])
 const isLoadingMessages = ref(false)
 const messagesError = ref<string | null>(null)
 
 async function fetchContacts(userId: number) {
   isLoading.value = true
   error.value = null
+  
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const response = await fetch(`${backendUrl}/contact/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem('token') || ''}`
-      }
-    })
-
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`)
-    }
-
-    contacts.value = await response.json()
-
-
-    contacts.value = contacts.value.sort((a: User, b: User) => {
+    // Use API service instead of direct fetch
+    contacts.value = await apiService.getContacts(userId, token);
+    
+    // Sort contacts by creation date
+    contacts.value = contacts.value.sort((a, b) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
   } catch (err) {
@@ -78,28 +56,19 @@ async function fetchContacts(userId: number) {
   }
 }
 
-
 async function fetchMessages(userId: number, contactId: number) {
   messagesError.value = null
-
+  isLoadingMessages.value = true;
+  
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const response = await fetch(`${backendUrl}/message?sender_uid=${userId}&receiver_uid=${contactId}`, {
-      headers: {
-        'Authorization': `Bearer ${sessionStorage.getItem('token') || ''}`
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`)
-    }
-
-    const data: Message[] = await response.json();
-
-    messages.value = data.sort((a: Message, b: Message) => {
+    // Use API service instead of direct fetch
+    messages.value = await apiService.getMessages(userId, contactId, token);
+    
+    // Sort messages by timestamp
+    messages.value = messages.value.sort((a, b) => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     })
-
+    
     setTimeout(() => {
       const messageContainer = document.querySelector('.flex.flex-col-reverse.space-y-reverse.space-y-4');
       if (messageContainer) {
@@ -110,7 +79,6 @@ async function fetchMessages(userId: number, contactId: number) {
         });
       }
     }, 0);
-
   } catch (err) {
     messagesError.value = err instanceof Error ? err.message : 'Unknown error occurred'
     console.error('Error fetching messages:', err)
@@ -121,28 +89,18 @@ async function fetchMessages(userId: number, contactId: number) {
 
 async function sendMessage() {
   if (!newMessage.value.trim() || !selectedContact.value) return;
-
+  
   try {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'
-    const response = await fetch(`${backendUrl}/message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionStorage.getItem('token') || ''}`
-      },
-      body: JSON.stringify({
-        sender_uid: currentUserId,
-        receiver_uid: selectedContact.value.contactUserId,
-        content: newMessage.value
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`)
-    }
-
-    const newMessageObj = await response.json();
-    messages.value.push(newMessageObj);
+    // Use API service instead of direct fetch
+    const sentMessage = await apiService.sendMessage(
+      currentUserId,
+      selectedContact.value.contactUserId,
+      newMessage.value,
+      token
+    );
+    
+    // Add the new message to the list and refresh messages
+    messages.value.push(sentMessage);
     fetchMessages(currentUserId, selectedContact.value.contactUserId);
     newMessage.value = '';
   } catch (err) {
@@ -167,7 +125,7 @@ function toggleSidebar() {
   )
 }
 
-function selectContact(contact: User) {
+function selectContact(contact: Contact) {
   selectedContact.value = contact
   messages.value = []
   showChat.value = true;
@@ -179,9 +137,45 @@ function selectContact(contact: User) {
   }
 }
 
-function formatDate(dateString: string) {
-  const date = new Date(dateString)
+function formatDate(dateString: string | Date) {
+  const date = dateString instanceof Date ? dateString : new Date(dateString)
   return date.toLocaleString()
+}
+
+// Helper function to get color class based on contact status
+function getStatusColorClass(status: ContactStatus | string): string {
+  switch(status) {
+    case ContactStatus.ACCEPTED:
+      return 'bg-green-500';
+    case ContactStatus.INCOMING_REQUEST:
+    case ContactStatus.OUTGOING_REQUEST:
+      return 'bg-yellow-500';
+    case ContactStatus.REJECTED:
+    case ContactStatus.BLOCKED:
+      return 'bg-red-500';
+    case ContactStatus.DELETED:
+      return 'bg-gray-500';
+    default:
+      return 'bg-blue-500';
+  }
+}
+
+// Helper function to format status text for display
+function formatStatusText(status: ContactStatus | string): string {
+  if (typeof status === 'string') {
+    // Convert snake_case to Title Case (e.g., incoming_request -> Incoming Request)
+    return status
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+  
+  // If it's an enum value, convert it the same way
+  const statusString = status.toString();
+  return statusString
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 </script>
 
@@ -252,7 +246,7 @@ function formatDate(dateString: string) {
       </div>
 
       <ul v-else class="space-y-2">
-        <li v-for="contact in contacts" :key="contact.uid"
+        <li v-for="contact in contacts" :key="contact.userId"
           class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer" @click="selectContact(contact)">
           <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
             {{ contact.username.charAt(0).toUpperCase() }}
@@ -287,12 +281,8 @@ function formatDate(dateString: string) {
         <div class="ml-3">
           <div class="font-medium">{{ selectedContact.username }}</div>
           <div class="text-xs text-muted-foreground">
-            <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="{
-              'bg-green-500': selectedContact.status === 'accepted',
-              'bg-yellow-500': selectedContact.status === 'pending',
-              'bg-red-500': selectedContact.status === 'blocked'
-            }"></span>
-            {{ selectedContact.status[0].toUpperCase() + selectedContact.status.slice(1) }}
+            <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="getStatusColorClass(selectedContact.status)"></span>
+            {{ formatStatusText(selectedContact.status) }}
           </div>
         </div>
       </div>

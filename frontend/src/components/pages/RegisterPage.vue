@@ -87,7 +87,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/AuthStore';
-import { getBackendUrl } from '../../lib/config';
+import { apiService } from '../../services/api.service';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -100,57 +100,27 @@ const rememberMe = ref(false);
 
 async function handleRegister() {
   error.value = '';
-  
+
   if (!username.value || !password.value) {
     error.value = 'Username and password are required';
     return;
   }
-  
+
   if (password.value !== confirmPassword.value) {
     error.value = 'Passwords do not match';
     return;
   }
-  
+
   isLoading.value = true;
   try {
-    const backendUrl = getBackendUrl();
-    const response = await fetch(`${backendUrl}/user`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
-    });
+    // Register the user and get the token directly from registration
+    const user = await apiService.register(username.value, password.value);
     
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Registration failed');
-    }
-    
-    const loginResponse = await fetch(`${backendUrl}/user/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
-    });
-    
-    const loginData = await loginResponse.json();
-    
-    if (!loginResponse.ok) {
-      throw new Error('Registration successful, but login failed. Please try logging in manually.');
-    }
-    
-    authStore.setToken(loginData.token, rememberMe.value);
-    authStore.setUser(loginData.user, rememberMe.value);
-    
+    // Save authentication data
+    authStore.setToken(user.token, rememberMe.value);
+    authStore.setUser(user, rememberMe.value);
+
+    // Redirect to home page
     router.push('/');
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Registration failed';
