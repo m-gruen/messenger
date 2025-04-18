@@ -235,4 +235,124 @@ describe('UserUtils', () => {
             expect(result.data).toBe(null);
         });
     });
+
+    describe('updateUser', () => {
+        it('should return an error response for an invalid user ID', async () => {
+            const result = await userUtils.updateUser(-1, { username: 'newUsername' });
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response if the user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0 });
+            const result = await userUtils.updateUser(1, { username: 'newUsername' });
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an error response if the user is deleted', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({
+                    rowCount: 1,
+                    rows: [{ uid: 1, username: 'testUser', created_at: new Date(), display_name: 'Test User', is_deleted: true, shadow_mode: false, full_name_search: false }]
+                }); // User exists but is deleted
+            const result = await userUtils.updateUser(1, { username: 'newUsername' });
+            expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
+            expect(result.error).toBe('Cannot update deleted user');
+        });
+
+        it('should return an error response if the username is invalid', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ uid: 1, is_deleted: false }]
+            }); // User exists and is not deleted
+
+            const result = await userUtils.updateUser(1, { username: 'ab' });
+
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe(
+                'Username must be valid string between 3 and 20 characters and can only contain letters, numbers, and underscores'
+            );
+        });
+
+        it('should return an error response if the username already exists', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ uid: 1, is_deleted: false }] }) // User exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // Username conflict
+
+            const result = await userUtils.updateUser(1, { username: 'existingUsername' });
+            expect(result.statusCode).toBe(StatusCodes.CONFLICT);
+            expect(result.error).toBe('Username already exists');
+        });
+
+        it('should update the user and return a success response', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ uid: 1, is_deleted: false }] }) // User exists
+                .mockResolvedValueOnce({ rowCount: 0 }) // No username conflict
+                .mockResolvedValueOnce({
+                    rowCount: 1,
+                    rows: [
+                        {
+                            uid: 1,
+                            username: 'updatedUsername',
+                            created_at: new Date(),
+                            display_name: 'Updated Name',
+                            is_deleted: false,
+                            shadow_mode: false,
+                            full_name_search: false,
+                        },
+                    ],
+                }); // Update query
+
+            const result = await userUtils.updateUser(1, { username: 'updatedUsername', displayName: 'Updated Name' });
+
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data?.username).toBe('updatedUsername');
+            expect(result.data?.display_name).toBe('Updated Name');
+        });
+
+        describe('searchUsers', () => {
+            it('should return an error response for an invalid search query', async () => {
+                const result = await userUtils.searchUsers('', 10);
+                expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+                expect(result.error).toBe('Search query is required');
+            });
+
+            it('should return a success response with user search results', async () => {
+                (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                    rowCount: 2,
+                    rows: [
+                        { uid: 1, username: 'user1', display_name: 'User One', created_at: new Date() },
+                        { uid: 2, username: 'user2', display_name: 'User Two', created_at: new Date() }
+                    ]
+                });
+
+                const result = await userUtils.searchUsers('user', 10);
+                expect(result.statusCode).toBe(StatusCodes.OK);
+                expect(result.data).toHaveLength(2);
+                expect(result.data?.[0].username).toBe('user1');
+                expect(result.data?.[1].username).toBe('user2');
+            });
+
+            it('should return a success response with a default limit if the limit is invalid', async () => {
+                (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                    rowCount: 1,
+                    rows: [{ uid: 1, username: 'user1', display_name: 'User One', created_at: new Date() }]
+                });
+
+                const result = await userUtils.searchUsers('user', -5);
+                expect(result.statusCode).toBe(StatusCodes.OK);
+                expect(result.data).toHaveLength(1);
+                expect(result.data?.[0].username).toBe('user1');
+            });
+
+            it('should return an empty result if no users match the query', async () => {
+                (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0, rows: [] });
+
+                const result = await userUtils.searchUsers('nonexistent', 10);
+                expect(result.statusCode).toBe(StatusCodes.OK);
+                expect(result.data).toHaveLength(0);
+            });
+        });
+    });
 });
