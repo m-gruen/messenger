@@ -137,26 +137,123 @@ describe('UserUtils', () => {
 
     describe('getUserById', () => {
         it('should return an error response for an invalid user ID', async () => {
-            const result = await userUtils.getUserById(-1);
+            const result = await userUtils.getUserById(-1, 1);
             expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
             expect(result.error).toBe('Invalid user ID');
+        });
+        
+        it('should return an error response for an invalid requesting user ID', async () => {
+            const result = await userUtils.getUserById(1, -1);
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid requesting user ID');
         });
 
         it('should return an error response if the user does not exist', async () => {
             (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0 });
-            const result = await userUtils.getUserById(1);
+            const result = await userUtils.getUserById(1, 2);
             expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
             expect(result.error).toBe('User not found');
         });
 
-        it('should return a success response with user data', async () => {
+        it('should return a success response when a user requests their own data', async () => {
+            const userId = 1;
+            const requestingUserId = 1; // Same user
+            
             (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
                 rowCount: 1,
-                rows: [{ uid: 1, username: 'testUser', created_at: new Date(), display_name: 'Test User', is_deleted: false, shadow_mode: false, full_name_search: false }]
+                rows: [{ 
+                    uid: userId, 
+                    username: 'testUser', 
+                    created_at: new Date(), 
+                    display_name: 'Test User', 
+                    is_deleted: false, 
+                    shadow_mode: true, // Even with privacy features enabled
+                    full_name_search: true 
+                }]
             });
-            const result = await userUtils.getUserById(1);
+            
+            const result = await userUtils.getUserById(userId, requestingUserId);
+            
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data?.username).toBe('testUser');
+            expect(result.data?.uid).toBe(userId);
+        });
+        
+        it('should return a success response when a user has no privacy restrictions', async () => {
+            const userId = 1;
+            const requestingUserId = 2; // Different user
+            
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ 
+                    uid: userId, 
+                    username: 'testUser', 
+                    created_at: new Date(), 
+                    display_name: 'Test User', 
+                    is_deleted: false, 
+                    shadow_mode: false,
+                    full_name_search: false 
+                }]
+            });
+            
+            const result = await userUtils.getUserById(userId, requestingUserId);
+            
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data?.username).toBe('testUser');
+        });
+        
+        it('should return a success response when requesting user has contact with shadow mode user', async () => {
+            const userId = 1;
+            const requestingUserId = 2;
+            
+            // Mock the database query for user lookup
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ 
+                    uid: userId, 
+                    username: 'privateUser', 
+                    created_at: new Date(), 
+                    display_name: 'Private User', 
+                    is_deleted: false, 
+                    shadow_mode: true,
+                    full_name_search: false 
+                }]
+            });
+            
+            // Mock the hasContactWith check to return true
+            jest.spyOn(userUtils, 'hasContactWith').mockResolvedValueOnce(true);
+            
+            const result = await userUtils.getUserById(userId, requestingUserId);
+            
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data?.username).toBe('privateUser');
+        });
+        
+        it('should return an error when requesting user has no contact with shadow mode user', async () => {
+            const userId = 1;
+            const requestingUserId = 2;
+            
+            // Mock the database query for user lookup
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ 
+                    uid: userId, 
+                    username: 'privateUser', 
+                    created_at: new Date(), 
+                    display_name: 'Private User', 
+                    is_deleted: false, 
+                    shadow_mode: true,
+                    full_name_search: false 
+                }]
+            });
+            
+            // Mock the hasContactWith check to return false
+            jest.spyOn(userUtils, 'hasContactWith').mockResolvedValueOnce(false);
+            
+            const result = await userUtils.getUserById(userId, requestingUserId);
+            
+            expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
+            expect(result.error).toBe('You do not have permission to view this user profile');
         });
     });
 
