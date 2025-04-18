@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { UserUtils, UserResponse } from '../utilities/user-utils';
+import { UserUtils, UserResponse, BasicUserResponse } from '../utilities/user-utils';
 import { DbSession } from '../db';
 import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-middleware';
 
@@ -33,14 +33,14 @@ userRouter.post('/', async (req: Request, res: Response) => {
     }
 });
 
-userRouter.get('/:uid', authenticateToken, async (req: Request, res: Response) => {
+userRouter.get('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid: number = parseInt(req.params.uid);
 
     let dbSession = await DbSession.create(true);
     try {
         const userUtils = new UserUtils(dbSession);
 
-        const response: UserResponse = await userUtils.getUserById(uid);
+        const response: BasicUserResponse = await userUtils.getUserById(uid, req.user?.uid || 0);
 
         res.status(response.statusCode).json(
             response.data !== null ? response.data : { error: response.error }
