@@ -369,6 +369,101 @@ describe('ContactUtils', () => {
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data).toBeNull();
         });
+
+        it('should delete the contact and mark the reverse contact as deleted for regular contacts', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 1, status: ContactStatus.ACCEPTED }] }) // contact exists with ACCEPTED status
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.ACCEPTED }] }) // reverse contact exists 
+                .mockResolvedValueOnce({ rowCount: 1 }); // update reverse contact
+
+            const result = await contactUtils.deleteContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Verify the DELETE query was called
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                [1, 2]
+            );
+            
+            // Check that any UPDATE query was called with the right parameters
+            // This is more flexible than checking the exact SQL string
+            const updateCalls = (dbSessionMock.query as jest.Mock).mock.calls.filter(call => 
+                typeof call[0] === 'string' && 
+                call[0].includes('UPDATE contact') && 
+                call[0].includes('SET status')
+            );
+            
+            expect(updateCalls.length).toBeGreaterThan(0);
+            expect(updateCalls[0][1]).toEqual([2, 1, ContactStatus.DELETED]);
+        });
+
+        it('should completely delete both sides when canceling an outgoing request', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 1, status: ContactStatus.OUTGOING_REQUEST }] }) // outgoing request exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.INCOMING_REQUEST }] }); // matching incoming request exists
+                
+            const result = await contactUtils.deleteContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Verify both sides were completely deleted
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                [1, 2]
+            );
+            
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                [2, 1]
+            );
+        });
+        
+        it('should handle deleting an incoming request by marking the outgoing request as deleted', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 1, status: ContactStatus.INCOMING_REQUEST }] }) // incoming request exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.OUTGOING_REQUEST }] }) // matching outgoing request exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // update reverse contact
+                
+            const result = await contactUtils.deleteContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Verify the receiver's side is deleted
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                [1, 2]
+            );
+            
+            // Check that any UPDATE query was called with the right parameters
+            // This is more flexible than checking the exact SQL string
+            const updateCalls = (dbSessionMock.query as jest.Mock).mock.calls.filter(call => 
+                typeof call[0] === 'string' && 
+                call[0].includes('UPDATE contact') && 
+                call[0].includes('SET status')
+            );
+            
+            expect(updateCalls.length).toBeGreaterThan(0);
+            expect(updateCalls[0][1]).toEqual([2, 1, ContactStatus.DELETED]);
+        });
+
+        it('should handle database errors when deleting a contact', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for userId
+                .mockResolvedValueOnce({ rowCount: 1 }) // userExists for contactUserId
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 1, status: ContactStatus.OUTGOING_REQUEST }] }) // contact exists
+                .mockRejectedValueOnce(new Error('Database error')); // error when deleting
+                
+            const result = await contactUtils.deleteContact(1, 2);
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('Failed to delete contact relationship.');
+        });
     });
 
     describe('deleteContactViaContactId', () => {
@@ -387,10 +482,108 @@ describe('ContactUtils', () => {
 
         it('should delete the contact and return a success response', async () => {
             (dbSessionMock.query as jest.Mock)
-                .mockResolvedValueOnce({ rowCount: 1, rows: [{}] }) // contact exists
-                .mockResolvedValueOnce({ rowCount: 1, rows: [{}] }) // reverse contact exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: 1, contact_user_id: 2 }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.ACCEPTED }] }) // contact status
+                .mockResolvedValueOnce({ rowCount: 1 }) // delete successful
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.ACCEPTED }] }) // reverse contact exists
                 .mockResolvedValueOnce({ rowCount: 1 }); // update reverse contact
 
+            const result = await contactUtils.deleteContactViaContactId(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Verify contact was deleted
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE contact_id = $1',
+                [1]
+            );
+        });
+        
+        it('should delete the contact and mark the reverse contact as deleted for regular contacts', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: 1, contact_user_id: 2 }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.ACCEPTED }] }) // contact status
+                .mockResolvedValueOnce({ rowCount: 1 }) // delete successful
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.ACCEPTED }] }) // reverse contact exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // update reverse contact
+
+            const result = await contactUtils.deleteContactViaContactId(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Check that any UPDATE query was called with the right parameters
+            const updateCalls = (dbSessionMock.query as jest.Mock).mock.calls.filter(call => 
+                typeof call[0] === 'string' && 
+                call[0].includes('UPDATE contact') && 
+                call[0].includes('SET status')
+            );
+            
+            expect(updateCalls.length).toBeGreaterThan(0);
+            expect(updateCalls[0][1]).toEqual([2, 1, ContactStatus.DELETED]);
+        });
+
+        it('should completely delete both sides when canceling an outgoing request', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: 1, contact_user_id: 2 }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.OUTGOING_REQUEST }] }) // contact status
+                .mockResolvedValueOnce({ rowCount: 1 }) // delete successful
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.INCOMING_REQUEST }] }); // reverse contact exists
+                
+            const result = await contactUtils.deleteContactViaContactId(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Verify both sides were completely deleted
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE contact_id = $1',
+                [1]
+            );
+            
+            expect(dbSessionMock.query).toHaveBeenCalledWith(
+                'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                [2, 1]
+            );
+        });
+        
+        it('should handle deleting an incoming request by marking the outgoing request as deleted', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: 1, contact_user_id: 2 }] }) // contact exists
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.INCOMING_REQUEST }] }) // contact status
+                .mockResolvedValueOnce({ rowCount: 1 }) // delete successful
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ contact_id: 2, status: ContactStatus.OUTGOING_REQUEST }] }) // reverse contact exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // update reverse contact
+                
+            const result = await contactUtils.deleteContactViaContactId(1);
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data).toBeNull();
+            
+            // Check that any UPDATE query was called with the right parameters
+            const updateCalls = (dbSessionMock.query as jest.Mock).mock.calls.filter(call => 
+                typeof call[0] === 'string' && 
+                call[0].includes('UPDATE contact') && 
+                call[0].includes('SET status')
+            );
+            
+            expect(updateCalls.length).toBeGreaterThan(0);
+            expect(updateCalls[0][1]).toEqual([2, 1, ContactStatus.DELETED]);
+        });
+
+        it('should handle database errors when deleting a contact', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ user_id: 1, contact_user_id: 2 }] }) // contact exists
+                .mockRejectedValueOnce(new Error('Database error')); // error when getting status
+                
+            const result = await contactUtils.deleteContactViaContactId(1);
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('Failed to delete contact relationship.');
+        });
+        
+        it('should handle missing user IDs in the contact record', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ }] }) // contact exists but with missing user IDs
+                .mockResolvedValueOnce({ rowCount: 1, rows: [{ status: ContactStatus.ACCEPTED }] }) // contact status 
+                .mockResolvedValueOnce({ rowCount: 1 }); // delete successful
+                
             const result = await contactUtils.deleteContactViaContactId(1);
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data).toBeNull();
