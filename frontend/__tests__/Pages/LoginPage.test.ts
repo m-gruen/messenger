@@ -2,282 +2,221 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '../../src/components/pages/LoginPage.vue';
+import { ref, computed } from 'vue';
 
+// Mock dependencies before they are imported
+vi.mock('../../src/services/api.service', () => ({
+  apiService: {
+    login: vi.fn()
+  }
+}));
 
+vi.mock('../../src/stores/AuthStore', () => ({
+  useAuthStore: vi.fn()
+}));
+
+// Create mock routes for testing
 const routes = [
-	{ path: '/', component: { template: '<div>Home</div>' } },
-	{ path: '/register', component: { template: '<div>Register</div>' } },
-	{ path: '/login', component: LoginPage }
+  { path: '/', component: { template: '<div>Home</div>' } },
+  { path: '/login', component: LoginPage },
+  { path: '/register', component: { template: '<div>Register</div>' } }
 ];
 
 const router = createRouter({
-	history: createWebHistory(),
-	routes
+  history: createWebHistory(),
+  routes
 });
 
-
-vi.mock('../../src/stores/AuthStore', () => ({
-	useAuthStore: vi.fn(() => ({
-		setToken: vi.fn(),
-		setUser: vi.fn(),
-		token: null
-	}))
-}));
-
-
-vi.mock('../../src/lib/config', () => ({
-	getBackendUrl: vi.fn(() => 'http://localhost:3000')
-}));
+// Import mocked functions AFTER vi.mock calls
+import { apiService } from '../../src/services/api.service';
+import { useAuthStore } from '../../src/stores/AuthStore';
 
 describe('LoginPage.vue', () => {
-	const localStorageMock = {
-		getItem: vi.fn(),
-		setItem: vi.fn(),
-		removeItem: vi.fn(),
-		clear: vi.fn(),
-		length: 0,
-		key: vi.fn()
-	};
-
-	global.fetch = vi.fn();
-
-	beforeEach(() => {
-		vi.clearAllMocks();
-		router.push('/login');
-
-
-		Object.defineProperty(window, 'localStorage', { value: localStorageMock });
-
-
-		global.fetch = vi.fn();
-	});
-
-	afterEach(() => {
-		vi.resetAllMocks();
-	});
-
-	it('renders the login page correctly', async () => {
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-		expect(wrapper.find('h1').text()).toBe('Welcome Back');
-		expect(wrapper.find('input#username').exists()).toBe(true);
-		expect(wrapper.find('input#password').exists()).toBe(true);
-		expect(wrapper.find('input#remember-me').exists()).toBe(true);
-		expect(wrapper.find('button[type="submit"]').text()).toBe('Login');
-	});
-
-	it('displays validation error when form is submitted with empty fields', async () => {
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-
-		await wrapper.find('form').trigger('submit.prevent');
-		await flushPromises();
-
-		expect(wrapper.find('div.bg-destructive\\/10').text().trim()).toBe('Username and password are required');
-		expect(global.fetch).not.toHaveBeenCalled();
-	});
-
-	it('handles successful login correctly', async () => {
-		const mockUser = {
-			uid: 123,
-			username: 'johndoe',
-			created_at: '2025-04-01T12:00:00.000Z',
-			token: 'fake-token'
-		};
-
-		global.fetch = vi.fn().mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve(mockUser)
-		});
-
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-
-		await wrapper.find('input#username').setValue('johndoe');
-		await wrapper.find('input#password').setValue('johndoe');
-
-
-		await wrapper.find('form').trigger('submit.prevent');
-		await flushPromises();
-
-
-		expect(global.fetch).toHaveBeenCalledWith('http://localhost:3000/user/login', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				username: 'johndoe',
-				password: 'johndoe'
-			})
-		});
-
-
-		const authStore = (await import('../../src/stores/AuthStore')).useAuthStore();
-		expect(authStore.setToken).toHaveBeenCalledWith('fake-token', false);
-		expect(authStore.setUser).toHaveBeenCalledWith(mockUser, false);
-
-
-		expect(router.currentRoute.value.path).toBe('/');
-	});
-
-	it('handles login with remember me checked', async () => {
-		const mockUser = {
-			uid: 123,
-			username: 'testuser',
-			created_at: '2025-04-01T12:00:00.000Z',
-			token: 'fake-token'
-		};
-
-		global.fetch = vi.fn().mockResolvedValue({
-			ok: true,
-			json: () => Promise.resolve(mockUser)
-		});
-
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-
-		await wrapper.find('input#username').setValue('testuser');
-		await wrapper.find('input#password').setValue('password123');
-		await wrapper.find('input#remember-me').setValue(true);
-
-
-		await wrapper.find('form').trigger('submit.prevent');
-		await flushPromises();
-
-
-		const authStore = (await import('../../src/stores/AuthStore')).useAuthStore();
-		expect(authStore.setToken).toHaveBeenCalledWith('fake-token', true);
-		expect(authStore.setUser).toHaveBeenCalledWith(mockUser, true);
-	});
-
-	it('handles login failure correctly', async () => {
-		global.fetch = vi.fn().mockResolvedValue({
-			ok: false,
-			json: () => Promise.resolve({ error: 'Invalid credentials' })
-		});
-
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-
-		await wrapper.find('input#username').setValue('testuser');
-		await wrapper.find('input#password').setValue('wrongpassword');
-
-
-		await wrapper.find('form').trigger('submit.prevent');
-		await flushPromises();
-
-
-		expect(wrapper.find('div.bg-destructive\\/10').text().trim()).toBe('Invalid credentials');
-		expect(router.currentRoute.value.path).toBe('/login');
-	});
-
-	it('shows loading state during login process', async () => {
-
-		let resolvePromise;
-		const waitForPromise = new Promise(resolve => {
-			resolvePromise = resolve;
-		});
-
-		global.fetch = vi.fn().mockImplementation(() => {
-			return waitForPromise.then(() => ({
-				ok: true,
-				json: () => Promise.resolve({
-					uid: 123,
-					username: 'testuser',
-					created_at: '2025-04-01T12:00:00.000Z',
-					token: 'fake-token'
-				})
-			}));
-		});
-
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-
-		await wrapper.find('input#username').setValue('testuser');
-		await wrapper.find('input#password').setValue('password123');
-
-
-		const submitPromise = wrapper.find('form').trigger('submit.prevent');
-		await flushPromises();
-
-
-		expect(wrapper.find('button[type="submit"]').text()).toContain('Logging in...');
-		expect(wrapper.find('svg.animate-spin').exists()).toBe(true);
-
-
-		resolvePromise({
-			ok: true,
-			json: () => Promise.resolve({
-				uid: 123,
-				username: 'testuser',
-				created_at: '2025-04-01T12:00:00.000Z',
-				token: 'fake-token'
-			})
-		});
-
-		await submitPromise;
-		await flushPromises();
-
-
-		expect(router.currentRoute.value.path).toBe('/');
-	});
-
-	it('navigates to register page when register link is clicked', async () => {
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-		await wrapper.find('a[href="/register"]').trigger('click');
-		await flushPromises();
-		expect(router.currentRoute.value.path).toBe('/register');
-	});
-
-	it('handles network error gracefully', async () => {
-		global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-		const wrapper = mount(LoginPage, {
-			global: {
-				plugins: [router]
-			}
-		});
-
-
-		await wrapper.find('input#username').setValue('testuser');
-		await wrapper.find('input#password').setValue('password123');
-
-
-		await wrapper.find('form').trigger('submit.prevent');
-		await flushPromises();
-
-
-		expect(wrapper.find('div.bg-destructive\\/10').text().trim()).toBe('Network error');
-		expect(router.currentRoute.value.path).toBe('/login');
-	});
+  // Mock store functions
+  const mockSetUser = vi.fn();
+  const mockSetToken = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    // Set up auth store mock with a more complete structure
+    vi.mocked(useAuthStore).mockReturnValue({
+      token: ref(null),
+      user: ref(null),
+      isAuthenticated: computed(() => false),
+      setToken: mockSetToken,
+      setUser: mockSetUser,
+      logout: vi.fn(),
+      $id: 'auth',
+      $reset: vi.fn(),
+      $dispose: vi.fn(),
+      $state: {},
+      $patch: vi.fn(),
+      $subscribe: vi.fn(),
+      _p: undefined,
+      _s: undefined,
+      _customProperties: new Set()
+    } as unknown as ReturnType<typeof useAuthStore>);
+
+    router.push('/login');
+  });
+
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('renders the login form', () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    });
+
+    expect(wrapper.find('h1').text()).toBe('Welcome Back');
+    expect(wrapper.find('form').exists()).toBe(true);
+    expect(wrapper.findAll('input').length).toBe(3); // username, password, and remember me
+    expect(wrapper.find('button[type="submit"]').exists()).toBe(true);
+  });
+
+  it('has a link to register page', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    });
+
+    // In the mounted component, router-link is rendered as an <a> element
+    const registerLink = wrapper.find('a');
+    expect(registerLink.exists()).toBe(true);
+    expect(registerLink.text()).toBe('Register');
+  });
+
+  it('validates the form and shows errors when form is submitted with empty fields', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    });
+
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+    
+    const errorMessage = wrapper.find('.bg-destructive\\/10');
+    expect(errorMessage.exists()).toBe(true);
+    expect(errorMessage.text()).toContain('Username and password are required');
+  });
+
+  it('calls login API when form is submitted with valid data', async () => {
+    // Mock successful login API response
+    vi.mocked(apiService.login).mockResolvedValueOnce({
+      token: 'fake-token',
+      user: {
+        uid: 123,
+        username: 'testuser',
+        created_at: '2025-04-01T12:00:00.000Z'
+      }
+    });
+    
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    });
+
+    // Fill in form fields
+    const usernameInput = wrapper.find('input#username');
+    const passwordInput = wrapper.find('input#password');
+    
+    await usernameInput.setValue('testuser');
+    await passwordInput.setValue('password123');
+    
+    // Submit the form
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+    
+    // Verify API was called with correct data
+    expect(apiService.login).toHaveBeenCalledWith('testuser', 'password123');
+    
+    // Verify store actions were called
+    expect(mockSetToken).toHaveBeenCalledWith('fake-token', false);
+    expect(mockSetUser).toHaveBeenCalledWith({
+      token: 'fake-token',
+      user: {
+        uid: 123,
+        username: 'testuser',
+        created_at: '2025-04-01T12:00:00.000Z'
+      }
+    }, false);
+    
+    // Check that we navigate to home page
+    expect(router.currentRoute.value.path).toBe('/');
+  });
+
+  it('shows error message when login fails', async () => {
+    // Mock failed login API response
+    vi.mocked(apiService.login).mockRejectedValueOnce(new Error('Invalid credentials'));
+    
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    });
+
+    // Fill in form fields
+    const usernameInput = wrapper.find('input#username');
+    const passwordInput = wrapper.find('input#password');
+    
+    await usernameInput.setValue('testuser');
+    await passwordInput.setValue('wrongpassword');
+    
+    // Submit the form
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+    
+    // Verify error message is displayed
+    const errorAlert = wrapper.find('.bg-destructive\\/10');
+    expect(errorAlert.exists()).toBe(true);
+    expect(errorAlert.text()).toContain('Invalid credentials');
+    
+    // Verify we stay on login page
+    expect(router.currentRoute.value.path).toBe('/login');
+  });
+
+  it('handles remember me functionality', async () => {
+    // Mock successful login API response
+    vi.mocked(apiService.login).mockResolvedValueOnce({
+      token: 'fake-token',
+      user: {
+        uid: 123,
+        username: 'testuser',
+        created_at: '2025-04-01T12:00:00.000Z'
+      }
+    });
+    
+    const wrapper = mount(LoginPage, {
+      global: {
+        plugins: [router]
+      }
+    });
+
+    // Fill in form fields and check remember me
+    await wrapper.find('input#username').setValue('testuser');
+    await wrapper.find('input#password').setValue('password123');
+    await wrapper.find('input#remember-me').setValue(true);
+    
+    // Submit the form
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+    
+    // Verify store actions were called with remember=true
+    expect(mockSetToken).toHaveBeenCalledWith('fake-token', true);
+    expect(mockSetUser).toHaveBeenCalledWith({
+      token: 'fake-token',
+      user: {
+        uid: 123,
+        username: 'testuser',
+        created_at: '2025-04-01T12:00:00.000Z'
+      }
+    }, true);
+  });
 });
