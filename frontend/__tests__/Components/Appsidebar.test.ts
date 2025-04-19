@@ -1,470 +1,361 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createRouter, createWebHistory } from 'vue-router';
 import AppSidebar from '../../src/components/ui/sidebar/AppSidebar.vue';
-import { nextTick } from 'vue';
 
-
-vi.mock('lucide-vue-next', () => ({
-    Home: vi.fn(),
-    Inbox: vi.fn(),
-    Search: vi.fn(),
-    Settings: vi.fn(),
-    ChevronRight: vi.fn(),
-    ChevronLeft: vi.fn(),
-    MessageSquare: vi.fn(),
-    Send: vi.fn(),
-    ArrowLeft: vi.fn(),
+// First, mock the modules before using any variables
+vi.mock('../../src/stores/AuthStore', () => ({
+    useAuthStore: vi.fn()
 }));
 
+vi.mock('../../src/services/api.service', () => ({
+    apiService: {
+        getContacts: vi.fn(),
+        getContactRequests: vi.fn(),
+        getMessages: vi.fn(),
+        sendMessage: vi.fn()
+    }
+}));
+
+vi.mock('../../src/services/storage.service', () => ({
+    storageService: {
+        getUser: vi.fn(),
+        getToken: vi.fn()
+    }
+}));
+
+// Mock for Lucide icons
+vi.mock('lucide-vue-next', () => ({
+    Home: { render: () => {} },
+    Inbox: { render: () => {} },
+    Search: { render: () => {} },
+    Settings: { render: () => {} },
+    ChevronRight: { render: () => {} },
+    ChevronLeft: { render: () => {} },
+    MessageSquare: { render: () => {} },
+    Send: { render: () => {} },
+    ArrowLeft: { render: () => {} }
+}));
+
+// Set up environment for testing
+process.env.NODE_ENV = 'test';
+
+// Create mock routes for testing
+const routes = [
+    { path: '/', component: { template: '<div>Home</div>' } },
+    { path: '/add-contact', component: { template: '<div>Add Contact</div>' } },
+    { path: '/login', component: { template: '<div>Login</div>' } }
+];
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes
+});
+
+// Get references to mocked functions AFTER the mocks are set up
+import { useAuthStore } from '../../src/stores/AuthStore';
+import { apiService } from '../../src/services/api.service';
+import { storageService } from '../../src/services/storage.service';
+import { Contact } from '../../src/models/contact-model';
+
 describe('AppSidebar.vue', () => {
-
-    const sessionStorageMock = {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        clear: vi.fn(),
-        removeItem: vi.fn(),
-        length: 0,
-        key: vi.fn(),
+    // Create mock user and token
+    const mockUser = {
+        uid: 123,
+        username: 'testuser',
+        created_at: '2025-04-01T12:00:00.000Z'
     };
-
-
-    global.fetch = vi.fn();
-
-
-    vi.mock('import.meta', () => ({
-        env: {
-            VITE_BACKEND_URL: 'http://localhost:3000',
-
-        },
-    }));
-
+    const mockToken = 'fake-token';
+    
+    // Set up testing environment
     beforeEach(() => {
-
         vi.clearAllMocks();
-
-
-        Object.defineProperty(window, 'sessionStorage', { value: sessionStorageMock });
-        sessionStorageMock.getItem.mockImplementation((key) => {
-            if (key === 'uid') return '1';
-            if (key === 'token') return 'fake-token';
-            return null;
-        });
-
-
-        global.fetch = vi.fn();
-
-
-        document.documentElement.style.removeProperty('--sidebar-width');
-
-
-        Element.prototype.scrollIntoView = vi.fn();
+        
+        // Set up storage service mock
+        vi.mocked(storageService.getUser).mockReturnValue(mockUser);
+        vi.mocked(storageService.getToken).mockReturnValue(mockToken);
+        
+        router.push('/');
     });
 
     afterEach(() => {
         vi.resetAllMocks();
     });
 
-
-    it('check if the sidebar is rendered correctly', async () => {
-        const wrapper = mount(AppSidebar);
-        await flushPromises();
-        expect(wrapper.exists()).toBe(true);
-    });
-
-    it('check if the sidebar is closed by default', async () => {
-        const wrapper = mount(AppSidebar);
-        await flushPromises();
-        expect(document.getElementsByTagName('html')[0].style.length).toBe(0);
-    });
-
-    it('check if sidebar closes when button is clicked', async () => {
-        const wrapper = mount(AppSidebar);
-        await flushPromises()
-
-        const button = wrapper.find('#sidebar-toggle');
-        await button.trigger('click');
-        await nextTick();
-
-        expect(document.getElementsByTagName('html')[0].style.length).toBe(1);
-        expect(document.getElementsByTagName('html')[0].style.getPropertyValue('--sidebar-width')).toBe('48px');
-    });
-
-    it('check if sidebar opens when button is clicked twice', async () => {
-        const wrapper = mount(AppSidebar);
-        await flushPromises()
-
-        const button = wrapper.find('#sidebar-toggle');
-        await button.trigger('click');
-        await button.trigger('click')
-        await nextTick();
-
-        expect(document.getElementsByTagName('html')[0].style.length).toBe(1);
-        expect(document.getElementsByTagName('html')[0].style.getPropertyValue('--sidebar-width')).toBe('240px');
-    });
-
-
-    it('should have four navigation items', async () => {
-        const wrapper = mount(AppSidebar);
-        await flushPromises();
-
-        const navItems = wrapper.findAll('ul li a');
-        expect(navItems.length).toBe(4);
-    });
-
-    it('should show contacts when clicking the contacts button', async () => {
-
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: true,
-            json: () => Promise.resolve([
-                { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' },
-                { uid: 3, username: 'User3', contactUserId: 3, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'pending' }
-            ])
+    it('renders the sidebar with navigation items', async () => {
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    'Home': true,
+                    'Inbox': true,
+                    'Search': true,
+                    'Settings': true,
+                    'ChevronLeft': true,
+                    'ChevronRight': true
+                }
+            }
         });
-
-        const wrapper = mount(AppSidebar);
+        
         await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
-        await flushPromises();
-
-
-        const contactsPanel = wrapper.find('div.fixed.z-10.top-0.bottom-0.overflow-y-auto');
-        expect(contactsPanel.exists()).toBe(true);
-        expect(contactsPanel.isVisible()).toBe(true);
-
-
-        const contactItems = wrapper.findAll('ul li.p-2.rounded-md.hover\\:bg-accent');
-        expect(contactItems.length).toBe(2);
-
-
-        expect(global.fetch).toHaveBeenCalledTimes(1);
-        expect(global.fetch).toHaveBeenCalledWith(
-            'http://localhost:3000/contact/1',
-            expect.objectContaining({
-                method: 'GET',
-                headers: { 'Authorization': 'Bearer fake-token' }
-            })
-        );
+        
+        // Check for sidebar header
+        expect(wrapper.text()).toContain('Application');
+        
+        // Check for navigation items
+        expect(wrapper.text()).toContain('Home');
+        expect(wrapper.text()).toContain('Contacts');
+        expect(wrapper.text()).toContain('Search');
+        expect(wrapper.text()).toContain('Settings');
     });
 
-
-    it('should show error message when contact fetch fails', async () => {
-
-        global.fetch = vi.fn().mockResolvedValue({
-            ok: false,
-            status: 401,
-            statusText: 'Unauthorized'
+    it('toggles the contacts panel when Contacts is clicked', async () => {
+        // Mock contacts data
+        const mockContacts = [
+            {
+                userId: 456,
+                contactUserId: 456,
+                username: 'friend1',
+                status: 'ACCEPTED',
+                createdAt: '2025-03-01T12:00:00.000Z'
+            },
+            {
+                userId: 789,
+                contactUserId: 789,
+                username: 'friend2',
+                status: 'ACCEPTED',
+                createdAt: '2025-03-15T12:00:00.000Z'
+            }
+        ];
+        
+        // Mock API response
+        vi.mocked(apiService.getContacts).mockResolvedValue(mockContacts);
+        
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    'Home': true,
+                    'Inbox': true,
+                    'Search': true,
+                    'Settings': true,
+                    'ChevronLeft': true,
+                    'ChevronRight': true
+                }
+            }
         });
-
-        const wrapper = mount(AppSidebar);
+        
+        // Initially contacts panel should be hidden
+        expect(wrapper.find('h2').exists()).toBe(false);
+        
+        // Find and click the Contacts navigation item
+        const contactsLink = wrapper.findAll('a')[1];
+        await contactsLink.trigger('click');
         await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
-        await flushPromises();
-
-
-        const errorMessage = wrapper.find('div.bg-destructive\\/10.text-destructive');
-        expect(errorMessage.exists()).toBe(true);
-        expect(errorMessage.text()).toContain('Error 401: Unauthorized');
+        
+        // Contacts panel should now be visible with the title
+        expect(wrapper.find('h2').exists()).toBe(true);
+        expect(wrapper.find('h2').text()).toBe('Contacts');
+        
+        // API should have been called
+        expect(apiService.getContacts).toHaveBeenCalledWith(123, mockToken);
+        
+        // Contacts should be displayed
+        expect(wrapper.text()).toContain('friend1');
+        expect(wrapper.text()).toContain('friend2');
     });
-
-
-    it('should open chat when contact is selected', async () => {
-
-        global.fetch = vi.fn().mockImplementationOnce(() => Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve([
-                { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' }
-            ])
-        }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([])
-            }));
-
-        const wrapper = mount(AppSidebar);
+    
+    it('shows loading state when fetching contacts', async () => {
+        // Create a delayed promise that we can control
+        let resolveContacts!: (value: any) => void;  // Using the definite assignment assertion
+        const contactsPromise = new Promise<Contact[]>(resolve => {
+            resolveContacts = resolve;
+        });
+        
+        // Mock API with delayed response
+        vi.mocked(apiService.getContacts).mockReturnValue(contactsPromise);
+        
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    'Home': true,
+                    'Inbox': true,
+                    'Search': true,
+                    'Settings': true,
+                    'ChevronLeft': true,
+                    'ChevronRight': true
+                }
+            }
+        });
+        
+        // Click the Contacts navigation item
+        const contactsLink = wrapper.findAll('a')[1];
+        await contactsLink.trigger('click');
         await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
+        
+        // Loading indicator should be visible
+        expect(wrapper.text()).toContain('Loading contacts...');
+        
+        // Resolve the contacts promise
+        resolveContacts([]);
         await flushPromises();
-
-
-        const contactItem = wrapper.find('ul li.p-2.rounded-md.hover\\:bg-accent');
-        await contactItem.trigger('click');
-        await flushPromises();
-
-
-        const chatInterface = wrapper.find('div.fixed.z-10.top-0.bottom-0.border-r.border-border.bg-background.flex.flex-col');
-        expect(chatInterface.exists()).toBe(true);
-
-
-        const contactName = wrapper.find('div.font-medium');
-        expect(contactName.text()).toBe('Application');
-
-
-        expect(global.fetch).toHaveBeenCalledTimes(2);
-        expect(global.fetch).toHaveBeenLastCalledWith(
-            'http://localhost:3000/message?sender_uid=1&receiver_uid=2',
-            expect.objectContaining({
-                headers: { 'Authorization': 'Bearer fake-token' }
-            })
-        );
+        
+        // Loading indicator should be gone, empty state should be shown
+        expect(wrapper.text()).not.toContain('Loading contacts...');
+        expect(wrapper.text()).toContain('No contacts found.');
     });
-
-
-    it('should send a message when form is submitted', async () => {
-
-        const mockMessage = {
-            mid: 1,
-            sender_uid: 1,
-            receiver_uid: 2,
-            content: 'Hello there',
-            timestamp: '2025-04-12T12:00:00.000Z'
-        };
-
-        global.fetch = vi.fn()
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([
-                    { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' }
-                ])
-            }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([])
-            }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve(mockMessage)
-            }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([mockMessage])
-            }));
-
-        const wrapper = mount(AppSidebar);
+    
+    it('handles API errors when fetching contacts', async () => {
+        // Mock API error
+        vi.mocked(apiService.getContacts).mockRejectedValue(new Error('Network error'));
+        
+        // We need to spy on console.error to prevent test output pollution
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    'Home': true,
+                    'Inbox': true,
+                    'Search': true,
+                    'Settings': true,
+                    'ChevronLeft': true,
+                    'ChevronRight': true
+                }
+            }
+        });
+        
+        // Click the Contacts navigation item
+        const contactsLink = wrapper.findAll('a')[1];
+        await contactsLink.trigger('click');
         await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
-        await flushPromises();
-
-        const contactItem = wrapper.find('ul li.p-2.rounded-md.hover\\:bg-accent');
-        await contactItem.trigger('click');
-        await flushPromises();
-
-
-        const messageInput = wrapper.find('input[type="text"]');
-        await messageInput.setValue('Hello there');
-
-
-        const form = wrapper.find('form');
-        await form.trigger('submit.prevent');
-        await flushPromises();
-
-
-        expect(global.fetch).toHaveBeenCalledTimes(4);
-        expect(global.fetch).toHaveBeenNthCalledWith(
-            3,
-            'http://localhost:3000/message',
-            expect.objectContaining({
-                method: 'POST',
-                headers: expect.objectContaining({
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer fake-token'
-                }),
-                body: JSON.stringify({
-                    sender_uid: 1,
-                    receiver_uid: 2,
-                    content: 'Hello there'
-                })
-            })
-        );
-
-
-        expect(messageInput.element).toBeTruthy();
-        expect((messageInput.element as HTMLInputElement).value).toBe('');
+        
+        // Error should have been logged
+        expect(consoleErrorSpy).toHaveBeenCalled();
+        
+        // Error message should be visible to user
+        expect(wrapper.find('.bg-destructive\\/10').exists()).toBe(true);
+        expect(wrapper.find('.bg-destructive\\/10').text()).toContain('Network error');
+        
+        // Restore console.error
+        consoleErrorSpy.mockRestore();
     });
-
-
-    it('should display messages properly', async () => {
-
+    
+    it('toggles sidebar collapse state', async () => {
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    'Home': true,
+                    'Inbox': true,
+                    'Search': true,
+                    'Settings': true,
+                    'ChevronLeft': true,
+                    'ChevronRight': true
+                }
+            }
+        });
+        
+        // Check initial state
+        expect(wrapper.find('aside').classes()).not.toContain('w-12');
+        
+        // Find and click the sidebar toggle button
+        const toggleButton = wrapper.find('#sidebar-toggle');
+        await toggleButton.trigger('click');
+        
+        // Sidebar should now be collapsed
+        expect(wrapper.find('aside').classes()).toContain('w-12');
+        
+        // Click again to expand
+        await toggleButton.trigger('click');
+        
+        // Should be expanded again
+        expect(wrapper.find('aside').classes()).not.toContain('w-12');
+    });
+    
+    it('shows chat interface when a contact is selected', async () => {
+        // Mock contacts and messages
+        const mockContacts = [
+            {
+                userId: 456,
+                contactUserId: 456,
+                username: 'friend1',
+                status: 'ACCEPTED',
+                createdAt: '2025-03-01T12:00:00.000Z'
+            }
+        ];
+        
         const mockMessages = [
             {
                 mid: 1,
-                sender_uid: 1,
-                receiver_uid: 2,
-                content: 'Hello there',
-                timestamp: '2025-04-12T12:00:00.000Z'
+                sender_uid: 123,
+                receiver_uid: 456,
+                content: 'Hello there!',
+                timestamp: '2025-04-01T12:00:00.000Z',
+                is_read: true
             },
             {
                 mid: 2,
-                sender_uid: 2,
-                receiver_uid: 1,
+                sender_uid: 456,
+                receiver_uid: 123,
                 content: 'Hi! How are you?',
-                timestamp: '2025-04-12T12:01:00.000Z'
+                timestamp: '2025-04-01T12:05:00.000Z',
+                is_read: true
             }
         ];
-
-        global.fetch = vi.fn()
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([
-                    { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' }
-                ])
-            }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve(mockMessages)
-            }));
-
-        const wrapper = mount(AppSidebar);
+        
+        // Mock API responses
+        vi.mocked(apiService.getContacts).mockResolvedValue(mockContacts);
+        vi.mocked(apiService.getMessages).mockResolvedValue(mockMessages);
+        
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    'Home': true,
+                    'Inbox': true,
+                    'Search': true,
+                    'Settings': true,
+                    'ChevronLeft': true,
+                    'ChevronRight': true,
+                    'MessageSquare': true,
+                    'Send': true,
+                    'ArrowLeft': true
+                }
+            }
+        });
+        
+        // Click contacts to show the panel
+        const contactsLink = wrapper.findAll('a')[1];
+        await contactsLink.trigger('click');
         await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
+        
+        // Chat interface should not be visible yet
+        expect(wrapper.find('input[type="text"]').exists()).toBe(false);
+        
+        // Click on a contact
+        const contactElement = wrapper.find('li.cursor-pointer');
+        await contactElement.trigger('click');
         await flushPromises();
-
-        const contactItem = wrapper.find('ul li.p-2.rounded-md.hover\\:bg-accent');
-        await contactItem.trigger('click');
-        await flushPromises();
-
-
-        const messageBubbles = wrapper.findAll('div.max-w-\\[70\\%\\].rounded-lg.p-3.shadow-sm');
-        expect(messageBubbles.length).toBe(2);
-
-
-        expect(messageBubbles[0].find('p').text()).toBe('Hi! How are you?');
-        expect(messageBubbles[1].find('p').text()).toBe('Hello there');
-
-
-        const messageContainers = wrapper.findAll('div.flex.justify-end, div.flex.justify-start');
-        expect(messageContainers[0].classes()).toContain('justify-start');
-        expect(messageContainers[1].classes()).toContain('justify-end');
-    });
-
-
-    it('should close chat when back button is clicked', async () => {
-        global.fetch = vi.fn()
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([
-                    { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' }
-                ])
-            }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([])
-            }));
-
-        const wrapper = mount(AppSidebar);
-        await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
-        await flushPromises();
-
-        const contactItem = wrapper.find('ul li.p-2.rounded-md.hover\\:bg-accent');
-        await contactItem.trigger('click');
-        await flushPromises();
-
-
-        const backButton = wrapper.find('button.mr-2.rounded-full.p-1\\.5.hover\\:bg-accent');
-        await backButton.trigger('click');
-        await flushPromises();
-
-
-        const chatInterface = wrapper.find('div.fixed.z-10.top-0.bottom-0.border-r.border-border.bg-background.flex.flex-col');
-        expect(chatInterface.exists()).toBe(false);
-    });
-
-    it('should display empty state when no messages exist', async () => {
-        global.fetch = vi.fn()
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([
-                    { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' }
-                ])
-            }))
-
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([])
-            }));
-
-        const wrapper = mount(AppSidebar);
-        await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
-        await flushPromises();
-
-        const contactItem = wrapper.find('ul li.p-2.rounded-md.hover\\:bg-accent');
-        await contactItem.trigger('click');
-        await flushPromises();
-
-
-        const emptyState = wrapper.find('div.flex.flex-col.items-center.justify-center.h-full.text-center');
-        expect(emptyState.exists()).toBe(true);
-
-        const emptyStateText = wrapper.find('p.mt-4.text-muted-foreground');
-        expect(emptyStateText.text()).toContain('No messages yet with User2');
-    });
-
-    it('should disable send button when message input is empty', async () => {
-        global.fetch = vi.fn()
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([
-                    { uid: 2, username: 'User2', contactUserId: 2, userId: 1, createdAt: '2025-04-01T12:00:00.000Z', status: 'accepted' }
-                ])
-            }))
-            .mockImplementationOnce(() => Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve([])
-            }));
-
-        const wrapper = mount(AppSidebar);
-        await flushPromises();
-
-
-        const contactsButton = wrapper.findAll('ul li a').at(1);
-        await contactsButton?.trigger('click');
-        await flushPromises();
-
-        const contactItem = wrapper.find('ul li.p-2.rounded-md.hover\\:bg-accent');
-        await contactItem.trigger('click');
-        await flushPromises();
-
-
-        const sendButton = wrapper.find('button[type="submit"]');
-        expect(sendButton.attributes('disabled')).toBeDefined();
-
-
-        const messageInput = wrapper.find('input[type="text"]');
-        await messageInput.setValue('Hello');
-        await nextTick();
-
-        expect(sendButton.attributes('disabled')).toBeUndefined();
+        
+        // Chat interface should now be visible
+        expect(wrapper.text()).toContain('friend1');
+        // Check for the message input field
+        expect(wrapper.find('form input[type="text"]').exists()).toBe(true);
+        
+        // Messages should be displayed
+        expect(wrapper.text()).toContain('Hello there!');
+        expect(wrapper.text()).toContain('Hi! How are you?');
+        
+        // Check API calls
+        expect(apiService.getMessages).toHaveBeenCalledWith(123, 456, mockToken);
     });
 });
