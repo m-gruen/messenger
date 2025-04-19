@@ -235,35 +235,65 @@ export class ContactUtils extends Utils {
       }
 
       try {
-         const contactExists = await this.dbSession.query(
-            'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+         const contactQuery = await this.dbSession.query(
+            'SELECT contact_id, status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
             [userId, contactUserId]
          );
 
-         if (contactExists.rowCount === 0) {
+         if (contactQuery.rowCount === 0) {
             return this.createErrorResponse(
                StatusCodes.NOT_FOUND,
                'Contact not found'
             );
          }
 
+         const contactStatus = contactQuery.rows && contactQuery.rows[0] && contactQuery.rows[0].status
+            ? contactQuery.rows[0].status
+            : '';
+
          await this.dbSession.query(
             'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
             [userId, contactUserId]
          );
 
-         const reverseContactExists = await this.dbSession.query(
-            'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+         const reverseContactQuery = await this.dbSession.query(
+            'SELECT contact_id, status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
             [contactUserId, userId]
          );
 
-         if ((reverseContactExists.rowCount ?? 0) > 0) {
-            await this.dbSession.query(`
-               UPDATE contact 
-               SET status = $3
-               WHERE user_id = $1 AND contact_user_id = $2`,
-               [contactUserId, userId, ContactStatus.DELETED]
-            );
+         if (reverseContactQuery && reverseContactQuery.rowCount && reverseContactQuery.rowCount > 0) {
+            const reverseStatus = reverseContactQuery.rows && reverseContactQuery.rows[0] && reverseContactQuery.rows[0].status
+               ? reverseContactQuery.rows[0].status
+               : '';
+
+            if (contactStatus === ContactStatus.OUTGOING_REQUEST &&
+               reverseStatus === ContactStatus.INCOMING_REQUEST) {
+               await this.dbSession.query(
+                  'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                  [contactUserId, userId]
+               );
+            } else {
+               await this.dbSession.query(
+                  `UPDATE contact 
+                  SET status = $3
+                  WHERE user_id = $1 AND contact_user_id = $2`,
+                  [contactUserId, userId, ContactStatus.DELETED]
+               );
+            }
+         } else {
+            if (contactStatus === ContactStatus.OUTGOING_REQUEST) {
+               await this.dbSession.query(
+                  'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                  [contactUserId, userId]
+               );
+            } else {
+               await this.dbSession.query(
+                  `UPDATE contact 
+                  SET status = $3
+                  WHERE user_id = $1 AND contact_user_id = $2`,
+                  [contactUserId, userId, ContactStatus.DELETED]
+               );
+            }
          }
 
          return this.createSuccessResponse(null);
@@ -302,25 +332,59 @@ export class ContactUtils extends Utils {
             );
          }
 
-         const { user_id, contact_user_id } = contactQuery.rows[0];
+         const user_id = contactQuery.rows?.[0]?.user_id ?? 0;
+         const contact_user_id = contactQuery.rows?.[0]?.contact_user_id ?? 0;
+
+         const contactStatusQuery = await this.dbSession.query(
+            'SELECT status FROM contact WHERE contact_id = $1',
+            [contactId]
+         );
+         
+         const contactStatus = contactStatusQuery.rows?.[0]?.status || '';
 
          await this.dbSession.query(
             'DELETE FROM contact WHERE contact_id = $1',
             [contactId]
          );
 
-         const reverseContactExists = await this.dbSession.query(
-            'SELECT contact_id FROM contact WHERE user_id = $1 AND contact_user_id = $2',
-            [contact_user_id, user_id]
-         );
-
-         if ((reverseContactExists.rowCount ?? 0) > 0) {
-            await this.dbSession.query(`
-            UPDATE contact 
-            SET status = $3
-            WHERE user_id = $1 AND contact_user_id = $2`,
-               [contact_user_id, user_id, ContactStatus.DELETED]
+         if (user_id && contact_user_id) {
+            const reverseContactQuery = await this.dbSession.query(
+               'SELECT contact_id, status FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+               [contact_user_id, user_id]
             );
+
+            if ((reverseContactQuery.rowCount ?? 0) > 0) {
+               const reverseStatus = reverseContactQuery.rows?.[0]?.status || '';
+               
+               if ((contactStatus === ContactStatus.OUTGOING_REQUEST || contactStatus === '') && 
+                   (reverseStatus === ContactStatus.INCOMING_REQUEST || reverseStatus === '')) {
+                  await this.dbSession.query(
+                     'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                     [contact_user_id, user_id]
+                  );
+               } else {
+                  await this.dbSession.query(`
+                  UPDATE contact 
+                  SET status = $3
+                  WHERE user_id = $1 AND contact_user_id = $2`,
+                     [contact_user_id, user_id, ContactStatus.DELETED]
+                  );
+               }
+            } else {
+               if (contactStatus === ContactStatus.OUTGOING_REQUEST) {
+                  await this.dbSession.query(
+                     'DELETE FROM contact WHERE user_id = $1 AND contact_user_id = $2',
+                     [contact_user_id, user_id]
+                  );
+               } else {
+                  await this.dbSession.query(`
+                  UPDATE contact 
+                  SET status = $3
+                  WHERE user_id = $1 AND contact_user_id = $2`,
+                     [contact_user_id, user_id, ContactStatus.DELETED]
+                  );
+               }
+            }
          }
 
          return this.createSuccessResponse(null);
