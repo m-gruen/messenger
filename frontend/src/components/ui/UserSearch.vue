@@ -27,10 +27,10 @@
           <p class="username">@{{ user.username }}</p>
         </div>
         <Button 
-          @click="addContact(user.uid)" 
-          variant="outline" 
+          @click="handleUserAction(user.uid)" 
+          :variant="getButtonVariant(user.uid)"
           size="sm"
-          :disabled="isPending(user.uid)"
+          :disabled="isPending(user.uid) || isExistingContact(user.uid)"
         >
           {{ getButtonText(user.uid) }}
         </Button>
@@ -44,12 +44,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiService } from '@/services/api.service';
 import { useAuthStore } from '@/stores/AuthStore';
 import type { User } from '@/models/user-model';
+import type { Contact } from '@/models/contact-model';
+import { ContactStatus } from '@/models/contact-model';
 
 const authStore = useAuthStore();
 const currentUserId = computed(() => authStore.user?.uid || 0);
@@ -61,6 +63,35 @@ const loading = ref(false);
 const error = ref('');
 const hasSearched = ref(false);
 const pendingRequests = ref<number[]>([]);
+const userContacts = ref<Contact[]>([]);
+const outgoingRequests = ref<Contact[]>([]);
+const loadingContacts = ref(false);
+
+onMounted(async () => {
+  if (currentUserId.value) {
+    await fetchContacts();
+  }
+});
+
+async function fetchContacts() {
+  if (!currentUserId.value) return;
+  
+  loadingContacts.value = true;
+  try {
+    // Fetch both current contacts and outgoing requests
+    const [contacts, outgoing] = await Promise.all([
+      apiService.getContacts(currentUserId.value, token.value),
+      apiService.getOutgoingContactRequests(currentUserId.value, token.value)
+    ]);
+    
+    userContacts.value = contacts;
+    outgoingRequests.value = outgoing;
+  } catch (err) {
+    console.error('Error fetching contacts:', err);
+  } finally {
+    loadingContacts.value = false;
+  }
+}
 
 async function handleSearch() {
   if (!searchQuery.value.trim()) {
@@ -84,6 +115,20 @@ async function handleSearch() {
   }
 }
 
+async function handleUserAction(userId: number) {
+  if (isExistingContact(userId)) {
+    // We shouldn't get here due to disabled button, but just in case
+    return;
+  }
+  
+  if (hasPendingRequest(userId)) {
+    // This is a request that's already been sent
+    return;
+  }
+  
+  await addContact(userId);
+}
+
 async function addContact(userId: number) {
   if (!currentUserId.value) {
     error.value = 'You must be logged in to add contacts';
@@ -93,7 +138,15 @@ async function addContact(userId: number) {
   try {
     pendingRequests.value.push(userId);
     await apiService.addContact(currentUserId.value, userId, token.value);
-    // We don't remove from pendingRequests to keep the button disabled after successful add
+    // Add to outgoingRequests to reflect in UI immediately
+    outgoingRequests.value.push({
+      contactId: 0, // We don't know this yet, but it's not critical
+      userId: currentUserId.value,
+      contactUserId: userId,
+      username: searchResults.value.find(user => user.uid === userId)?.username || '',
+      createdAt: new Date(),
+      status: ContactStatus.OUTGOING_REQUEST
+    });
   } catch (err) {
     pendingRequests.value = pendingRequests.value.filter(id => id !== userId);
     error.value = err instanceof Error ? err.message : 'Failed to add contact';
@@ -101,12 +154,39 @@ async function addContact(userId: number) {
   }
 }
 
+function isExistingContact(userId: number): boolean {
+  return userContacts.value.some(contact => contact.contactUserId === userId);
+}
+
+function hasPendingRequest(userId: number): boolean {
+  return outgoingRequests.value.some(request => request.contactUserId === userId);
+}
+
 function isPending(userId: number): boolean {
   return pendingRequests.value.includes(userId);
 }
 
 function getButtonText(userId: number): string {
-  return isPending(userId) ? 'Request Sent' : 'Add Contact';
+  if (isExistingContact(userId)) {
+    return 'Already Contact';
+  }
+  if (hasPendingRequest(userId)) {
+    return 'Request Sent';
+  }
+  if (isPending(userId)) {
+    return 'Sending...';
+  }
+  return 'Add Contact';
+}
+
+function getButtonVariant(userId: number): 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' {
+  if (isExistingContact(userId)) {
+    return 'secondary'; // Using secondary instead of success
+  }
+  if (hasPendingRequest(userId)) {
+    return 'ghost'; // Using ghost instead of secondary
+  }
+  return 'outline';
 }
 </script>
 
