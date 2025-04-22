@@ -125,7 +125,8 @@ export abstract class Utils {
                 status === ContactStatus.BLOCKED ||
                 status === ContactStatus.INCOMING_REQUEST ||
                 status === ContactStatus.OUTGOING_REQUEST ||
-                status === ContactStatus.DELETED
+                status === ContactStatus.DELETED ||
+                status === ContactStatus.REJECTED
             ) {
                 return false;
             }
