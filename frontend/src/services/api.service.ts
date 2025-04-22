@@ -1,4 +1,5 @@
 import { getBackendUrl } from '../lib/config';
+import { StatusCodes } from 'http-status-codes';
 import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
@@ -42,7 +43,7 @@ export class ApiService {
         let data: any;
         
         const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json') && response.status !== 204) {
+        if (contentType && contentType.includes('application/json') && response.status !== StatusCodes.NO_CONTENT) {
             data = await response.json();
         }
 

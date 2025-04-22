@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import UserSearch from '@/components/ui/UserSearch.vue'
 import type { IMessage } from '@/models/message-model';
 import { type Contact, ContactStatus } from '@/models/contact-model';
 import { apiService } from '@/services/api.service';
@@ -19,7 +20,7 @@ const token = storageService.getToken() || '';
 const items = [
   { title: "Home", url: "#", icon: Home },
   { title: "Contacts", url: "#", icon: Inbox, action: toggleContacts },
-  { title: "Search", url: "#", icon: Search },
+  { title: "Search", url: "#", icon: Search, action: toggleSearch },
   { title: "Settings", url: "#", icon: Settings },
 ];
 
@@ -27,6 +28,7 @@ const contacts = ref<Contact[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const showContacts = ref(false)
+const showSearch = ref(false)
 const sidebarCollapsed = ref(false)
 const selectedContact = ref<Contact | null>(null)
 const showChat = ref(false)
@@ -107,6 +109,17 @@ function toggleContacts() {
   showContacts.value = !showContacts.value
   if (showContacts.value) {
     fetchContacts(currentUserId)
+    // Close search if contacts is opened
+    showSearch.value = false
+  }
+  showChat.value = false;
+}
+
+function toggleSearch() {
+  showSearch.value = !showSearch.value
+  // Close contacts if search is opened
+  if (showSearch.value) {
+    showContacts.value = false
   }
   showChat.value = false;
 }
@@ -253,12 +266,28 @@ function formatStatusText(status: ContactStatus | string): string {
       </ul>
     </div>
 
+    <!-- User Search Panel -->
+    <div v-if="showSearch"
+      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ease-in-out"
+      :style="{ left: sidebarCollapsed ? '48px' : 'var(--sidebar-width)' }" :class="{ 'w-80': true }">
+      <div class="p-4 border-b">
+        <h2 class="text-xl font-bold mb-1">Find Contacts</h2>
+        <p class="text-sm text-muted-foreground">Search for users to add as contacts</p>
+      </div>
+      <UserSearch />
+    </div>
+
     <!-- Chat Interface (WhatsApp-like) -->
     <div v-if="selectedContact && showChat"
       class="fixed z-10 top-0 bottom-0 border-r border-border bg-background transition-all duration-300 ease-in-out flex flex-col"
       :style="{
-        left: showContacts ? (sidebarCollapsed ? '368px' : '560px') : (sidebarCollapsed ? '48px' : 'var(--sidebar-width)'),
-        width: 'calc(100vw - ' + (showContacts ? (sidebarCollapsed ? '368px' : '560px') : (sidebarCollapsed ? '48px' : 'var(--sidebar-width)')) + ')'
+        left: (showContacts || showSearch) ? 
+          (sidebarCollapsed ? (showSearch ? '368px' : '304px') : (showSearch ? '560px' : '496px')) : 
+          (sidebarCollapsed ? '48px' : 'var(--sidebar-width)'),
+        width: 'calc(100vw - ' + 
+          ((showContacts || showSearch) ? 
+          (sidebarCollapsed ? (showSearch ? '368px' : '304px') : (showSearch ? '560px' : '496px')) : 
+          (sidebarCollapsed ? '48px' : 'var(--sidebar-width)')) + ')'
       }">
       <!-- Chat Header -->
       <div class="flex items-center p-4 border-b bg-card">
