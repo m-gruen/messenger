@@ -1,5 +1,5 @@
 import { getBackendUrl } from '../lib/config';
-import type { AuthenticatedUser } from '@/models/user-model';
+import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 
@@ -97,8 +97,8 @@ export class ApiService {
      * @param token JWT token
      * @returns User data
      */
-    public async getUserById(uid: number, token: string): Promise<AuthenticatedUser> {
-        return await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user/${uid}`, {
+    public async getUserById(uid: number, token: string): Promise<User> {
+        return await this.fetchApi<User>(`${this.baseUrl}/user/${uid}`, {
             method: 'GET'
         }, token);
     }
@@ -110,8 +110,8 @@ export class ApiService {
      * @param token JWT token
      * @returns List of users
      */
-    public async searchUsers(query: string, token: string, limit: number = 20): Promise<AuthenticatedUser[]> {
-        return await this.fetchApi<AuthenticatedUser[]>(
+    public async searchUsers(query: string, token: string, limit: number = 20): Promise<User[]> {
+        return await this.fetchApi<User[]>(
             `${this.baseUrl}/user/search?query=${encodeURIComponent(query)}&limit=${limit}`, 
             { method: 'GET' }, 
             token
