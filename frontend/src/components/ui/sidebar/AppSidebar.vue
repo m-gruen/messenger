@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
 import UserSearch from '@/components/ui/UserSearch.vue'
 import ContactRequests from '@/components/ui/ContactRequests.vue'
+import ContactList from '@/components/ui/ContactList.vue'
 import type { IMessage } from '@/models/message-model';
-import { type Contact, ContactStatus } from '@/models/contact-model';
+import type { Contact } from '@/models/contact-model';
+import { ContactStatus } from '@/models/contact-model';
 import { apiService } from '@/services/api.service';
 import { storageService } from '@/services/storage.service';
+import { useContactStore } from '@/stores/ContactStore';
 
 import {
   Home, Inbox, Search, Settings, ChevronRight,
@@ -16,21 +18,20 @@ import {
 
 // Get user ID and token from storage service
 const user = storageService.getUser();
-const currentUserId = user?.uid || 0;
-const token = storageService.getToken() || '';
-const router = useRouter();
+const currentUserId = computed(() => user?.uid || 0);
+const token = computed(() => storageService.getToken() || '');
+
+// Contact store
+const contactStore = useContactStore();
 
 const items = [
-  { title: "Home", url: "/", icon: Home, action: () => router.push('/') },
+  { title: "Home", url: "#", icon: Home },
   { title: "Contacts", url: "#", icon: Inbox, action: toggleContacts },
   { title: "Requests", url: "#", icon: UserPlus, action: toggleRequests },
   { title: "Search", url: "#", icon: Search, action: toggleSearch },
   { title: "Settings", url: "#", icon: Settings },
 ];
 
-const contacts = ref<Contact[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
 const showContacts = ref(false)
 const showRequests = ref(false)
 const showSearch = ref(false)
@@ -43,30 +44,45 @@ const messages = ref<IMessage[]>([])
 const isLoadingMessages = ref(false)
 const messagesError = ref<string | null>(null)
 
-async function fetchContacts(userId: number) {
-  isLoading.value = true
-  error.value = null
-  
-  try {
-    contacts.value = await apiService.getContacts(userId, token);
-    
-    contacts.value = contacts.value.sort((a, b) => {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
-    console.error('Error fetching contacts:', err)
-  } finally {
-    isLoading.value = false
+// Computed properties for positional styling
+const sidebarWidth = computed(() => sidebarCollapsed.value ? '48px' : '240px');
+const panelWidth = '320px'; // Fixed width for all panels (w-80 = 20rem = 320px)
+
+// Calculate chat window position and width as computed properties
+const chatLeftPosition = computed(() => {
+  if (showContacts.value) {
+    return `calc(${sidebarWidth.value} + ${panelWidth})`;
+  } else if (showRequests.value) {
+    return `calc(${sidebarWidth.value} + ${panelWidth})`;
+  } else if (showSearch.value) {
+    return `calc(${sidebarWidth.value} + ${panelWidth})`;
   }
-}
+  return sidebarWidth.value;
+});
+
+const chatWidth = computed(() => {
+  return `calc(100vw - ${chatLeftPosition.value})`;
+});
+
+onMounted(async () => {
+  if (currentUserId.value) {
+    await contactStore.fetchAllContacts();
+  }
+});
+
+// Re-fetch contacts when needed sections are toggled visible
+watch(showContacts, async (isVisible) => {
+  if (isVisible && currentUserId.value) {
+    await contactStore.fetchAllContacts();
+  }
+});
 
 async function fetchMessages(userId: number, contactId: number) {
   messagesError.value = null
   isLoadingMessages.value = true;
   
   try {
-    messages.value = await apiService.getMessages(userId, contactId, token);
+    messages.value = await apiService.getMessages(userId, contactId, token.value);
     
     messages.value = messages.value.sort((a, b) => {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -95,14 +111,14 @@ async function sendMessage() {
   
   try {
     const sentMessage = await apiService.sendMessage(
-      currentUserId,
+      currentUserId.value,
       selectedContact.value.contactUserId,
       newMessage.value,
-      token
+      token.value
     );
     
     messages.value.push(sentMessage);
-    fetchMessages(currentUserId, selectedContact.value.contactUserId);
+    fetchMessages(currentUserId.value, selectedContact.value.contactUserId);
     newMessage.value = '';
   } catch (err) {
     messagesError.value = err instanceof Error ? err.message : 'Failed to send message'
@@ -113,7 +129,6 @@ async function sendMessage() {
 function toggleContacts() {
   showContacts.value = !showContacts.value
   if (showContacts.value) {
-    fetchContacts(currentUserId)
     // Close other panels if contacts is opened
     showSearch.value = false
     showRequests.value = false
@@ -153,8 +168,9 @@ function selectContact(contact: Contact) {
   selectedContact.value = contact
   messages.value = []
   showChat.value = true;
+
   if (contact && contact.userId) {
-    fetchMessages(currentUserId, contact.contactUserId)
+    fetchMessages(currentUserId.value, contact.contactUserId)
   } else {
     console.error('Invalid contact selected, missing userId')
     messagesError.value = 'Cannot load messages: Invalid contact'
@@ -210,7 +226,7 @@ function formatStatusText(status: ContactStatus | string): string {
     ]">
       <!-- Toggle Sidebar Button -->
       <button @click="toggleSidebar"
-        class="absolute -right-3 top-5 bg-primary text-primary-foreground rounded-full p-1 shadow-md z-30"
+        class="absolute -right-3 top-5 bg-primary text-primary-foreground rounded-full p-1 shadow-md z-50"
         id="sidebar-toggle"
         :aria-label="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
         <ChevronLeft v-if="!sidebarCollapsed" class="h-4 w-4" />
@@ -250,50 +266,22 @@ function formatStatusText(status: ContactStatus | string): string {
 
     <!-- Contacts List Panel -->
     <div v-if="showContacts"
-      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border p-4 bg-card transition-all duration-300 ease-in-out"
-      :style="{ left: sidebarCollapsed ? '48px' : 'var(--sidebar-width)' }" :class="{ 'w-64': true }">
-      <h2 class="text-xl font-bold mb-3">Contacts</h2>
-
-      <div v-if="isLoading" class="flex items-center justify-center p-4">
-        <div class="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
-        <span class="ml-2">Loading contacts...</span>
-      </div>
-
-      <div v-else-if="error" class="bg-destructive/10 text-destructive p-4 rounded-md">
-        {{ error }}
-      </div>
-
-      <div v-else-if="contacts.length === 0" class="text-muted-foreground p-4">
-        No contacts found.
-      </div>
-
-      <ul v-else class="space-y-2">
-        <li v-for="contact in contacts" :key="contact.userId"
-          class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer" @click="selectContact(contact)">
-          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            {{ contact.username.charAt(0).toUpperCase() }}
-          </div>
-          <div class="ml-3">
-            <div class="font-medium">{{ contact.username }}</div>
-            <div class="text-xs text-muted-foreground">
-              Joined {{ new Date(contact.createdAt).toLocaleDateString() }}
-            </div>
-          </div>
-        </li>
-      </ul>
+      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ease-in-out"
+      :style="{ left: sidebarWidth }" :class="{ 'w-80': true }">
+      <ContactList :visible="showContacts" @select="selectContact" />
     </div>
 
     <!-- Contact Requests Panel -->
     <div v-if="showRequests"
       class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ease-in-out"
-      :style="{ left: sidebarCollapsed ? '48px' : 'var(--sidebar-width)' }" :class="{ 'w-80': true }">
+      :style="{ left: sidebarWidth }" :class="{ 'w-80': true }">
       <ContactRequests :visible="showRequests" />
     </div>
 
     <!-- User Search Panel -->
     <div v-if="showSearch"
       class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ease-in-out"
-      :style="{ left: sidebarCollapsed ? '48px' : 'var(--sidebar-width)' }" :class="{ 'w-80': true }">
+      :style="{ left: sidebarWidth }" :class="{ 'w-80': true }">
       <div class="p-4 border-b">
         <h2 class="text-xl font-bold mb-1">Find Contacts</h2>
         <p class="text-sm text-muted-foreground">Search for users to add as contacts</p>
@@ -305,13 +293,8 @@ function formatStatusText(status: ContactStatus | string): string {
     <div v-if="selectedContact && showChat"
       class="fixed z-10 top-0 bottom-0 border-r border-border bg-background transition-all duration-300 ease-in-out flex flex-col"
       :style="{
-        left: (showContacts || showSearch || showRequests) ? 
-          (sidebarCollapsed ? (showSearch ? '368px' : (showRequests ? '304px' : '240px')) : (showSearch ? '560px' : (showRequests ? '496px' : '432px'))) : 
-          (sidebarCollapsed ? '48px' : 'var(--sidebar-width)'),
-        width: 'calc(100vw - ' + 
-          ((showContacts || showSearch || showRequests) ? 
-          (sidebarCollapsed ? (showSearch ? '368px' : (showRequests ? '304px' : '240px')) : (showSearch ? '560px' : (showRequests ? '496px' : '432px'))) : 
-          (sidebarCollapsed ? '48px' : 'var(--sidebar-width)')) + ')'
+        left: chatLeftPosition,
+        width: chatWidth
       }">
       <!-- Chat Header -->
       <div class="flex items-center p-4 border-b bg-card">
