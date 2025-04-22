@@ -32,7 +32,9 @@ Creates a new user account.
 {
   "username": "string", // Required
   "password": "string", // Required
-  "displayName": "string" // Optional
+  "displayName": "string", // Optional
+  "shadowMode": boolean,  // Optional (defaults to false)
+  "fullNameSearch": boolean // Optional (defaults to false)
 }
 ----
 
