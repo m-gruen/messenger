@@ -2,16 +2,45 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRouter, createWebHistory } from 'vue-router';
 import AppSidebar from '../../src/components/ui/sidebar/AppSidebar.vue';
+import { ContactStatus } from '../../src/models/contact-model';
 
-// First, mock the modules before using any variables
+// Mock the AuthStore
 vi.mock('../../src/stores/AuthStore', () => ({
-    useAuthStore: vi.fn()
+    useAuthStore: vi.fn(() => ({
+        user: {
+            uid: 123,
+            username: 'testuser',
+            token: 'fake-token'
+        }
+    }))
+}));
+
+// Mock the ContactStore with necessary methods and properties
+vi.mock('../../src/stores/ContactStore', () => ({
+    useContactStore: vi.fn(() => ({
+        contacts: [],
+        loading: false,
+        error: null,
+        acceptedContacts: [],
+        incomingRequests: [],
+        outgoingRequests: [],
+        fetchAllContacts: vi.fn().mockResolvedValue([]),
+        getContactStatus: vi.fn(),
+        isExistingContact: vi.fn(),
+        addContact: vi.fn(),
+        acceptContactRequest: vi.fn(),
+        rejectContactRequest: vi.fn(),
+        cancelOutgoingRequest: vi.fn(),
+        deleteContact: vi.fn(),
+        isPending: vi.fn()
+    }))
 }));
 
 vi.mock('../../src/services/api.service', () => ({
     apiService: {
         getContacts: vi.fn(),
-        getContactRequests: vi.fn(),
+        getIncomingContactRequests: vi.fn(),
+        getOutgoingContactRequests: vi.fn(),
         getMessages: vi.fn(),
         sendMessage: vi.fn()
     }
@@ -20,21 +49,47 @@ vi.mock('../../src/services/api.service', () => ({
 vi.mock('../../src/services/storage.service', () => ({
     storageService: {
         getUser: vi.fn(),
-        getToken: vi.fn()
+        getToken: vi.fn(),
+        isAuthenticated: vi.fn()
+    }
+}));
+
+// Mock the child components
+vi.mock('../../src/components/ui/ContactList.vue', () => ({
+    default: {
+        name: 'ContactList',
+        props: ['visible'],
+        template: '<div class="contact-list-mock">Contact List Mock</div>'
+    }
+}));
+
+vi.mock('../../src/components/ui/ContactRequests.vue', () => ({
+    default: {
+        name: 'ContactRequests',
+        props: ['visible'],
+        template: '<div class="contact-requests-mock">Contact Requests Mock</div>'
+    }
+}));
+
+vi.mock('../../src/components/ui/UserSearch.vue', () => ({
+    default: {
+        name: 'UserSearch',
+        template: '<div class="user-search-mock">User Search Mock</div>'
     }
 }));
 
 // Mock for Lucide icons
 vi.mock('lucide-vue-next', () => ({
-    Home: { render: () => {} },
-    Inbox: { render: () => {} },
-    Search: { render: () => {} },
-    Settings: { render: () => {} },
-    ChevronRight: { render: () => {} },
-    ChevronLeft: { render: () => {} },
-    MessageSquare: { render: () => {} },
-    Send: { render: () => {} },
-    ArrowLeft: { render: () => {} }
+    Home: { render: () => null },
+    Inbox: { render: () => null },
+    Search: { render: () => null },
+    Settings: { render: () => null },
+    ChevronRight: { render: () => null },
+    ChevronLeft: { render: () => null },
+    MessageSquare: { render: () => null },
+    Send: { render: () => null },
+    ArrowLeft: { render: () => null },
+    UserPlus: { render: () => null }
 }));
 
 // Set up environment for testing
@@ -43,7 +98,6 @@ process.env.NODE_ENV = 'test';
 // Create mock routes for testing
 const routes = [
     { path: '/', component: { template: '<div>Home</div>' } },
-    { path: '/add-contact', component: { template: '<div>Add Contact</div>' } },
     { path: '/login', component: { template: '<div>Login</div>' } }
 ];
 
@@ -54,9 +108,10 @@ const router = createRouter({
 
 // Get references to mocked functions AFTER the mocks are set up
 import { useAuthStore } from '../../src/stores/AuthStore';
+import { useContactStore } from '../../src/stores/ContactStore';
 import { apiService } from '../../src/services/api.service';
 import { storageService } from '../../src/services/storage.service';
-import { Contact } from '../../src/models/contact-model';
+import type { Contact } from '../../src/models/contact-model';
 
 describe('AppSidebar.vue', () => {
     // Create mock user and token
@@ -93,7 +148,8 @@ describe('AppSidebar.vue', () => {
                     'Search': true,
                     'Settings': true,
                     'ChevronLeft': true,
-                    'ChevronRight': true
+                    'ChevronRight': true,
+                    'UserPlus': true
                 }
             }
         });
@@ -106,145 +162,51 @@ describe('AppSidebar.vue', () => {
         // Check for navigation items
         expect(wrapper.text()).toContain('Home');
         expect(wrapper.text()).toContain('Contacts');
+        expect(wrapper.text()).toContain('Requests');
         expect(wrapper.text()).toContain('Search');
         expect(wrapper.text()).toContain('Settings');
     });
 
     it('toggles the contacts panel when Contacts is clicked', async () => {
-        // Mock contacts data
-        const mockContacts = [
-            {
-                userId: 456,
-                contactUserId: 456,
-                username: 'friend1',
-                status: 'ACCEPTED',
-                createdAt: '2025-03-01T12:00:00.000Z'
-            },
-            {
-                userId: 789,
-                contactUserId: 789,
-                username: 'friend2',
-                status: 'ACCEPTED',
-                createdAt: '2025-03-15T12:00:00.000Z'
-            }
-        ];
-        
-        // Mock API response
-        vi.mocked(apiService.getContacts).mockResolvedValue(mockContacts);
-        
         // Mount the component
         const wrapper = mount(AppSidebar, {
             global: {
                 plugins: [router],
                 stubs: {
-                    'Home': true,
-                    'Inbox': true,
-                    'Search': true,
-                    'Settings': true,
-                    'ChevronLeft': true,
-                    'ChevronRight': true
+                    ContactList: {
+                        template: '<div class="contact-list-mock">Contact List Mock</div>',
+                        props: ['visible']
+                    },
+                    ContactRequests: true,
+                    UserSearch: true,
+                    Home: true,
+                    Inbox: true,
+                    Search: true,
+                    Settings: true,
+                    ChevronLeft: true,
+                    ChevronRight: true,
+                    UserPlus: true
                 }
             }
         });
         
-        // Initially contacts panel should be hidden
-        expect(wrapper.find('h2').exists()).toBe(false);
+        // Verify the contacts panel is not visible initially
+        expect(wrapper.html()).not.toContain('contact-list-mock');
         
         // Find and click the Contacts navigation item
         const contactsLink = wrapper.findAll('a')[1];
         await contactsLink.trigger('click');
         await flushPromises();
         
-        // Contacts panel should now be visible with the title
-        expect(wrapper.find('h2').exists()).toBe(true);
-        expect(wrapper.find('h2').text()).toBe('Contacts');
+        // Contacts panel should now be visible
+        expect(wrapper.html()).toContain('contact-list-mock');
         
-        // API should have been called
-        expect(apiService.getContacts).toHaveBeenCalledWith(123, mockToken);
-        
-        // Contacts should be displayed
-        expect(wrapper.text()).toContain('friend1');
-        expect(wrapper.text()).toContain('friend2');
-    });
-    
-    it('shows loading state when fetching contacts', async () => {
-        // Create a delayed promise that we can control
-        let resolveContacts!: (value: any) => void;  // Using the definite assignment assertion
-        const contactsPromise = new Promise<Contact[]>(resolve => {
-            resolveContacts = resolve;
-        });
-        
-        // Mock API with delayed response
-        vi.mocked(apiService.getContacts).mockReturnValue(contactsPromise);
-        
-        // Mount the component
-        const wrapper = mount(AppSidebar, {
-            global: {
-                plugins: [router],
-                stubs: {
-                    'Home': true,
-                    'Inbox': true,
-                    'Search': true,
-                    'Settings': true,
-                    'ChevronLeft': true,
-                    'ChevronRight': true
-                }
-            }
-        });
-        
-        // Click the Contacts navigation item
-        const contactsLink = wrapper.findAll('a')[1];
+        // Click again to hide the panel
         await contactsLink.trigger('click');
         await flushPromises();
         
-        // Loading indicator should be visible
-        expect(wrapper.text()).toContain('Loading contacts...');
-        
-        // Resolve the contacts promise
-        resolveContacts([]);
-        await flushPromises();
-        
-        // Loading indicator should be gone, empty state should be shown
-        expect(wrapper.text()).not.toContain('Loading contacts...');
-        expect(wrapper.text()).toContain('No contacts found.');
-    });
-    
-    it('handles API errors when fetching contacts', async () => {
-        // Mock API error
-        vi.mocked(apiService.getContacts).mockRejectedValue(new Error('Network error'));
-        
-        // We need to spy on console.error to prevent test output pollution
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-        
-        // Mount the component
-        const wrapper = mount(AppSidebar, {
-            global: {
-                plugins: [router],
-                stubs: {
-                    'Home': true,
-                    'Inbox': true,
-                    'Search': true,
-                    'Settings': true,
-                    'ChevronLeft': true,
-                    'ChevronRight': true
-                }
-            }
-        });
-        
-        // Click the Contacts navigation item
-        const contactsLink = wrapper.findAll('a')[1];
-        await contactsLink.trigger('click');
-        await flushPromises();
-        
-        // Error should have been logged
-        expect(consoleErrorSpy).toHaveBeenCalled();
-        
-        // Error message should be visible to user
-        expect(wrapper.find('.bg-destructive\\/10').exists()).toBe(true);
-        expect(wrapper.find('.bg-destructive\\/10').text()).toContain('Network error');
-        
-        // Restore console.error
-        consoleErrorSpy.mockRestore();
+        // Contacts panel should now be hidden
+        expect(wrapper.html()).not.toContain('contact-list-mock');
     });
     
     it('toggles sidebar collapse state', async () => {
@@ -258,7 +220,8 @@ describe('AppSidebar.vue', () => {
                     'Search': true,
                     'Settings': true,
                     'ChevronLeft': true,
-                    'ChevronRight': true
+                    'ChevronRight': true,
+                    'UserPlus': true
                 }
             }
         });
@@ -280,82 +243,66 @@ describe('AppSidebar.vue', () => {
         expect(wrapper.find('aside').classes()).not.toContain('w-12');
     });
     
-    it('shows chat interface when a contact is selected', async () => {
-        // Mock contacts and messages
-        const mockContacts = [
-            {
-                userId: 456,
-                contactUserId: 456,
-                username: 'friend1',
-                status: 'ACCEPTED',
-                createdAt: '2025-03-01T12:00:00.000Z'
-            }
-        ];
-        
-        const mockMessages = [
-            {
-                mid: 1,
-                sender_uid: 123,
-                receiver_uid: 456,
-                content: 'Hello there!',
-                timestamp: '2025-04-01T12:00:00.000Z',
-                is_read: true
-            },
-            {
-                mid: 2,
-                sender_uid: 456,
-                receiver_uid: 123,
-                content: 'Hi! How are you?',
-                timestamp: '2025-04-01T12:05:00.000Z',
-                is_read: true
-            }
-        ];
-        
-        // Mock API responses
-        vi.mocked(apiService.getContacts).mockResolvedValue(mockContacts);
-        vi.mocked(apiService.getMessages).mockResolvedValue(mockMessages);
-        
+    it('toggles requests panel when Requests is clicked', async () => {
         // Mount the component
         const wrapper = mount(AppSidebar, {
             global: {
                 plugins: [router],
                 stubs: {
-                    'Home': true,
-                    'Inbox': true,
-                    'Search': true,
-                    'Settings': true,
-                    'ChevronLeft': true,
-                    'ChevronRight': true,
-                    'MessageSquare': true,
-                    'Send': true,
-                    'ArrowLeft': true
+                    ContactRequests: {
+                        template: '<div class="contact-requests-mock">Contact Requests Mock</div>',
+                        props: ['visible']
+                    },
+                    ContactList: true,
+                    UserSearch: true,
+                    Home: true,
+                    Inbox: true,
+                    Search: true,
+                    Settings: true,
+                    ChevronLeft: true,
+                    ChevronRight: true,
+                    UserPlus: true
                 }
             }
         });
         
-        // Click contacts to show the panel
-        const contactsLink = wrapper.findAll('a')[1];
-        await contactsLink.trigger('click');
+        // Find and click the Requests navigation item
+        const requestsLink = wrapper.findAll('a')[2];
+        await requestsLink.trigger('click');
         await flushPromises();
         
-        // Chat interface should not be visible yet
-        expect(wrapper.find('input[type="text"]').exists()).toBe(false);
+        // Requests panel should now be visible
+        expect(wrapper.html()).toContain('contact-requests-mock');
+    });
+    
+    it('toggles search panel when Search is clicked', async () => {
+        // Mount the component
+        const wrapper = mount(AppSidebar, {
+            global: {
+                plugins: [router],
+                stubs: {
+                    UserSearch: {
+                        template: '<div class="user-search-mock">User Search Mock</div>'
+                    },
+                    ContactList: true,
+                    ContactRequests: true,
+                    Home: true,
+                    Inbox: true,
+                    Search: true,
+                    Settings: true,
+                    ChevronLeft: true,
+                    ChevronRight: true,
+                    UserPlus: true
+                }
+            }
+        });
         
-        // Click on a contact
-        const contactElement = wrapper.find('li.cursor-pointer');
-        await contactElement.trigger('click');
+        // Find and click the Search navigation item
+        const searchLink = wrapper.findAll('a')[3];
+        await searchLink.trigger('click');
         await flushPromises();
         
-        // Chat interface should now be visible
-        expect(wrapper.text()).toContain('friend1');
-        // Check for the message input field
-        expect(wrapper.find('form input[type="text"]').exists()).toBe(true);
-        
-        // Messages should be displayed
-        expect(wrapper.text()).toContain('Hello there!');
-        expect(wrapper.text()).toContain('Hi! How are you?');
-        
-        // Check API calls
-        expect(apiService.getMessages).toHaveBeenCalledWith(123, 456, mockToken);
+        // Search panel should now be visible
+        expect(wrapper.html()).toContain('user-search-mock');
     });
 });
