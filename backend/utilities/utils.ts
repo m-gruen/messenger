@@ -201,4 +201,22 @@ export abstract class Utils {
 
         return true;
     }
+    
+    /**
+     * Validates if a value is a boolean or a string representation of a boolean
+     * @param value The value to validate
+     * @returns True if the value is a boolean or a valid string representation of a boolean
+     */
+    protected isValidBoolean(value: unknown): boolean {
+        if (typeof value === 'boolean') {
+            return true;
+        }
+        
+        if (typeof value === 'string') {
+            const lowerValue = value.toLowerCase();
+            return lowerValue === 'true' || lowerValue === 'false';
+        }
+        
+        return false;
+    }
 }
