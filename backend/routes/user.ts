@@ -33,6 +33,36 @@ userRouter.post('/', async (req: Request, res: Response) => {
     }
 });
 
+userRouter.get('/search', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const { query, limit = 20 } = req.query;
+
+    if (!query || typeof query !== 'string') {
+        res.status(StatusCodes.BAD_REQUEST).json({
+            error: 'Search query is required'
+        });
+        return;
+    }
+
+    const searchLimit = typeof limit === 'string' ? parseInt(limit) : 20;
+
+    const dbSession = await DbSession.create(true);
+    try {
+        const userUtils = new UserUtils(dbSession);
+        const response = await userUtils.searchUsers(query, searchLimit);
+
+        res.status(response.statusCode).json(
+            response.data !== null ? response.data : { error: response.error }
+        );
+    } catch (error) {
+        console.error('Error searching for users:', error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: "An unexpected error occurred while processing your request"
+        });
+    } finally {
+        await dbSession.complete();
+    }
+});
+
 userRouter.get('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid: number = parseInt(req.params.uid);
 
@@ -69,36 +99,6 @@ userRouter.post('/login', async (req: Request, res: Response) => {
         );
     } catch (error) {
         console.error(error);
-        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            error: "An unexpected error occurred while processing your request"
-        });
-    } finally {
-        await dbSession.complete();
-    }
-});
-
-userRouter.get('/search', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
-    const { query, limit = 20 } = req.query;
-
-    if (!query || typeof query !== 'string') {
-        res.status(StatusCodes.BAD_REQUEST).json({
-            error: 'Search query is required'
-        });
-        return;
-    }
-
-    const searchLimit = typeof limit === 'string' ? parseInt(limit) : 20;
-
-    const dbSession = await DbSession.create(true);
-    try {
-        const userUtils = new UserUtils(dbSession);
-        const response = await userUtils.searchUsers(query, searchLimit);
-
-        res.status(response.statusCode).json(
-            response.data !== null ? response.data : { error: response.error }
-        );
-    } catch (error) {
-        console.error('Error searching for users:', error);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             error: "An unexpected error occurred while processing your request"
         });
