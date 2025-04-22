@@ -1,0 +1,225 @@
+### Create Test Users
+# Set the base URL to your backend server
+@baseUrl = http://localhost:3000
+
+### Create User 1
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "alice_smith",
+  "password": "test",
+  "displayName": "Alice Smith"
+}
+
+### Create User 2
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "bob_johnson",
+  "password": "test",
+  "displayName": "Bob Johnson"
+}
+
+### Create User 3
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "carol_davis",
+  "password": "test",
+  "displayName": "Carol Davis"
+}
+
+### Create User 4
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "david_miller",
+  "password": "test",
+  "displayName": "David Miller"
+}
+
+### Create User 5
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "emily_wilson",
+  "password": "test",
+  "displayName": "Emily Wilson"
+}
+
+### Create User 6
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "frank_thomas",
+  "password": "test",
+  "displayName": "Frank Thomas"
+}
+
+### Create User 7
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "grace_lee",
+  "password": "test",
+  "displayName": "Grace Lee"
+}
+
+### Create User 8
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "henry_garcia",
+  "password": "test",
+  "displayName": "Henry Garcia"
+}
+
+### Create User 9
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "isabel_lopez",
+  "password": "test",
+  "displayName": "Isabel Lopez"
+}
+
+### Create User 10
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "james_wright",
+  "password": "test",
+  "displayName": "James Wright"
+}
+
+### Create User 11
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "kate_brown",
+  "password": "test",
+  "displayName": "Kate Brown"
+}
+
+### Create User 12
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "liam_jones",
+  "password": "test",
+  "displayName": "Liam Jones"
+}
+
+### Create User 13
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "mia_taylor",
+  "password": "test",
+  "displayName": "Mia Taylor"
+}
+
+### Create User 14
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "noah_martinez",
+  "password": "test",
+  "displayName": "Noah Martinez"
+}
+
+### Create User 15
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "olivia_anderson",
+  "password": "test",
+  "displayName": "Olivia Anderson"
+}
+
+### Create User 16
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "parker_white",
+  "password": "test",
+  "displayName": "Parker White"
+}
+
+### Create User 17
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "quinn_harris",
+  "password": "test",
+  "displayName": "Quinn Harris"
+}
+
+### Create User 18
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "ryan_clark",
+  "password": "test",
+  "displayName": "Ryan Clark"
+}
+
+### Create User 19
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "sophia_lewis",
+  "password": "test",
+  "displayName": "Sophia Lewis"
+}
+
+### Create User 20
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "tyler_walker",
+  "password": "test",
+  "displayName": "Tyler Walker"
+}
+
+### Create User with Shadow Mode
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "private_user",
+  "password": "test",
+  "displayName": "Private User",
+  "shadowMode": true
+}
+
+### Create User with Full Name Search
+POST {{baseUrl}}/user
+Content-Type: application/json
+
+{
+  "username": "public_user",
+  "password": "test",
+  "displayName": "Public User",
+  "fullNameSearch": true
+}
