@@ -59,8 +59,8 @@ export class UserUtils extends Utils {
         username: string,
         password: string,
         displayName?: string,
-        shadowMode: boolean = false,
-        fullNameSearch: boolean = false
+        shadowMode: boolean | string = false,
+        fullNameSearch: boolean | string = false
     ): Promise<UserResponse> {
         if (!this.isValidString(username, 3, 20, /^[a-zA-Z0-9_]+$/)) {
             return this.createErrorResponse(
@@ -75,6 +75,28 @@ export class UserUtils extends Utils {
                 'Password must be valid string'
             );
         }
+        
+        if (shadowMode !== undefined && !this.isValidBoolean(shadowMode)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Shadow mode must be a boolean value'
+            );
+        }
+        
+        if (fullNameSearch !== undefined && !this.isValidBoolean(fullNameSearch)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Full name search must be a boolean value'
+            );
+        }
+
+        const shadowModeValue = typeof shadowMode === 'string' 
+            ? shadowMode.toLowerCase() === 'true' 
+            : Boolean(shadowMode);
+            
+        const fullNameSearchValue = typeof fullNameSearch === 'string' 
+            ? fullNameSearch.toLowerCase() === 'true' 
+            : Boolean(fullNameSearch);
 
         try {
             const existingUser = await this.dbSession.query(
@@ -104,8 +126,8 @@ export class UserUtils extends Utils {
                     username,
                     hashedPassword,
                     displayName || null,
-                    shadowMode,
-                    fullNameSearch
+                    shadowModeValue,
+                    fullNameSearchValue
                 ]
             );
 
@@ -360,8 +382,8 @@ export class UserUtils extends Utils {
             username?: string;
             password?: string;
             displayName?: string | null;
-            shadowMode?: boolean;
-            fullNameSearch?: boolean;
+            shadowMode?: boolean | string;
+            fullNameSearch?: boolean | string;
         }
     ): Promise<UserResponse> {
         if (!this.isValidUserId(uid)) {
@@ -427,6 +449,32 @@ export class UserUtils extends Utils {
                     'Display name must be a valid string between 1 and 100 characters'
                 );
             }
+            
+            if (shadowMode !== undefined && !this.isValidBoolean(shadowMode)) {
+                return this.createErrorResponse(
+                    StatusCodes.BAD_REQUEST,
+                    'Shadow mode must be a boolean value'
+                );
+            }
+            
+            if (fullNameSearch !== undefined && !this.isValidBoolean(fullNameSearch)) {
+                return this.createErrorResponse(
+                    StatusCodes.BAD_REQUEST,
+                    'Full name search must be a boolean value'
+                );
+            }
+            
+            const shadowModeValue = shadowMode !== undefined
+                ? (typeof shadowMode === 'string' 
+                    ? shadowMode.toLowerCase() === 'true' 
+                    : Boolean(shadowMode))
+                : undefined;
+                
+            const fullNameSearchValue = fullNameSearch !== undefined
+                ? (typeof fullNameSearch === 'string' 
+                    ? fullNameSearch.toLowerCase() === 'true' 
+                    : Boolean(fullNameSearch))
+                : undefined;
 
             let updateQuery = 'UPDATE account SET';
             const updateParams: any[] = [];
@@ -448,13 +496,13 @@ export class UserUtils extends Utils {
                 updateFields.push(`display_name = $${updateParams.length}`);
             }
 
-            if (shadowMode !== undefined) {
-                updateParams.push(shadowMode);
+            if (shadowModeValue !== undefined) {
+                updateParams.push(shadowModeValue);
                 updateFields.push(`shadow_mode = $${updateParams.length}`);
             }
 
-            if (fullNameSearch !== undefined) {
-                updateParams.push(fullNameSearch);
+            if (fullNameSearchValue !== undefined) {
+                updateParams.push(fullNameSearchValue);
                 updateFields.push(`full_name_search = $${updateParams.length}`);
             }
 
