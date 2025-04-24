@@ -213,7 +213,7 @@ userRouter.post('/:uid/verify-password', authenticateToken, async (req: Authenti
     try {
         const userUtils = new UserUtils(dbSession);
 
-        const isPasswordCorrect = await userUtils.verifyPassword(uid, password);
+        const isPasswordCorrect = await userUtils.verifyUserPassword(uid, password);
 
         if (isPasswordCorrect) {
             res.status(StatusCodes.OK).json({ verified: true });

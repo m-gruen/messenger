@@ -32,12 +32,27 @@ export class UserUtils extends Utils {
     }
 
     /**
+     * Verifies a password against a hash
+     * @param hashed The hashed password
+     * @param password The plain text password to verify
+     * @returns True if the password matches the hash, false otherwise
+     */
+    public async verifyPassword(hashed: string, password: string): Promise<boolean> {
+        try {
+            return await argon2.verify(hashed, password, passwordOptions);
+        } catch (error) {
+            console.error('Password verification error:', error);
+            throw new Error(`Error verifying password: ${error}`);
+        }
+    }
+
+    /**
      * Checks if a password matches a user's stored password
      * @param uid User ID
      * @param password Password to verify
      * @returns True if password is correct, false otherwise
      */
-    public async verifyPassword(uid: number, password: string): Promise<boolean> {
+    public async verifyUserPassword(uid: number, password: string): Promise<boolean> {
         if (!this.isValidUserId(uid) || !this.isValidString(password)) {
             return false;
         }
@@ -53,25 +68,10 @@ export class UserUtils extends Utils {
             }
 
             const storedHash = result.rows[0].password_hash;
-            return await this.verifyPasswordHash(storedHash, password);
+            return await this.verifyPassword(storedHash, password);
         } catch (error) {
             console.error('Error verifying password:', error);
             return false;
-        }
-    }
-
-    /**
-     * Verifies a password against a hash
-     * @param hashed The hashed password
-     * @param password The plain text password to verify
-     * @returns True if the password matches the hash, false otherwise
-     */
-    public async verifyPasswordHash(hashed: string, password: string): Promise<boolean> {
-        try {
-            return await argon2.verify(hashed, password, passwordOptions);
-        } catch (error) {
-            console.error('Password verification error:', error);
-            throw new Error(`Error verifying password: ${error}`);
         }
     }
 
@@ -104,14 +104,14 @@ export class UserUtils extends Utils {
                 'Password must be valid string'
             );
         }
-        
+
         if (shadowMode !== undefined && !this.isValidBoolean(shadowMode)) {
             return this.createErrorResponse(
                 StatusCodes.BAD_REQUEST,
                 'Shadow mode must be a boolean value'
             );
         }
-        
+
         if (fullNameSearch !== undefined && !this.isValidBoolean(fullNameSearch)) {
             return this.createErrorResponse(
                 StatusCodes.BAD_REQUEST,
@@ -119,12 +119,12 @@ export class UserUtils extends Utils {
             );
         }
 
-        const shadowModeValue = typeof shadowMode === 'string' 
-            ? shadowMode.toLowerCase() === 'true' 
+        const shadowModeValue = typeof shadowMode === 'string'
+            ? shadowMode.toLowerCase() === 'true'
             : Boolean(shadowMode);
-            
-        const fullNameSearchValue = typeof fullNameSearch === 'string' 
-            ? fullNameSearch.toLowerCase() === 'true' 
+
+        const fullNameSearchValue = typeof fullNameSearch === 'string'
+            ? fullNameSearch.toLowerCase() === 'true'
             : Boolean(fullNameSearch);
 
         try {
@@ -230,7 +230,7 @@ export class UserUtils extends Utils {
             }
 
             const user = result.rows[0];
-            
+
             if (uid === requestingUserId) {
                 return this.createSuccessResponse({
                     uid: user.uid,
@@ -239,10 +239,10 @@ export class UserUtils extends Utils {
                     created_at: user.created_at
                 });
             }
-            
+
             if (user.shadow_mode || user.full_name_search) {
                 const hasContact = await this.hasContactWith(requestingUserId, uid);
-                
+
                 if (!hasContact) {
                     return this.createErrorResponse(
                         StatusCodes.FORBIDDEN,
@@ -250,7 +250,7 @@ export class UserUtils extends Utils {
                     );
                 }
             }
-            
+
             const userData: User = {
                 uid: user.uid,
                 username: user.username,
@@ -478,30 +478,30 @@ export class UserUtils extends Utils {
                     'Display name must be a valid string between 1 and 100 characters'
                 );
             }
-            
+
             if (shadowMode !== undefined && !this.isValidBoolean(shadowMode)) {
                 return this.createErrorResponse(
                     StatusCodes.BAD_REQUEST,
                     'Shadow mode must be a boolean value'
                 );
             }
-            
+
             if (fullNameSearch !== undefined && !this.isValidBoolean(fullNameSearch)) {
                 return this.createErrorResponse(
                     StatusCodes.BAD_REQUEST,
                     'Full name search must be a boolean value'
                 );
             }
-            
+
             const shadowModeValue = shadowMode !== undefined
-                ? (typeof shadowMode === 'string' 
-                    ? shadowMode.toLowerCase() === 'true' 
+                ? (typeof shadowMode === 'string'
+                    ? shadowMode.toLowerCase() === 'true'
                     : Boolean(shadowMode))
                 : undefined;
-                
+
             const fullNameSearchValue = fullNameSearch !== undefined
-                ? (typeof fullNameSearch === 'string' 
-                    ? fullNameSearch.toLowerCase() === 'true' 
+                ? (typeof fullNameSearch === 'string'
+                    ? fullNameSearch.toLowerCase() === 'true'
                     : Boolean(fullNameSearch))
                 : undefined;
 
