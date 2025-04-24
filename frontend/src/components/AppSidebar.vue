@@ -30,7 +30,7 @@ const items = [
   { title: "Contacts", url: "#", icon: Inbox, action: toggleContacts },
   { title: "Requests", url: "#", icon: UserPlus, action: toggleRequests },
   { title: "Search", url: "#", icon: Search, action: toggleSearch },
-  { title: "Settings", url: "#", icon: Settings, action: toogleUserSettings },
+  { title: "Settings", url: "#", icon: Settings, action: toggleUserSettings },
 ];
 
 const showContacts = ref(false)
@@ -128,7 +128,7 @@ async function sendMessage() {
   }
 }
 
-function toogleUserSettings() {
+function toggleUserSettings() {
   showUserSettings.value = !showUserSettings.value;
   if (showUserSettings.value) {
     showContacts.value = false;
@@ -144,6 +144,7 @@ function toggleContacts() {
     // Close other panels if contacts is opened
     showSearch.value = false
     showRequests.value = false
+    showUserSettings.value = false;
   }
   showChat.value = false;
 }
@@ -154,6 +155,7 @@ function toggleRequests() {
     // Close other panels if requests is opened
     showContacts.value = false
     showSearch.value = false
+    showUserSettings.value = false;
   }
   showChat.value = false;
 }
@@ -164,6 +166,7 @@ function toggleSearch() {
   if (showSearch.value) {
     showContacts.value = false
     showRequests.value = false
+    showUserSettings.value = false;
   }
   showChat.value = false;
 }
@@ -303,12 +306,8 @@ function formatStatusText(status: ContactStatus | string): string {
     
     <!-- User Settings Panel -->
     <div v-if="showUserSettings"
-      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ease-in-out"
-      :style="{ left: sidebarWidth }" :class="{ 'w-80': true }">
-      <div class="p-4 border-b">
-        <h2 class="text-xl font-bold mb-1">User Settings</h2>
-        <p class="text-sm text-muted-foreground">Manage your account settings</p>
-      </div>
+      class="fixed z-10 top-0 bottom-0 left-0 right-0 overflow-y-auto bg-card transition-all duration-300 ease-in-out">
+
       <UserSettings />
     </div>
 
