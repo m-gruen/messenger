@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
-import { ApiService, apiService } from '@/services/api.service';
+import { apiService } from '@/services/api.service';
 import { User } from 'lucide-vue-next';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
-const currentUsername = storageService.getUser()?.username!;
 
 const username = ref(user.value?.username || '');
 const DisplayName = ref(user.value?.display_name || '');

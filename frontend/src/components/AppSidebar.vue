@@ -7,16 +7,9 @@ import ContactList from '@/components/ContactList.vue'
 import UserSettings from '@/components/UserSettings.vue'
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
-import { ContactStatus } from '@/models/contact-model';
 import { apiService } from '@/services/api.service';
 import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
-
-import {
-  Home, Inbox, Search, Settings, ChevronRight,
-  ChevronLeft, MessageSquare, UserPlus,
-  Send, ArrowLeft
-} from "lucide-vue-next"
 import ContactDetails from '@/components/ContactDetails.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
 
