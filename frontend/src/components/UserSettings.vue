@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
+const currentUsername = storageService.getUser()?.username!;
 
 const username = ref(user.value?.username || '');
 const DisplayName = ref(user.value?.display_name || '');
@@ -40,7 +41,7 @@ async function updateProfile(): Promise<void>{
       updateError.value = null;
       updateSuccess.value = null;
 
-      
+      // Password validation
       if (currentPassword.value) {
          if (!newPassword.value) {
             updateError.value = "New password is required";
@@ -53,9 +54,14 @@ async function updateProfile(): Promise<void>{
             isUpdating.value = false;
             return;
          }
+         const isPasswordCorrect = await apiService.verifyPassword(UserId, currentPassword.value, token);
+         if (!isPasswordCorrect) {
+            updateError.value = "Current password is incorrect";
+            isUpdating.value = false;
+            return;
+         }
       }
 
-      
       const userData: Partial<User> = {};
       
       if (username.value && username.value !== user.value?.username) {
@@ -68,9 +74,10 @@ async function updateProfile(): Promise<void>{
       
       if (currentPassword.value && newPassword.value) {
          userData.password = newPassword.value;
+         // Include the current password for server-side verification
+         userData.password = currentPassword.value;
       }
 
-      // Add shadowMode and fullNameSearch to update data
       userData.shadowMode = shadowMode.value;
       userData.fullNameSearch = fullNameSearch.value;
       
@@ -80,14 +87,11 @@ async function updateProfile(): Promise<void>{
          return;
       }
       
-
-      const response = await apiService.updateUser(UserId,userData,token);
-      
+      const response = await apiService.updateUser(UserId, userData, token);
       
       const updatedUser = response;
       storageService.storeUser(updatedUser);
       user.value = updatedUser;
-      
       
       currentPassword.value = '';
       newPassword.value = '';

@@ -190,3 +190,45 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
         });
     }
 });
+
+userRouter.post('/:uid/verify-password', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const uid = parseInt(req.params.uid);
+    const { password } = req.body;
+
+    if (uid !== req.user?.uid) {
+        res.status(StatusCodes.FORBIDDEN).json({
+            error: 'You can only verify your own password'
+        });
+        return;
+    }
+
+    if (!password) {
+        res.status(StatusCodes.BAD_REQUEST).json({
+            error: 'Password is required'
+        });
+        return;
+    }
+
+    let dbSession = await DbSession.create(true);
+    try {
+        const userUtils = new UserUtils(dbSession);
+
+        const isPasswordCorrect = await userUtils.verifyPassword(uid, password);
+
+        if (isPasswordCorrect) {
+            res.status(StatusCodes.OK).json({ verified: true });
+        } else {
+            res.status(StatusCodes.UNAUTHORIZED).json({ 
+                error: 'Password is incorrect',
+                verified: false 
+            });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: "An unexpected error occurred while verifying password"
+        });
+    } finally {
+        await dbSession.complete();
+    }
+});

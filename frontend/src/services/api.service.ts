@@ -301,6 +301,27 @@ export class ApiService {
             timestamp: new Date(data.timestamp)
         };
     }
+
+    /**
+     * Verify user's current password
+     * @param userId User ID
+     * @param currentPassword Current password to verify
+     * @param token JWT token
+     * @returns True if password is correct, false otherwise
+     */
+    public async verifyPassword(userId: number, currentPassword: string, token: string): Promise<boolean> {
+        try {
+            await this.fetchApi<any>(`${this.baseUrl}/user/${userId}/verify-password`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    password: currentPassword
+                })
+            }, token);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
 }
 
 export const apiService = new ApiService();

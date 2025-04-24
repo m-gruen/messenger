@@ -32,12 +32,41 @@ export class UserUtils extends Utils {
     }
 
     /**
+     * Checks if a password matches a user's stored password
+     * @param uid User ID
+     * @param password Password to verify
+     * @returns True if password is correct, false otherwise
+     */
+    public async verifyPassword(uid: number, password: string): Promise<boolean> {
+        if (!this.isValidUserId(uid) || !this.isValidString(password)) {
+            return false;
+        }
+
+        try {
+            const result = await this.dbSession.query(
+                `SELECT password_hash FROM account WHERE uid = $1 AND is_deleted = FALSE`,
+                [uid]
+            );
+
+            if (result.rowCount === 0) {
+                return false;
+            }
+
+            const storedHash = result.rows[0].password_hash;
+            return await this.verifyPasswordHash(storedHash, password);
+        } catch (error) {
+            console.error('Error verifying password:', error);
+            return false;
+        }
+    }
+
+    /**
      * Verifies a password against a hash
      * @param hashed The hashed password
      * @param password The plain text password to verify
      * @returns True if the password matches the hash, false otherwise
      */
-    public async verifyPassword(hashed: string, password: string): Promise<boolean> {
+    public async verifyPasswordHash(hashed: string, password: string): Promise<boolean> {
         try {
             return await argon2.verify(hashed, password, passwordOptions);
         } catch (error) {
