@@ -274,7 +274,6 @@ function cancelRemoveContact() {
         >
           <ArrowLeft class="h-5 w-5" />
         </button>
-        <h2 class="text-xl font-bold">User Settings</h2>
       </div>
       <UserSettings />
     </div>
