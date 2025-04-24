@@ -6,12 +6,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
+import { User } from 'lucide-vue-next';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken();
 
 const username = ref(user.value?.username || '');
+const DisplayName = ref(user.value?.display_name || '');
 const currentPassword = ref('');
 const newPassword = ref('');
 const confirmPassword = ref('');
@@ -21,12 +23,24 @@ const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
 
 type User = {
-   username : string,
-   displayname: string,
-   
-
+  "username": string, // Optional
+  "password": string, // Optional
+  "displayName": string, // Optional
+  "shadowMode": boolean, // Optional
+  "fullNameSearch": boolean // Optional
 }
 
+
+async function updateProfile(): Promise<User | null>{
+   
+   return null;
+}
+
+function logout() {
+  storageService.clearAuth();
+  storageService.clearAuth();
+  router.push('/login');
+}
 </script>
 
 <template>
@@ -45,10 +59,10 @@ type User = {
               <Input id="username" v-model="username" placeholder="Username" />
             </div>
             
-            <!-- Email -->
+            <!-- DisplayName -->
             <div class="space-y-2">
-              <label for="email" class="text-sm font-medium">Email</label>
-              <Input id="email" v-model="email" type="email" placeholder="Email address" />
+              <label for="display_name" class="text-sm font-medium">Display Name</label>
+              <Input v-model="DisplayName" id="display_name" type="email" placeholder="Display Name " />
             </div>
             
             <!-- Current Password -->
