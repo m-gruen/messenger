@@ -41,6 +41,12 @@ const showChat = ref(false)
 const newMessage = ref('')
 const showContactDetails = ref(false)
 
+// Additional states for contact removal
+const isRemovingContact = ref(false)
+const showRemoveConfirmation = ref(false)
+const removalError = ref<string | null>(null)
+const removalSuccess = ref(false)
+
 const messages = ref<IMessage[]>([])
 const isLoadingMessages = ref(false)
 const messagesError = ref<string | null>(null)
@@ -130,20 +136,49 @@ async function sendMessage() {
 async function removeContact() {
   if (!selectedContact.value || !currentUserId.value) return;
   
+  // Skip confirmation if already confirmed
+  if (!showRemoveConfirmation.value) {
+    showRemoveConfirmation.value = true;
+    return;
+  }
+  
+  // Reset confirmation state
+  showRemoveConfirmation.value = false;
+  
   try {
-    await apiService.removeContact(
+    isRemovingContact.value = true;
+    removalError.value = null;
+    
+    await apiService.deleteContact(
       currentUserId.value,
       selectedContact.value.contactUserId,
       token.value
     );
     
-    await contactStore.fetchAllContacts();
-    showContactDetails.value = false;
-    showChat.value = false;
-    selectedContact.value = null;
+    // Record success for UI feedback
+    removalSuccess.value = true;
+    
+    // Close all related UI elements after a short delay to allow user to see the success message
+    setTimeout(() => {
+      showContactDetails.value = false;
+      showChat.value = false;
+      selectedContact.value = null;
+      removalSuccess.value = false; // Reset the success flag
+      
+      // Refresh contacts list
+      contactStore.fetchAllContacts();
+    }, 1500);
   } catch (err) {
+    removalError.value = err instanceof Error ? err.message : 'Failed to remove contact';
     console.error('Error removing contact:', err);
+  } finally {
+    isRemovingContact.value = false;
   }
+}
+
+// Cancel contact removal confirmation
+function cancelRemoveContact() {
+  showRemoveConfirmation.value = false;
 }
 
 function toggleContacts() {
@@ -384,7 +419,30 @@ function formatStatusText(status: ContactStatus | string): string {
         
         <!-- Actions Section -->
         <div class="px-4 py-6">
-          <button @click="removeContact" 
+          <div v-if="showRemoveConfirmation" class="mb-4">
+            <p class="text-white text-center mb-2">Are you sure you want to remove this contact?</p>
+            <div class="flex justify-center gap-4">
+              <button @click="removeContact" 
+                class="bg-red-900 hover:bg-red-800 text-white py-2 px-4 rounded-md">
+                Confirm
+              </button>
+              <button @click="cancelRemoveContact" 
+                class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
+                Cancel
+              </button>
+            </div>
+          </div>
+          <div v-else-if="isRemovingContact" class="flex justify-center items-center mb-4">
+            <div class="animate-spin w-6 h-6 border-3 border-primary border-t-transparent rounded-full"></div>
+            <span class="ml-2 text-white">Removing contact...</span>
+          </div>
+          <div v-else-if="removalError" class="bg-destructive/10 text-destructive p-4 rounded-md mb-4">
+            {{ removalError }}
+          </div>
+          <div v-else-if="removalSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
+            Contact removed successfully!
+          </div>
+          <button v-if="!showRemoveConfirmation && !isRemovingContact && !removalSuccess" @click="removeContact" 
             class="w-full bg-red-900 hover:bg-red-800 text-white py-3 rounded-md flex justify-center items-center">
             Remove Contact
           </button>
