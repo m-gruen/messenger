@@ -4,7 +4,7 @@ import { X } from "lucide-vue-next"
 import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
 
-const props = defineProps({
+defineProps({
   contact: {
     type: Object as () => Contact,
     required: true
@@ -19,7 +19,7 @@ const props = defineProps({
   },
   removalError: {
     type: String,
-    default: null
+    default: undefined
   },
   removalSuccess: {
     type: Boolean,

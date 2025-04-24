@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits } from 'vue'
 import { Home, Inbox, Search, Settings, ChevronRight, ChevronLeft, UserPlus } from "lucide-vue-next"
 
-const props = defineProps({
+defineProps({
   collapsed: {
     type: Boolean,
     default: false

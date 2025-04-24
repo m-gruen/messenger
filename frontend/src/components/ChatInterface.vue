@@ -6,7 +6,7 @@ import MessageInput from './MessageInput.vue'
 import type { Contact } from '@/models/contact-model'
 import type { IMessage } from '@/models/message-model'
 
-const props = defineProps({
+defineProps({
   contact: {
     type: Object as () => Contact,
     required: true
@@ -21,7 +21,7 @@ const props = defineProps({
   },
   messagesError: {
     type: String,
-    default: null
+    default: undefined
   },
   currentUserId: {
     type: Number,

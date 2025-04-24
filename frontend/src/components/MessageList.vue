@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { defineProps } from 'vue'
-import { MessageSquare } from "lucide-vue-next"
-import type { IMessage } from '@/models/message-model';
+import type { IMessage } from '@/models/message-model'
 
-const props = defineProps({
+defineProps({
   messages: {
     type: Array as () => IMessage[],
     default: () => []
@@ -18,11 +17,11 @@ const props = defineProps({
   },
   error: {
     type: String,
-    default: null
+    default: undefined
   },
   contactUsername: {
     type: String,
-    default: ''
+    required: true
   }
 })
 

@@ -25,18 +25,18 @@ const showContacts = ref(false)
 const showRequests = ref(false)
 const showSearch = ref(false)
 const sidebarCollapsed = ref(false)
-const selectedContact = ref(null)
+const selectedContact = ref<Contact | null>(null)
 const showChat = ref(false)
 const showContactDetails = ref(false)
 
 // Chat state
-const messages = ref([])
+const messages = ref<IMessage[]>([])
 const isLoadingMessages = ref(false)
-const messagesError = ref(null)
+const messagesError = ref<string | undefined>(undefined)
 
 // Contact removal state
 const isRemovingContact = ref(false)
-const removalError = ref(null)
+const removalError = ref<string | undefined>(undefined)
 const removalSuccess = ref(false)
 
 // Computed properties for positional styling
@@ -68,8 +68,8 @@ watch(showContacts, async (isVisible) => {
   }
 })
 
-async function fetchMessages(userId, contactId) {
-  messagesError.value = null
+async function fetchMessages(userId: number, contactId: number) {
+  messagesError.value = undefined
   isLoadingMessages.value = true
   
   try {
@@ -97,7 +97,7 @@ async function fetchMessages(userId, contactId) {
   }
 }
 
-async function sendMessage(content) {
+async function sendMessage(content: string) {
   if (!content.trim() || !selectedContact.value) return
   
   try {
@@ -121,7 +121,7 @@ async function removeContact() {
   
   try {
     isRemovingContact.value = true
-    removalError.value = null
+    removalError.value = undefined
     
     await apiService.deleteContact(
       currentUserId.value,
@@ -188,7 +188,7 @@ function toggleSidebar() {
   )
 }
 
-function selectContact(contact) {
+function selectContact(contact: Contact) {
   selectedContact.value = contact
   messages.value = []
   showChat.value = true

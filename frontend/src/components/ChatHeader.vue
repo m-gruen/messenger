@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
-import { ArrowLeft, Info } from "lucide-vue-next"
+import { ChevronLeft, MoreHorizontal } from 'lucide-vue-next'
 import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
 
-const props = defineProps({
+defineProps({
   contact: {
     type: Object as () => Contact,
     required: true
@@ -51,7 +51,7 @@ function formatStatusText(status: ContactStatus | string): string {
 <template>
   <div class="flex items-center p-4 border-b bg-card">
     <button @click="emit('back')" class="mr-2 rounded-full p-1.5 hover:bg-accent">
-      <ArrowLeft class="h-5 w-5" />
+      <ChevronLeft class="h-5 w-5" />
     </button>
 
     <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
@@ -67,7 +67,7 @@ function formatStatusText(status: ContactStatus | string): string {
     </div>
 
     <button @click="emit('details')" class="ml-auto rounded-full p-1.5 hover:bg-accent">
-      <Info class="h-5 w-5" />
+      <MoreHorizontal class="h-5 w-5" />
     </button>
   </div>
 </template>
