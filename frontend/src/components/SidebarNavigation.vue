@@ -9,14 +9,14 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['toggle-collapsed', 'toggle-contacts', 'toggle-requests', 'toggle-search'])
+const emit = defineEmits(['toggle-collapsed', 'toggle-contacts', 'toggle-requests', 'toggle-search', 'toggle-settings'])
 
 const items = [
   { title: "Home", url: "#", icon: Home },
   { title: "Contacts", url: "#", icon: Inbox, action: () => emit('toggle-contacts') },
   { title: "Requests", url: "#", icon: UserPlus, action: () => emit('toggle-requests') },
   { title: "Search", url: "#", icon: Search, action: () => emit('toggle-search') },
-  { title: "Settings", url: "#", icon: Settings },
+  { title: "Settings", url: "#", icon: Settings, action: () => emit('toggle-settings') },
 ];
 
 function toggleSidebar() {

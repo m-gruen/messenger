@@ -19,11 +19,7 @@ import {
 } from "lucide-vue-next"
 import ContactDetails from '@/components/ContactDetails.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
-import type { IMessage } from '@/models/message-model'
-import type { Contact } from '@/models/contact-model'
-import { apiService } from '@/services/api.service'
-import { storageService } from '@/services/storage.service'
-import { useContactStore } from '@/stores/ContactStore'
+
 
 // Get user ID and token from storage service
 const user = storageService.getUser()
@@ -246,6 +242,7 @@ function cancelRemoveContact() {
       @toggle-contacts="toggleContacts"
       @toggle-requests="toggleRequests"
       @toggle-search="toggleSearch"
+      @toggle-settings="toggleUserSettings"
     />
 
     <!-- Contacts List Panel -->
@@ -271,6 +268,22 @@ function cancelRemoveContact() {
         <p class="text-sm text-muted-foreground">Search for users to add as contacts</p>
       </div>
       <UserSearch />
+    </div>
+
+    <!-- User Settings Panel -->
+    <div v-if="showUserSettings"
+      class="fixed z-10 top-0 bottom-0 left-0 right-0 overflow-y-auto bg-card transition-all duration-300 ease-in-out">
+      <div class="p-3 border-b flex items-center">
+        <button 
+          @click="toggleUserSettings" 
+          class="p-2 rounded-md hover:bg-background/80 mr-2"
+          aria-label="Return to application"
+        >
+          <ArrowLeft class="h-5 w-5" />
+        </button>
+        <h2 class="text-xl font-bold">User Settings</h2>
+      </div>
+      <UserSettings />
     </div>
 
     <!-- Chat Interface -->
