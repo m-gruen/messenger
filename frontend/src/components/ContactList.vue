@@ -2,6 +2,24 @@
   <div class="contact-list-container">
     <h2 class="text-xl font-bold mb-3">Contacts</h2>
 
+    <!-- Filter Options - Now outside of conditionals so always visible -->
+    <div class="flex border-b mb-4">
+      <button 
+        @click="activeFilter = 'all'" 
+        class="py-2 px-4 font-medium text-sm" 
+        :class="activeFilter === 'all' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'"
+      >
+        All
+      </button>
+      <button 
+        @click="activeFilter = 'accepted'" 
+        class="py-2 px-4 font-medium text-sm" 
+        :class="activeFilter === 'accepted' ? 'border-b-2 border-primary text-primary' : 'text-muted-foreground'"
+      >
+        Contacts
+      </button>
+    </div>
+
     <div v-if="contactStore.loading" class="flex items-center justify-center p-4">
       <div class="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full"></div>
       <span class="ml-2">Loading contacts...</span>
@@ -16,24 +34,6 @@
     </div>
 
     <div v-else>
-      <!-- Filter Options -->
-      <div class="mb-3 flex flex-wrap gap-2">
-        <Button 
-          @click="activeFilter = 'all'" 
-          size="sm"
-          :variant="activeFilter === 'all' ? 'default' : 'outline'"
-        >
-          All
-        </Button>
-        <Button 
-          @click="activeFilter = 'accepted'" 
-          size="sm"
-          :variant="activeFilter === 'accepted' ? 'default' : 'outline'"
-        >
-          Contacts
-        </Button>
-      </div>
-
       <ul class="space-y-2">
         <li v-for="contact in filteredContacts" :key="contact.contactId"
           class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer"
@@ -57,7 +57,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { Button } from '@/components/ui/button';
 import type { Contact } from '@/models/contact-model';
 import { ContactStatus } from '@/models/contact-model';
 import { useContactStore } from '@/stores/ContactStore';
