@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import UserSearch from '@/components/UserSearch.vue'
 import ContactRequests from '@/components/ContactRequests.vue'
 import ContactList from '@/components/ContactList.vue'
+import UserSettings from '@/components/UserSettings.vue'
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 import { ContactStatus } from '@/models/contact-model';
@@ -29,12 +30,13 @@ const items = [
   { title: "Contacts", url: "#", icon: Inbox, action: toggleContacts },
   { title: "Requests", url: "#", icon: UserPlus, action: toggleRequests },
   { title: "Search", url: "#", icon: Search, action: toggleSearch },
-  { title: "Settings", url: "#", icon: Settings },
+  { title: "Settings", url: "#", icon: Settings, action: toogleUserSettings },
 ];
 
 const showContacts = ref(false)
 const showRequests = ref(false)
 const showSearch = ref(false)
+const showUserSettings = ref(false);
 const sidebarCollapsed = ref(false)
 const selectedContact = ref<Contact | null>(null)
 const showChat = ref(false)
@@ -124,6 +126,16 @@ async function sendMessage() {
     messagesError.value = err instanceof Error ? err.message : 'Failed to send message'
     console.error('Error sending message:', err)
   }
+}
+
+function toogleUserSettings() {
+  showUserSettings.value = !showUserSettings.value;
+  if (showUserSettings.value) {
+    showContacts.value = false;
+    showSearch.value = false;
+    showRequests.value = false;
+  }
+  showChat.value = false;
 }
 
 function toggleContacts() {
@@ -287,6 +299,17 @@ function formatStatusText(status: ContactStatus | string): string {
         <p class="text-sm text-muted-foreground">Search for users to add as contacts</p>
       </div>
       <UserSearch />
+    </div>
+    
+    <!-- User Settings Panel -->
+    <div v-if="showUserSettings"
+      class="fixed z-10 top-0 bottom-0 overflow-y-auto border-r border-border bg-card transition-all duration-300 ease-in-out"
+      :style="{ left: sidebarWidth }" :class="{ 'w-80': true }">
+      <div class="p-4 border-b">
+        <h2 class="text-xl font-bold mb-1">User Settings</h2>
+        <p class="text-sm text-muted-foreground">Manage your account settings</p>
+      </div>
+      <UserSettings />
     </div>
 
     <!-- Chat Interface (WhatsApp-like) -->
