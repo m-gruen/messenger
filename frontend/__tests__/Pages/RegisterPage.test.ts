@@ -1,7 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRouter, createWebHistory } from 'vue-router';
-import RegisterPage from '../../src/components/pages/RegisterPage.vue';
+import RegisterPage from '../../src/RegisterPage.vue';
 import { ref, computed } from 'vue';
 
 // First, mock the modules before using any variables
