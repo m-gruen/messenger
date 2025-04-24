@@ -13,7 +13,7 @@ import { useContactStore } from '@/stores/ContactStore';
 import {
   Home, Inbox, Search, Settings, ChevronRight,
   ChevronLeft, MessageSquare, UserPlus,
-  Send, ArrowLeft
+  Send, ArrowLeft, Info, X
 } from "lucide-vue-next"
 
 // Get user ID and token from storage service
@@ -39,6 +39,7 @@ const sidebarCollapsed = ref(false)
 const selectedContact = ref<Contact | null>(null)
 const showChat = ref(false)
 const newMessage = ref('')
+const showContactDetails = ref(false)
 
 const messages = ref<IMessage[]>([])
 const isLoadingMessages = ref(false)
@@ -126,6 +127,25 @@ async function sendMessage() {
   }
 }
 
+async function removeContact() {
+  if (!selectedContact.value || !currentUserId.value) return;
+  
+  try {
+    await apiService.removeContact(
+      currentUserId.value,
+      selectedContact.value.contactUserId,
+      token.value
+    );
+    
+    await contactStore.fetchAllContacts();
+    showContactDetails.value = false;
+    showChat.value = false;
+    selectedContact.value = null;
+  } catch (err) {
+    console.error('Error removing contact:', err);
+  }
+}
+
 function toggleContacts() {
   showContacts.value = !showContacts.value
   if (showContacts.value) {
@@ -175,6 +195,10 @@ function selectContact(contact: Contact) {
     console.error('Invalid contact selected, missing userId')
     messagesError.value = 'Cannot load messages: Invalid contact'
   }
+}
+
+function toggleContactDetails() {
+  showContactDetails.value = !showContactDetails.value;
 }
 
 function formatDate(dateString: string | Date) {
@@ -312,6 +336,58 @@ function formatStatusText(status: ContactStatus | string): string {
             <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="getStatusColorClass(selectedContact.status)"></span>
             {{ formatStatusText(selectedContact.status) }}
           </div>
+        </div>
+
+        <button @click="toggleContactDetails" class="ml-auto rounded-full p-1.5 hover:bg-accent">
+          <Info class="h-5 w-5" />
+        </button>
+      </div>
+
+      <!-- Contact Details Sheet -->
+      <div v-if="showContactDetails" 
+        class="fixed top-0 right-0 bottom-0 z-30 w-80 bg-black overflow-y-auto transform transition-transform duration-300 ease-in-out shadow-xl">
+        <!-- Header with Close Button -->
+        <div class="p-4 border-b border-border">
+          <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-semibold text-white">Contact Details</h2>
+            <button @click="toggleContactDetails" class="rounded-full p-1 hover:bg-accent/20">
+              <X class="h-6 w-6 text-white" />
+            </button>
+          </div>
+          <p class="text-sm text-muted-foreground mt-1">View and manage contact details</p>
+        </div>
+        
+        <!-- Contact Info -->
+        <div class="flex flex-col items-center py-6 px-4">
+          <!-- Avatar Circle -->
+          <div class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4">
+            {{ selectedContact.username.charAt(0).toUpperCase() }}
+          </div>
+          
+          <!-- Username -->
+          <h3 class="text-2xl font-medium text-white mt-2">{{ selectedContact.username }}</h3>
+          
+          <!-- Status -->
+          <div class="mt-2 flex items-center">
+            <span class="inline-flex h-3 w-3 rounded-full mr-2" :class="getStatusColorClass(selectedContact.status)"></span>
+            <span class="text-white">{{ formatStatusText(selectedContact.status) }}</span>
+          </div>
+          
+          <!-- Added Date -->
+          <p class="text-muted-foreground text-sm mt-4">
+            Added: {{ new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+          </p>
+        </div>
+        
+        <!-- Divider -->
+        <div class="border-t border-border mx-4 my-2"></div>
+        
+        <!-- Actions Section -->
+        <div class="px-4 py-6">
+          <button @click="removeContact" 
+            class="w-full bg-red-900 hover:bg-red-800 text-white py-3 rounded-md flex justify-center items-center">
+            Remove Contact
+          </button>
         </div>
       </div>
 
