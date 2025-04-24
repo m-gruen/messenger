@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
-import { apiService } from '@/services/api.service';
+import { ApiService, apiService } from '@/services/api.service';
 import { User } from 'lucide-vue-next';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
-const token = storageService.getToken();
+const token = storageService.getToken()!;
+const UserId = storageService.getUser()!.uid;
 
 const username = ref(user.value?.username || '');
 const DisplayName = ref(user.value?.display_name || '');
@@ -23,17 +24,75 @@ const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
 
 type User = {
-  "username": string, // Optional
-  "password": string, // Optional
-  "displayName": string, // Optional
-  "shadowMode": boolean, // Optional
-  "fullNameSearch": boolean // Optional
+  "username": string, 
+  "password": string, 
+  "displayName": string, 
+  "shadowMode": boolean, 
+  "fullNameSearch": boolean 
 }
 
 
-async function updateProfile(): Promise<User | null>{
-   
-   return null;
+async function updateProfile(): Promise<void>{
+   try {
+      isUpdating.value = true;
+      updateError.value = null;
+      updateSuccess.value = null;
+
+      
+      if (currentPassword.value) {
+         if (!newPassword.value) {
+            updateError.value = "New password is required";
+            isUpdating.value = false;
+         }
+         
+         if (newPassword.value !== confirmPassword.value) {
+            updateError.value = "New passwords don't match";
+            isUpdating.value = false;
+         }
+      }
+
+      
+      const userData: Partial<User> = {};
+      
+      if (username.value && username.value !== user.value?.username) {
+         userData.username = username.value;
+      }
+      
+      if (DisplayName.value && DisplayName.value !== user.value?.display_name) {
+         userData.displayName = DisplayName.value;
+      }
+      
+      if (currentPassword.value && newPassword.value) {
+         userData.password = newPassword.value;
+      }
+
+      
+      if (Object.keys(userData).length === 0) {
+         updateSuccess.value = "No changes to update";
+         isUpdating.value = false;
+      }
+      
+
+      const response = await apiService.updateUser(UserId,userData,token);
+      
+      
+      const updatedUser = response;
+      storageService.storeUser(updatedUser);
+      user.value = updatedUser;
+      
+      
+      currentPassword.value = '';
+      newPassword.value = '';
+      confirmPassword.value = '';
+      
+      updateSuccess.value = "Profile updated successfully";
+      return;
+   } catch (error: any) {
+      updateError.value = error.response?.data?.message || "Failed to update profile";
+      return;
+   } finally {
+      isUpdating.value = false;
+   }
 }
 
 function logout() {
