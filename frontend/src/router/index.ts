@@ -2,9 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router';
 import type { RouteRecordRaw } from 'vue-router';
 import { storageService } from '@/services/storage.service';
 
-import LoginPage from '../components/pages/LoginPage.vue';
-import RegisterPage from '../components/pages/RegisterPage.vue';
-import AppSidebar from '../components/ui/sidebar/AppSidebar.vue';
+import LoginPage from '../LoginPage.vue';
+import RegisterPage from '../RegisterPage.vue';
+import AppSidebar from '../components/AppSidebar.vue';
 
 const routes: RouteRecordRaw[] = [
     {

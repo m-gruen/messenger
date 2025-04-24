@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import UserSearch from '@/components/ui/UserSearch.vue'
-import ContactRequests from '@/components/ui/ContactRequests.vue'
-import ContactList from '@/components/ui/ContactList.vue'
+import UserSearch from '@/components/UserSearch.vue'
+import ContactRequests from '@/components/ContactRequests.vue'
+import ContactList from '@/components/ContactList.vue'
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 import { ContactStatus } from '@/models/contact-model';

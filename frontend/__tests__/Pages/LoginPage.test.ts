@@ -1,7 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRouter, createWebHistory } from 'vue-router';
-import LoginPage from '../../src/components/pages/LoginPage.vue';
+import LoginPage from '../../src/LoginPage.vue';
 import { ref, computed } from 'vue';
 
 // Mock dependencies before they are imported

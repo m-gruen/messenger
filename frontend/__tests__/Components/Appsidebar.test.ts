@@ -1,7 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRouter, createWebHistory } from 'vue-router';
-import AppSidebar from '../../src/components/ui/sidebar/AppSidebar.vue';
+import AppSidebar from '../../src/components/AppSidebar.vue';
 import { ContactStatus } from '../../src/models/contact-model';
 
 // Mock the AuthStore
