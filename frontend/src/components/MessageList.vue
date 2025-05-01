@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineProps } from 'vue'
 import type { IMessage } from '@/models/message-model'
+import { MessageSquare } from 'lucide-vue-next'
 
 defineProps({
   messages: {
