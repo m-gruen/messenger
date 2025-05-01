@@ -29,6 +29,15 @@ export class StorageService {
             if (user.created_at) {
                 sessionStorage.setItem('created_at', new Date(user.created_at).toISOString());
             }
+            if (user.display_name) {
+                sessionStorage.setItem('display_name', user.display_name);
+            }
+            if (user.shadow_mode !== undefined) {
+                sessionStorage.setItem('shadow_mode', String(user.shadow_mode));
+            }
+            if (user.full_name_search !== undefined) {
+                sessionStorage.setItem('full_name_search', String(user.full_name_search));
+            }
         }
     }
 
@@ -60,7 +69,10 @@ export class StorageService {
                 const username = sessionStorage.getItem('username');
                 const token = this.getToken();
                 const created_at = sessionStorage.getItem('created_at');
-
+                const display_name = sessionStorage.getItem('display_name');
+                const shadow_mode_str = sessionStorage.getItem('shadow_mode');
+                const full_name_search_str = sessionStorage.getItem('full_name_search');
+                
                 if (uid && username && token) {
                     user = {
                         uid: Number(uid),
@@ -68,6 +80,16 @@ export class StorageService {
                         created_at: created_at ? new Date(created_at) : new Date(),
                         token
                     };
+                    
+                    if (display_name) {
+                        user.display_name = display_name;
+                    }
+                    if (shadow_mode_str !== null) {
+                        user.shadow_mode = shadow_mode_str === 'true';
+                    }
+                    if (full_name_search_str !== null) {
+                        user.full_name_search = full_name_search_str === 'true';
+                    }
                 }
             }
         } catch (e) {
@@ -97,6 +119,9 @@ export class StorageService {
         sessionStorage.removeItem('uid');
         sessionStorage.removeItem('username');
         sessionStorage.removeItem('created_at');
+        sessionStorage.removeItem('display_name');
+        sessionStorage.removeItem('shadow_mode');
+        sessionStorage.removeItem('full_name_search');
     }
 }
 
