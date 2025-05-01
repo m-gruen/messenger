@@ -139,8 +139,17 @@ async function updateProfile(): Promise<void> {
       try {
         const response = await apiService.updateUser(UserId, userData, token);
 
-        const updatedUser = response;
-        storageService.storeUser(updatedUser);
+        // Ensure we preserve the original token when updating storage
+        const updatedUser = {
+          ...response,
+          token: token // Make sure token is included in the user object
+        };
+        
+        // Check if the user originally used persistent storage (localStorage)
+        const isPersistent = localStorage.getItem('user') !== null;
+        
+        // Update both in-memory user reference and persistent storage
+        storageService.storeUser(updatedUser, isPersistent);
         user.value = updatedUser;
 
         // Update original values
@@ -246,7 +255,7 @@ function logout() {
 </script>
 
 <template>
-  <div class="h-full w-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+  <div class="w-full bg-background">
     <!-- Unsaved changes notification -->
     <div v-if="hasUnsavedChanges"
       class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between items-center z-50">
@@ -318,7 +327,7 @@ function logout() {
       </div>
     </div>
 
-    <div class="max-w-3xl mx-auto p-6">
+    <div class="max-w-3xl mx-auto pb-20">
       <!-- User Profile Header -->
       <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">
         <div class="flex items-center gap-5">
@@ -367,7 +376,7 @@ function logout() {
 
               <!-- Inline username edit -->
               <div v-if="isEditingUsername" class="mt-3">
-                <Input v-model="username" placeholder="Username" class="w-full" />
+                <Input v-model="username" placeholder="Username" class="w-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
               </div>
             </div>
 
@@ -385,7 +394,7 @@ function logout() {
 
               <!-- Inline display name edit -->
               <div v-if="isEditingDisplayName" class="mt-3">
-                <Input v-model="DisplayName" placeholder="Display Name" class="w-full" />
+                <Input v-model="DisplayName" placeholder="Display Name" class="w-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
               </div>
             </div>
 
@@ -464,14 +473,14 @@ function logout() {
             <label for="storage-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message Storage
               Type</label>
             <select id="storage-type" v-model="storageType"
-              class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100">
+              class="w-full rounded-md border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100">
               <option value="ram">RAM Storage</option>
               <option value="server">Server Storage</option>
               <option value="file">File Storage</option>
             </select>
 
             <!-- Description based on selection -->
-            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded">
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded border border-gray-200 dark:border-gray-600">
               <p v-if="storageType === 'ram'">
                 RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option
                 but messages are not persistent.
@@ -501,12 +510,26 @@ function logout() {
 
 <style scoped>
 .bg-green-500 {
-  background-color: #43B581;
-  /* Discord green */
+  background-color: #43B581; /* Discord green */
 }
 
 /* Switch animation */
 .transform {
   transition: transform 150ms ease-in-out;
+}
+
+/* Input field styling */
+input, select {
+  border-width: 2px !important;
+}
+
+.dark input, .dark select {
+  color: white !important;
+  background-color: #2D3748 !important;
+}
+
+/* Remove extra margins to prevent unexpected spacing */
+.max-w-3xl {
+  margin-top: 0;
 }
 </style>
