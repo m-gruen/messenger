@@ -5,19 +5,15 @@ import UserSearch from '@/components/UserSearch.vue'
 import ContactRequests from '@/components/ContactRequests.vue'
 import ContactList from '@/components/ContactList.vue'
 import UserSettings from '@/components/UserSettings.vue'
-import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
-import { apiService } from '@/services/api.service';
 import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
-import ContactDetails from '@/components/ContactDetails.vue'
-import ChatInterface from '@/components/ChatInterface.vue'
+import ChatPanel from '@/components/ChatPanel.vue'
 import { ArrowLeft } from 'lucide-vue-next'
 
-// Get user ID and token from storage service
+// Get user ID from storage service
 const user = storageService.getUser()
 const currentUserId = computed(() => user?.uid || 0)
-const token = computed(() => storageService.getToken() || '')
 
 // Contact store
 const contactStore = useContactStore()
@@ -30,17 +26,6 @@ const showUserSettings = ref(false);
 const sidebarCollapsed = ref(false)
 const selectedContact = ref<Contact | null>(null)
 const showChat = ref(false)
-const showContactDetails = ref(false)
-
-// Chat state
-const messages = ref<IMessage[]>([])
-const isLoadingMessages = ref(false)
-const messagesError = ref<string | undefined>(undefined)
-
-// Contact removal state
-const isRemovingContact = ref(false)
-const removalError = ref<string | undefined>(undefined)
-const removalSuccess = ref(false)
 
 // Computed properties for positional styling
 const sidebarWidth = computed(() => sidebarCollapsed.value ? '48px' : '240px')
@@ -70,83 +55,6 @@ watch(showContacts, async (isVisible) => {
     await contactStore.fetchAllContacts()
   }
 })
-
-async function fetchMessages(userId: number, contactId: number) {
-  messagesError.value = undefined
-  isLoadingMessages.value = true
-  
-  try {
-    messages.value = await apiService.getMessages(userId, contactId, token.value)
-    
-    messages.value = messages.value.sort((a, b) => {
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    })
-    
-    setTimeout(() => {
-      const messageContainer = document.querySelector('.flex.flex-col-reverse.space-y-reverse.space-y-4')
-      if (messageContainer) {
-        messageContainer.scrollIntoView({
-          behavior: 'instant',
-          block: 'end',
-          inline: 'nearest'
-        })
-      }
-    }, 100)
-  } catch (err) {
-    messagesError.value = err instanceof Error ? err.message : 'Failed to load messages'
-    console.error('Error fetching messages:', err)
-  } finally {
-    isLoadingMessages.value = false
-  }
-}
-
-async function sendMessage(content: string) {
-  if (!selectedContact.value || !selectedContact.value.contactUserId) return
-  
-  try {
-    const newMessage = await apiService.sendMessage(
-      currentUserId.value,
-      selectedContact.value.contactUserId,
-      content,
-      token.value
-    )
-    
-    // Add the new message to the list
-    messages.value = [...messages.value, newMessage]
-  } catch (err) {
-    console.error('Error sending message:', err)
-  }
-}
-
-async function removeContact() {
-  if (!selectedContact.value || !selectedContact.value.contactUserId) return
-  
-  isRemovingContact.value = true
-  removalError.value = undefined
-  
-  try {
-    await contactStore.deleteContact(selectedContact.value.contactUserId)
-    
-    // Record success for UI feedback
-    removalSuccess.value = true
-    
-    // Close all related UI elements after a short delay
-    setTimeout(() => {
-      showContactDetails.value = false
-      showChat.value = false
-      selectedContact.value = null
-      removalSuccess.value = false // Reset the success flag
-      
-      // Refresh contacts list
-      contactStore.fetchAllContacts()
-    }, 1500)
-  } catch (err) {
-    removalError.value = err instanceof Error ? err.message : 'Failed to remove contact'
-    console.error('Error removing contact:', err)
-  } finally {
-    isRemovingContact.value = false
-  }
-}
 
 function toggleUserSettings() {
   showUserSettings.value = !showUserSettings.value;
@@ -201,29 +109,18 @@ function toggleSidebar() {
 
 function selectContact(contact: Contact) {
   selectedContact.value = contact
-  messages.value = []
   showChat.value = true
-  
-  if (contact && contact.userId) {
-    fetchMessages(currentUserId.value, contact.contactUserId)
-  } else {
-    console.error('Invalid contact selected, missing userId')
-    messagesError.value = 'Cannot load messages: Invalid contact'
-  }
 }
 
-function toggleContactDetails() {
-  showContactDetails.value = !showContactDetails.value
-}
-
-function cancelRemoveContact() {
-  // This is now handled within the ContactDetails component
+function closeChat() {
+  showChat.value = false
+  selectedContact.value = null
 }
 </script>
 
 <template>
   <div class="flex">
-    <!-- Left Sidebar Navigation - ONLY ONE SIDEBAR -->
+    <!-- Left Sidebar Navigation -->
     <SidebarNavigation 
       :collapsed="sidebarCollapsed"
       @toggle-collapsed="toggleSidebar"
@@ -279,32 +176,14 @@ function cancelRemoveContact() {
       </div>
     </div>
 
-    <!-- Chat Interface -->
-    <ChatInterface 
-      v-if="selectedContact && showChat"
-      :contact="selectedContact"
-      :messages="messages"
-      :is-loading-messages="isLoadingMessages"
-      :messages-error="messagesError"
-      :current-user-id="currentUserId"
-      :left-position="chatLeftPosition"
-      :width="chatWidth"
-      @back="showChat = false"
-      @toggle-details="toggleContactDetails"
-      @send-message="sendMessage"
-    />
-
-    <!-- Contact Details -->
-    <ContactDetails
+    <!-- Chat Panel - Use our new component -->
+    <ChatPanel
       v-if="selectedContact"
       :contact="selectedContact"
-      :show="showContactDetails"
-      :is-removing="isRemovingContact"
-      :removal-error="removalError"
-      :removal-success="removalSuccess"
-      @close="toggleContactDetails"
-      @remove="removeContact"
-      @cancel-remove="cancelRemoveContact"
+      :visible="showChat"
+      :left-position="chatLeftPosition"
+      :width="chatWidth"
+      @close="closeChat"
     />
   </div>
 </template>

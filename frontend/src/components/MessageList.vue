@@ -26,9 +26,21 @@ defineProps({
   }
 })
 
-function formatDate(dateString: string | Date) {
-  const date = dateString instanceof Date ? dateString : new Date(dateString)
-  return date.toLocaleString()
+function formatDate(dateString: string | Date | undefined) {
+  if (!dateString) return 'Unknown date'
+
+  try {
+    const date = dateString instanceof Date ? dateString : new Date(dateString)
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', dateString)
+      return 'Just now'
+    }
+    return date.toLocaleString()
+  } catch (err) {
+    console.error('Error formatting date:', err, dateString)
+    return 'Just now'
+  }
 }
 </script>
 
