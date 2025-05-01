@@ -255,7 +255,7 @@ export class UserUtils extends Utils {
 
         try {
             const result = await this.dbSession.query(`
-                SELECT uid, username, password_hash, created_at 
+                SELECT uid, username, password_hash, created_at, display_name, is_deleted, shadow_mode, full_name_search
                 FROM account 
                 WHERE username = $1`,
                 [username]
@@ -287,6 +287,10 @@ export class UserUtils extends Utils {
                 uid: user.uid,
                 username: user.username,
                 created_at: user.created_at,
+                display_name: user.display_name,
+                is_deleted: user.is_deleted,
+                shadow_mode: user.shadow_mode,
+                full_name_search: user.full_name_search,
                 token: token
             };
 
