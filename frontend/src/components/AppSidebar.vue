@@ -12,7 +12,7 @@ import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
 import ContactDetails from '@/components/ContactDetails.vue'
 import ChatInterface from '@/components/ChatInterface.vue'
-
+import { ArrowLeft } from 'lucide-vue-next'
 
 // Get user ID and token from storage service
 const user = storageService.getUser()
@@ -91,9 +91,9 @@ async function fetchMessages(userId: number, contactId: number) {
           inline: 'nearest'
         })
       }
-    }, 0)
+    }, 100)
   } catch (err) {
-    messagesError.value = err instanceof Error ? err.message : 'Unknown error occurred'
+    messagesError.value = err instanceof Error ? err.message : 'Failed to load messages'
     console.error('Error fetching messages:', err)
   } finally {
     isLoadingMessages.value = false
@@ -101,36 +101,31 @@ async function fetchMessages(userId: number, contactId: number) {
 }
 
 async function sendMessage(content: string) {
-  if (!content.trim() || !selectedContact.value) return
+  if (!selectedContact.value || !selectedContact.value.contactUserId) return
   
   try {
-    const sentMessage = await apiService.sendMessage(
+    const newMessage = await apiService.sendMessage(
       currentUserId.value,
       selectedContact.value.contactUserId,
       content,
       token.value
     )
     
-    messages.value.push(sentMessage)
-    fetchMessages(currentUserId.value, selectedContact.value.contactUserId)
+    // Add the new message to the list
+    messages.value = [...messages.value, newMessage]
   } catch (err) {
-    messagesError.value = err instanceof Error ? err.message : 'Failed to send message'
     console.error('Error sending message:', err)
   }
 }
 
 async function removeContact() {
-  if (!selectedContact.value || !currentUserId.value) return
+  if (!selectedContact.value || !selectedContact.value.contactUserId) return
+  
+  isRemovingContact.value = true
+  removalError.value = undefined
   
   try {
-    isRemovingContact.value = true
-    removalError.value = undefined
-    
-    await apiService.deleteContact(
-      currentUserId.value,
-      selectedContact.value.contactUserId,
-      token.value
-    )
+    await contactStore.deleteContact(selectedContact.value.contactUserId)
     
     // Record success for UI feedback
     removalSuccess.value = true
@@ -208,7 +203,7 @@ function selectContact(contact: Contact) {
   selectedContact.value = contact
   messages.value = []
   showChat.value = true
-
+  
   if (contact && contact.userId) {
     fetchMessages(currentUserId.value, contact.contactUserId)
   } else {
@@ -228,7 +223,7 @@ function cancelRemoveContact() {
 
 <template>
   <div class="flex">
-    <!-- Left Sidebar Navigation -->
+    <!-- Left Sidebar Navigation - ONLY ONE SIDEBAR -->
     <SidebarNavigation 
       :collapsed="sidebarCollapsed"
       @toggle-collapsed="toggleSidebar"
@@ -265,8 +260,10 @@ function cancelRemoveContact() {
 
     <!-- User Settings Panel -->
     <div v-if="showUserSettings"
-      class="fixed z-10 top-0 bottom-0 left-0 right-0 overflow-y-auto bg-card transition-all duration-300 ease-in-out">
-      <div class="p-3 border-b flex items-center">
+      class="fixed z-10 top-0 bottom-0 overflow-hidden bg-card transition-all duration-300 ease-in-out"
+      :style="{ left: sidebarWidth, right: '0' }">
+      <!-- Back button header -->
+      <div class="p-3 border-b flex items-center bg-card z-50 sticky top-0">
         <button 
           @click="toggleUserSettings" 
           class="p-2 rounded-md hover:bg-background/80 mr-2"
@@ -274,8 +271,12 @@ function cancelRemoveContact() {
         >
           <ArrowLeft class="h-5 w-5" />
         </button>
+        <h1 class="font-medium">User Settings</h1>
       </div>
-      <UserSettings />
+      
+      <div class="h-[calc(100vh-56px)] overflow-y-auto">
+        <UserSettings />
+      </div>
     </div>
 
     <!-- Chat Interface -->
