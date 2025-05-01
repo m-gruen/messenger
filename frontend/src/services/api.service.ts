@@ -41,7 +41,7 @@ export class ApiService {
 
         const response = await fetch(url, options);
         let data: any;
-        
+
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json') && response.status !== StatusCodes.NO_CONTENT) {
             data = await response.json();
@@ -113,8 +113,8 @@ export class ApiService {
      */
     public async searchUsers(query: string, token: string, limit: number = 20): Promise<User[]> {
         return await this.fetchApi<User[]>(
-            `${this.baseUrl}/user/search?query=${encodeURIComponent(query)}&limit=${limit}`, 
-            { method: 'GET' }, 
+            `${this.baseUrl}/user/search?query=${encodeURIComponent(query)}&limit=${limit}`,
+            { method: 'GET' },
             token
         );
     }
@@ -122,7 +122,7 @@ export class ApiService {
     /**
      * Update user profile
      * @param uid User ID
-     * @param updateData Update data
+     * @param updateData Update data (username, displayName, shadowMode, fullNameSearch)
      * @param token JWT token
      * @returns Updated user data
      */
@@ -130,6 +130,24 @@ export class ApiService {
         return await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user/${uid}`, {
             method: 'PUT',
             body: JSON.stringify(updateData)
+        }, token);
+    }
+
+    /**
+     * Update user password
+     * @param uid User ID
+     * @param currentPassword Current password for verification
+     * @param newPassword New password to set
+     * @param token JWT token
+     * @returns Updated user data with new token
+     */
+    public async updatePassword(uid: number, currentPassword: string, newPassword: string, token: string): Promise<AuthenticatedUser> {
+        return await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user/${uid}/password`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                currentPassword,
+                newPassword
+            })
         }, token);
     }
 
@@ -300,27 +318,6 @@ export class ApiService {
             ...data,
             timestamp: new Date(data.timestamp)
         };
-    }
-
-    /**
-     * Verify user's current password
-     * @param userId User ID
-     * @param currentPassword Current password to verify
-     * @param token JWT token
-     * @returns True if password is correct, false otherwise
-     */
-    public async verifyPassword(userId: number, currentPassword: string, token: string): Promise<boolean> {
-        try {
-            await this.fetchApi<any>(`${this.baseUrl}/user/${userId}/verify-password`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    password: currentPassword
-                })
-            }, token);
-            return true;
-        } catch (error) {
-            return false;
-        }
     }
 }
 
