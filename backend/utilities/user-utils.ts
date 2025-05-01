@@ -47,35 +47,6 @@ export class UserUtils extends Utils {
     }
 
     /**
-     * Checks if a password matches a user's stored password
-     * @param uid User ID
-     * @param password Password to verify
-     * @returns True if password is correct, false otherwise
-     */
-    public async verifyUserPassword(uid: number, password: string): Promise<boolean> {
-        if (!this.isValidUserId(uid) || !this.isValidString(password)) {
-            return false;
-        }
-
-        try {
-            const result = await this.dbSession.query(
-                `SELECT password_hash FROM account WHERE uid = $1 AND is_deleted = FALSE`,
-                [uid]
-            );
-
-            if (result.rowCount === 0) {
-                return false;
-            }
-
-            const storedHash = result.rows[0].password_hash;
-            return await this.verifyPassword(storedHash, password);
-        } catch (error) {
-            console.error('Error verifying password:', error);
-            return false;
-        }
-    }
-
-    /**
      * Creates a new user
      * @param username The username for the new user
      * @param password The password for the new user
@@ -400,16 +371,15 @@ export class UserUtils extends Utils {
     }
 
     /**
-     * Updates a user's information including username, password, display name, and privacy settings
+     * Updates a user's information including username, display name, and privacy settings
      * @param uid The user ID to update
-     * @param options Update options including username, password, display name, and privacy settings
+     * @param options Update options including username, display name, and privacy settings
      * @returns A UserResponse object containing statusCode, data, and optional error message
      */
     public async updateUser(
         uid: number,
         options: {
             username?: string;
-            password?: string;
             displayName?: string | null;
             shadowMode?: boolean | string;
             fullNameSearch?: boolean | string;
@@ -422,7 +392,7 @@ export class UserUtils extends Utils {
             );
         }
 
-        const { username, password, displayName, shadowMode, fullNameSearch } = options;
+        const { username, displayName, shadowMode, fullNameSearch } = options;
 
         try {
             const userQuery = await this.dbSession.query(
@@ -465,13 +435,6 @@ export class UserUtils extends Utils {
                 }
             }
 
-            if (password !== undefined && !this.isValidString(password)) {
-                return this.createErrorResponse(
-                    StatusCodes.BAD_REQUEST,
-                    'Password must be valid string'
-                );
-            }
-
             if (displayName !== undefined && displayName !== null && !this.isValidString(displayName, 1, 100)) {
                 return this.createErrorResponse(
                     StatusCodes.BAD_REQUEST,
@@ -512,12 +475,6 @@ export class UserUtils extends Utils {
             if (username !== undefined) {
                 updateParams.push(username);
                 updateFields.push(`username = $${updateParams.length}`);
-            }
-
-            if (password !== undefined) {
-                const hashedPassword = await this.hashPassword(password);
-                updateParams.push(hashedPassword);
-                updateFields.push(`password_hash = $${updateParams.length}`);
             }
 
             if (displayName !== undefined) {
@@ -579,6 +536,100 @@ export class UserUtils extends Utils {
             return this.createErrorResponse(
                 StatusCodes.INTERNAL_SERVER_ERROR,
                 'An unexpected error occurred while updating the user.'
+            );
+        }
+    }
+
+    /**
+     * Updates a user's password after verifying their current password
+     * @param uid The user ID to update
+     * @param currentPassword The current password to verify
+     * @param newPassword The new password to set
+     * @returns A UserResponse object containing statusCode, data, and optional error message
+     */
+    public async updatePassword(
+        uid: number,
+        currentPassword: string,
+        newPassword: string
+    ): Promise<UserResponse> {
+        if (!this.isValidUserId(uid)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid user ID'
+            );
+        }
+
+        if (!this.isValidString(currentPassword) || !this.isValidString(newPassword)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Both current and new password are required'
+            );
+        }
+
+        try {
+            const userQuery = await this.dbSession.query(
+                `SELECT uid, username, password_hash, created_at, display_name, is_deleted, shadow_mode, full_name_search FROM account WHERE uid = $1 AND is_deleted = FALSE`,
+                [uid]
+            );
+
+            if (userQuery.rowCount === 0) {
+                return this.createErrorResponse(
+                    StatusCodes.NOT_FOUND,
+                    'User not found'
+                );
+            }
+
+            const user = userQuery.rows[0];
+            
+            // Verify current password
+            const passwordValid = await this.verifyPassword(user.password_hash, currentPassword);
+            
+            if (!passwordValid) {
+                return this.createErrorResponse(
+                    StatusCodes.UNAUTHORIZED,
+                    'Current password is incorrect'
+                );
+            }
+
+            // Hash and set the new password
+            const hashedNewPassword = await this.hashPassword(newPassword);
+            
+            const updateResult = await this.dbSession.query(
+                `UPDATE account SET password_hash = $2 WHERE uid = $1 
+                RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search`,
+                [uid, hashedNewPassword]
+            );
+
+            if (updateResult.rowCount === 0) {
+                return this.createErrorResponse(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    'Failed to update password'
+                );
+            }
+
+            const updatedUser = updateResult.rows[0];
+            const token = JwtUtils.generateToken({
+                uid: updatedUser.uid,
+                username: updatedUser.username
+            });
+
+            const userData: AuthenticatedUser = {
+                uid: updatedUser.uid,
+                username: updatedUser.username,
+                created_at: updatedUser.created_at,
+                display_name: updatedUser.display_name,
+                is_deleted: updatedUser.is_deleted,
+                shadow_mode: updatedUser.shadow_mode,
+                full_name_search: updatedUser.full_name_search,
+                token: token
+            };
+
+            return this.createSuccessResponse(userData);
+        } catch (error) {
+            console.error('Error updating password:', error);
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'An unexpected error occurred while updating the password.'
             );
         }
     }

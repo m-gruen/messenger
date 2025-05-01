@@ -173,7 +173,7 @@ Requires authentication.
 === Update User
 `PUT /user/:uid`
 
-Updates a user's account information.
+Updates a user's account information. This endpoint updates basic account details except password.
 
 [NOTE]
 Requires authentication. Users can only update their own accounts.
@@ -188,7 +188,6 @@ Requires authentication. Users can only update their own accounts.
 ----
 {
   "username": "string", // Optional
-  "password": "string", // Optional
   "displayName": "string", // Optional
   "shadowMode": boolean, // Optional
   "fullNameSearch": boolean // Optional
@@ -216,6 +215,53 @@ At least one field must be provided.
 ----
 
 .Error (400 Bad Request, 403 Forbidden, 409 Conflict, 500 Internal Server Error)
+[source,json]
+----
+{
+  "error": "string" // Error message
+}
+----
+
+=== Update Password
+`PUT /user/:uid/password`
+
+Updates a user's password. Requires verification of the current password.
+
+[NOTE]
+Requires authentication. Users can only update their own passwords.
+
+==== Parameters
+
+* `uid`: User ID (number)
+
+==== Request
+
+[source,json]
+----
+{
+  "currentPassword": "string", // Required - must match current password
+  "newPassword": "string" // Required - new password to set
+}
+----
+
+==== Response
+
+.Success (200 OK)
+[source,json]
+----
+{
+    "uid": number,
+    "username": "string",
+    "created_at": "timestamp",
+    "display_name": "string",
+    "is_deleted": boolean,
+    "shadow_mode": boolean,
+    "full_name_search": boolean,
+    "token": "string" // JWT token
+}
+----
+
+.Error (400 Bad Request, 401 Unauthorized, 403 Forbidden, 500 Internal Server Error)
 [source,json]
 ----
 {

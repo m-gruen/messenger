@@ -452,4 +452,115 @@ describe('UserUtils', () => {
             });
         });
     });
+
+    describe('updatePassword', () => {
+        it('should return an error response for an invalid user ID', async () => {
+            const result = await userUtils.updatePassword(-1, 'currentPassword', 'newPassword');
+            expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result.error).toBe('Invalid user ID');
+        });
+
+        it('should return an error response for invalid password parameters', async () => {
+            const result1 = await userUtils.updatePassword(1, '', 'newPassword');
+            expect(result1.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result1.error).toBe('Both current and new password are required');
+
+            const result2 = await userUtils.updatePassword(1, 'currentPassword', '');
+            expect(result2.statusCode).toBe(StatusCodes.BAD_REQUEST);
+            expect(result2.error).toBe('Both current and new password are required');
+        });
+
+        it('should return an error response if the user does not exist', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0 });
+            const result = await userUtils.updatePassword(1, 'currentPassword', 'newPassword');
+            expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
+            expect(result.error).toBe('User not found');
+        });
+
+        it('should return an error response if the current password is incorrect', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ 
+                    uid: 1,
+                    username: 'testUser',
+                    password_hash: 'hashed-password',
+                    display_name: null,
+                    is_deleted: false,
+                    shadow_mode: false,
+                    full_name_search: false,
+                    created_at: new Date()
+                }]
+            });
+            (argon2.verify as jest.Mock).mockResolvedValueOnce(false);
+            
+            const result = await userUtils.updatePassword(1, 'wrongPassword', 'newPassword');
+            
+            expect(result.statusCode).toBe(StatusCodes.UNAUTHORIZED);
+            expect(result.error).toBe('Current password is incorrect');
+        });
+
+        it('should update password and return a success response when current password is correct', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ 
+                    uid: 1,
+                    username: 'testUser',
+                    password_hash: 'hashed-password',
+                    display_name: 'Test User',
+                    is_deleted: false,
+                    shadow_mode: false,
+                    full_name_search: false,
+                    created_at: new Date()
+                }]
+            });
+            (argon2.verify as jest.Mock).mockResolvedValueOnce(true);
+            (argon2.hash as jest.Mock).mockResolvedValueOnce('new-hashed-password');
+            
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{
+                    uid: 1,
+                    username: 'testUser',
+                    display_name: 'Test User',
+                    is_deleted: false,
+                    shadow_mode: false,
+                    full_name_search: false,
+                    created_at: new Date()
+                }]
+            });
+            
+            const result = await userUtils.updatePassword(1, 'currentPassword', 'newPassword');
+            
+            expect(result.statusCode).toBe(StatusCodes.OK);
+            expect(result.data?.username).toBe('testUser');
+            expect(result.data?.uid).toBe(1);
+        });
+
+        it('should return an error if updating the password fails', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ 
+                    uid: 1,
+                    username: 'testUser',
+                    password_hash: 'hashed-password',
+                    display_name: 'Test User',
+                    is_deleted: false,
+                    shadow_mode: false,
+                    full_name_search: false,
+                    created_at: new Date()
+                }]
+            });
+            (argon2.verify as jest.Mock).mockResolvedValueOnce(true);
+            (argon2.hash as jest.Mock).mockResolvedValueOnce('new-hashed-password');
+            
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 0
+            });
+            
+            const result = await userUtils.updatePassword(1, 'currentPassword', 'newPassword');
+            
+            expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
+            expect(result.error).toBe('Failed to update password');
+        });
+    });
 });
