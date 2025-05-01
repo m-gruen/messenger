@@ -143,7 +143,7 @@ userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, 
 
 userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid = parseInt(req.params.uid);
-    const { username, password, displayName, shadowMode, fullNameSearch } = req.body;
+    const { username, displayName, shadowMode, fullNameSearch } = req.body;
 
     if (uid !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).json({
@@ -153,7 +153,6 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
     }
 
     if (username === undefined && 
-        password === undefined && 
         displayName === undefined && 
         shadowMode === undefined && 
         fullNameSearch === undefined) {
@@ -169,7 +168,6 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
 
         const result = await userUtils.updateUser(uid, {
             username,
-            password,
             displayName,
             shadowMode,
             fullNameSearch
@@ -191,44 +189,42 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
     }
 });
 
-userRouter.post('/:uid/verify-password', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+userRouter.put('/:uid/password', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid = parseInt(req.params.uid);
-    const { password } = req.body;
+    const { currentPassword, newPassword } = req.body;
 
     if (uid !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).json({
-            error: 'You can only verify your own password'
+            error: 'You can only update your own password'
         });
         return;
     }
 
-    if (!password) {
+    if (!currentPassword || !newPassword) {
         res.status(StatusCodes.BAD_REQUEST).json({
-            error: 'Password is required'
+            error: 'Both current and new password are required'
         });
         return;
     }
 
-    let dbSession = await DbSession.create(true);
+    let dbSession = await DbSession.create(false);
     try {
         const userUtils = new UserUtils(dbSession);
 
-        const isPasswordCorrect = await userUtils.verifyUserPassword(uid, password);
+        const result = await userUtils.updatePassword(uid, currentPassword, newPassword);
 
-        if (isPasswordCorrect) {
-            res.status(StatusCodes.OK).json({ verified: true });
+        await dbSession.complete(result.statusCode === StatusCodes.OK);
+
+        if (result.statusCode === StatusCodes.OK) {
+            res.status(result.statusCode).json(result.data);
         } else {
-            res.status(StatusCodes.UNAUTHORIZED).json({ 
-                error: 'Password is incorrect',
-                verified: false 
-            });
+            res.status(result.statusCode).json({ error: result.error });
         }
     } catch (error) {
         console.error(error);
+        await dbSession.complete(false);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-            error: "An unexpected error occurred while verifying password"
+            error: "An unexpected error occurred while updating password"
         });
-    } finally {
-        await dbSession.complete();
     }
 });
