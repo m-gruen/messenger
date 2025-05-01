@@ -9,6 +9,7 @@ export const useMessageStore = defineStore('messages', () => {
     const messages = ref<IMessage[]>([])
     const isLoading = ref(false)
     const error = ref<string | undefined>(undefined)
+    const sendError = ref<string | undefined>(undefined) // New state for send-related errors
 
     // Get user ID and token from storage service
     const user = storageService.getUser()
@@ -98,6 +99,9 @@ export const useMessageStore = defineStore('messages', () => {
      * Send a new message to a contact
      */
     async function sendMessage(receiverId: number, content: string) {
+        // Clear any previous send errors
+        sendError.value = undefined
+        
         try {
             // Send the message through the API service
             const newMessage = await apiService.sendMessage(
@@ -123,6 +127,7 @@ export const useMessageStore = defineStore('messages', () => {
             return newMessage
         } catch (err) {
             console.error('Error sending message:', err)
+            sendError.value = err instanceof Error ? err.message : 'Failed to send message'
             throw err
         }
     }
@@ -133,15 +138,25 @@ export const useMessageStore = defineStore('messages', () => {
     function clearMessages() {
         messages.value = []
         error.value = undefined
+        sendError.value = undefined
+    }
+
+    /**
+     * Clear just the send error
+     */
+    function clearSendError() {
+        sendError.value = undefined
     }
 
     return {
         messages,
         isLoading,
         error,
+        sendError,
         fetchMessages,
         sendMessage,
         clearMessages,
+        clearSendError,
         currentUserId
     }
 })

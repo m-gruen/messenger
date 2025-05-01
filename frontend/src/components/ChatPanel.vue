@@ -122,12 +122,14 @@ function goBack() {
       :messages="messageStore.messages"
       :is-loading-messages="messageStore.isLoading"
       :messages-error="messageStore.error"
+      :send-error="messageStore.sendError"
       :current-user-id="messageStore.currentUserId"
       :left-position="leftPosition"
       :width="width"
       @back="goBack"
       @toggle-details="toggleContactDetails"
       @send-message="sendMessage"
+      @clear-send-error="messageStore.clearSendError"
     />
 
     <!-- Contact Details -->
