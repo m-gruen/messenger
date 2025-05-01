@@ -1,24 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
-import { User } from 'lucide-vue-next';
 
 enum StorageType {
   RAM = 'ram',
   SERVER = 'server',
   FILE = 'file'
 }
-  
+
 const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
 
+// Form fields
 const username = ref(user.value?.username || '');
 const DisplayName = ref(user.value?.display_name || '');
 const currentPassword = ref('');
@@ -27,90 +26,217 @@ const confirmPassword = ref('');
 const shadowMode = ref(user.value?.shadow_mode || false);
 const fullNameSearch = ref(user.value?.full_name_search || false);
 
+// UI state
 const isUpdating = ref(false);
 const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
-const storageType = ref(StorageType.SERVER); 
+const storageType = ref(StorageType.SERVER);
+const isEditingUsername = ref(false);
+const isEditingDisplayName = ref(false);
+const showPasswordModal = ref(false);
 
-type User = {
-  "username": string, 
-  "password": string, 
-  "displayName": string, 
-  "shadowMode": boolean, 
-  "fullNameSearch": boolean 
+// Track original values to detect changes
+const originalValues = ref({
+  username: user.value?.username || '',
+  displayName: user.value?.display_name || '',
+  shadowMode: user.value?.shadow_mode || false,
+  fullNameSearch: user.value?.full_name_search || false,
+});
+
+// Calculate if there are unsaved changes
+const hasUnsavedChanges = computed(() => {
+  return username.value !== originalValues.value.username ||
+    DisplayName.value !== originalValues.value.displayName ||
+    shadowMode.value !== originalValues.value.shadowMode ||
+    fullNameSearch.value !== originalValues.value.fullNameSearch;
+});
+
+// Get the profile initial (first letter of username or display name)
+const userInitial = computed(() => {
+  if (DisplayName.value && DisplayName.value.length > 0) {
+    return DisplayName.value[0].toUpperCase();
+  }
+  if (username.value && username.value.length > 0) {
+    return username.value[0].toUpperCase();
+  }
+  return '?';
+});
+
+// Generate a background color based on username for avatar
+const avatarBackground = computed(() => {
+  const colors = [
+    '#7289DA', // Discord blue
+    '#43B581', // Discord green
+    '#FAA61A', // Discord yellow
+    '#F04747', // Discord red
+    '#593695', // Discord purple
+  ];
+
+  if (!username.value) return colors[0];
+
+  // Simple hash function to get consistent color for a username
+  let hash = 0;
+  for (let i = 0; i < username.value.length; i++) {
+    hash = username.value.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return colors[Math.abs(hash) % colors.length];
+});
+
+function resetForm() {
+  username.value = originalValues.value.username;
+  DisplayName.value = originalValues.value.displayName;
+  shadowMode.value = originalValues.value.shadowMode;
+  fullNameSearch.value = originalValues.value.fullNameSearch;
+  currentPassword.value = '';
+  newPassword.value = '';
+  confirmPassword.value = '';
+  updateError.value = null;
+  updateSuccess.value = null;
+  isEditingUsername.value = false;
+  isEditingDisplayName.value = false;
+  showPasswordModal.value = false;
 }
 
+// Update when user data changes
+watch(user, (newUser) => {
+  if (newUser) {
+    username.value = newUser.username || '';
+    DisplayName.value = newUser.display_name || '';
+    shadowMode.value = newUser.shadow_mode || false;
+    fullNameSearch.value = newUser.full_name_search || false;
 
-async function updateProfile(): Promise<void>{
-   try {
-      isUpdating.value = true;
-      updateError.value = null;
-      updateSuccess.value = null;
+    originalValues.value = {
+      username: newUser.username || '',
+      displayName: newUser.display_name || '',
+      shadowMode: newUser.shadow_mode || false,
+      fullNameSearch: newUser.full_name_search || false,
+    };
+  }
+}, { deep: true });
 
-      // Password validation
-      if (currentPassword.value) {
-         if (!newPassword.value) {
-            updateError.value = "New password is required";
-            isUpdating.value = false;
-            return;
-         }
-         
-         if (newPassword.value !== confirmPassword.value) {
-            updateError.value = "New passwords don't match";
-            isUpdating.value = false;
-            return;
-         }
-         const isPasswordCorrect = await apiService.verifyPassword(UserId, currentPassword.value, token);
-         if (!isPasswordCorrect) {
-            updateError.value = "Current password is incorrect";
-            isUpdating.value = false;
-            return;
-         }
-      }
+async function updateProfile(): Promise<void> {
+  try {
+    isUpdating.value = true;
+    updateError.value = null;
+    updateSuccess.value = null;
 
-      const userData: Partial<User> = {};
-      
+    // Handle other profile updates
+    if (hasProfileChanges()) {
+      const userData: any = {};
+
       if (username.value && username.value !== user.value?.username) {
-         userData.username = username.value;
+        userData.username = username.value;
       }
-      
-      if (DisplayName.value && DisplayName.value !== user.value?.display_name) {
-         userData.displayName = DisplayName.value;
-      }
-      
-      if (currentPassword.value && newPassword.value) {
-         userData.password = newPassword.value;
-         // Include the current password for server-side verification
-         userData.password = currentPassword.value;
+
+      if (DisplayName.value !== user.value?.display_name) {
+        userData.displayName = DisplayName.value;
       }
 
       userData.shadowMode = shadowMode.value;
       userData.fullNameSearch = fullNameSearch.value;
-      
-      if (Object.keys(userData).length === 0) {
-         updateSuccess.value = "No changes to update";
-         isUpdating.value = false;
-         return;
+
+      try {
+        const response = await apiService.updateUser(UserId, userData, token);
+
+        const updatedUser = response;
+        storageService.storeUser(updatedUser);
+        user.value = updatedUser;
+
+        // Update original values
+        originalValues.value = {
+          username: updatedUser.username || '',
+          displayName: updatedUser.display_name || '',
+          shadowMode: updatedUser.shadow_mode || false,
+          fullNameSearch: updatedUser.full_name_search || false,
+        };
+
+        updateSuccess.value = "Profile updated successfully";
+      } catch (error: any) {
+        updateError.value = error.message || "Failed to update profile";
+        isUpdating.value = false;
+        return;
       }
-      
-      const response = await apiService.updateUser(UserId, userData, token);
-      
-      const updatedUser = response;
-      storageService.storeUser(updatedUser);
-      user.value = updatedUser;
-      
+    } else if (!updateSuccess.value) {
+      updateSuccess.value = "No changes to update";
+    }
+
+    isUpdating.value = false;
+    isEditingUsername.value = false;
+    isEditingDisplayName.value = false;
+  } catch (error: any) {
+    updateError.value = error.message || "An unexpected error occurred";
+    isUpdating.value = false;
+  }
+}
+
+async function updatePassword(): Promise<void> {
+  try {
+    if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
+      updateError.value = "All password fields are required";
+      return;
+    }
+
+    if (newPassword.value !== confirmPassword.value) {
+      updateError.value = "New passwords don't match";
+      return;
+    }
+
+    isUpdating.value = true;
+    updateError.value = null;
+
+    try {
+      const passwordResponse = await apiService.updatePassword(
+        UserId,
+        currentPassword.value,
+        newPassword.value,
+        token
+      );
+
+      // Update user data and token after password change
+      storageService.storeUser(passwordResponse);
+      user.value = passwordResponse;
+
+      // Clear password fields
       currentPassword.value = '';
       newPassword.value = '';
       confirmPassword.value = '';
-      
-      updateSuccess.value = "Profile updated successfully";
-      return;
-   } catch (error: any) {
-      updateError.value = error.response?.data?.message || "Failed to update profile";
-      return;
-   } finally {
+
+      updateSuccess.value = "Password updated successfully";
+      showPasswordModal.value = false;
+    } catch (error: any) {
+      updateError.value = error.message || "Failed to update password. Current password may be incorrect.";
+    } finally {
       isUpdating.value = false;
-   }
+    }
+  } catch (error: any) {
+    updateError.value = error.message || "An unexpected error occurred";
+    isUpdating.value = false;
+  }
+}
+
+// Helper function to check if there are profile changes to update
+function hasProfileChanges(): boolean {
+  return (
+    (username.value && username.value !== originalValues.value.username) ||
+    DisplayName.value !== originalValues.value.displayName ||
+    shadowMode.value !== originalValues.value.shadowMode ||
+    fullNameSearch.value !== originalValues.value.fullNameSearch
+  );
+}
+
+function openPasswordModal() {
+  currentPassword.value = '';
+  newPassword.value = '';
+  confirmPassword.value = '';
+  showPasswordModal.value = true;
+}
+
+function closePasswordModal() {
+  currentPassword.value = '';
+  newPassword.value = '';
+  confirmPassword.value = '';
+  showPasswordModal.value = false;
 }
 
 function logout() {
@@ -120,155 +246,267 @@ function logout() {
 </script>
 
 <template>
-  <div class="h-full w-full overflow-y-auto p-6">
-    <Card class="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>User Settings</CardTitle>
-        <CardDescription>Manage your account settings and preferences</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form @submit.prevent="updateProfile" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-4">
-              <!-- Username -->
-              <div class="space-y-2">
-                <label for="username" class="text-sm font-medium">Username</label>
-                <Input id="username" v-model="username" placeholder="Username" />
-              </div>
-              
-              <!-- DisplayName -->
-              <div class="space-y-2">
-                <label for="display_name" class="text-sm font-medium">Display Name</label>
-                <Input v-model="DisplayName" id="display_name" placeholder="Display Name" />
-              </div>
-            </div>
+  <div class="h-full w-full overflow-y-auto bg-gray-50 dark:bg-gray-900">
+    <!-- Unsaved changes notification -->
+    <div v-if="hasUnsavedChanges"
+      class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between items-center z-50">
+      <div>Careful — you have unsaved changes!</div>
+      <div class="space-x-3">
+        <Button variant="outline" @click="resetForm">Reset</Button>
+        <Button variant="default" class="bg-green-500 hover:bg-green-600" @click="updateProfile" :disabled="isUpdating">
+          <span v-if="isUpdating">Saving...</span>
+          <span v-else>Save Changes</span>
+        </Button>
+      </div>
+    </div>
 
-            <div class="space-y-4">
-              <!-- Current Password -->
-              <div class="space-y-2">
-                <label for="current-password" class="text-sm font-medium">Current Password</label>
-                <Input 
-                  id="current-password" 
-                  v-model="currentPassword" 
-                  type="password" 
-                  placeholder="Enter current password to change password"
-                />
-              </div>
-              
-              <!-- New Password -->
-              <div class="space-y-2">
-                <label for="new-password" class="text-sm font-medium">New Password</label>
-                <Input 
-                  id="new-password" 
-                  v-model="newPassword" 
-                  type="password" 
-                  placeholder="Leave blank to keep current password"
-                  :disabled="!currentPassword"
-                />
-              </div>
-              
-              <!-- Confirm Password -->
-              <div class="space-y-2">
-                <label for="confirm-password" class="text-sm font-medium">Confirm New Password</label>
-                <Input 
-                  id="confirm-password" 
-                  v-model="confirmPassword" 
-                  type="password" 
-                  placeholder="Confirm new password"
-                  :disabled="!currentPassword"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <!-- Privacy Settings -->
-          <div class="pt-4 border-t">
-            <h3 class="text-lg font-medium mb-4">Privacy Preferences</h3>
-            <div class="space-y-4">
-              <!-- Shadow Mode -->
-              <div class="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="shadow-mode"
-                  v-model="shadowMode"
-                  class="rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <label for="shadow-mode" class="text-sm font-medium">Shadow Mode (Only contacts can see your activity status)</label>
-              </div>
-              
-              <!-- Full Name Search -->
-              <div class="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="full-name-search"
-                  v-model="fullNameSearch"
-                  class="rounded border-gray-300 text-primary focus:ring-primary"
-                />
-                <label for="full-name-search" class="text-sm font-medium">Allow people to find you by full name</label>
-              </div>
-            </div>
-          </div>
+    <!-- Password Update Modal -->
+    <div v-if="showPasswordModal"
+      class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+      <div class="bg-gray-800 rounded-md max-w-md w-full relative">
+        <!-- Close button -->
+        <button @click="closePasswordModal" class="absolute top-4 right-4 text-gray-400 hover:text-white"
+          aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
 
-          <div class="pt-4 border-t">
-            <h3 class="text-lg font-medium mb-4">Message Storage Settings</h3>
-            <div class="space-y-4">
-              <!-- Storage Type Selection -->
-              <div class="space-y-2">
-                <label for="storage-type" class="text-sm font-medium">Message Storage Type</label>
-                <select 
-                  id="storage-type" 
-                  v-model="storageType" 
-                  class="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="ram">RAM Storage</option>
-                  <option value="server">Server Storage</option>
-                  <option value="file">File Storage</option>
-                </select>
-                
-                <!-- Description based on selection -->
-                <div class="mt-2 text-sm text-gray-600 bg-gray-100 p-3 rounded">
-                  <p v-if="storageType === 'ram'">
-                    RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option but messages are not persistent.
-                  </p>
-                  <p v-else-if="storageType === 'server'">
-                    Server Storage: Messages are stored securely on the server. Provides message history across devices but requires server trust.
-                  </p>
-                  <p v-else-if="storageType === 'file'">
-                    File Storage: Messages are stored locally in encrypted files. Offers persistence without server storage, but only available on current device.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Error/Success Messages -->
-          <div v-if="updateError" class="p-3 bg-destructive/10 text-destructive rounded">
+        <div class="p-6">
+          <h2 class="text-xl font-bold text-white text-center">Update your password</h2>
+          <p class="text-gray-400 text-center mb-6">Enter your current password and a new password.</p>
+
+          <!-- Error message -->
+          <div v-if="updateError" class="mb-4 p-3 bg-red-900/30 text-red-200 rounded-md text-sm">
             {{ updateError }}
           </div>
-          <div v-if="updateSuccess" class="p-3 bg-green-100 text-green-800 rounded">
-            {{ updateSuccess }}
+
+          <form @submit.prevent="updatePassword" class="space-y-4">
+            <div>
+              <label for="current-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Current
+                Password</label>
+              <Input id="current-password-modal" v-model="currentPassword" type="password" placeholder=""
+                class="w-full bg-gray-700 border-gray-600 text-white" />
+            </div>
+
+            <div>
+              <label for="new-password-modal" class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
+              <Input id="new-password-modal" v-model="newPassword" type="password" placeholder=""
+                class="w-full bg-gray-700 border-gray-600 text-white" />
+            </div>
+
+            <div>
+              <label for="confirm-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Confirm New
+                Password</label>
+              <Input id="confirm-password-modal" v-model="confirmPassword" type="password" placeholder=""
+                class="w-full bg-gray-700 border-gray-600 text-white" />
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+              <Button variant="ghost" @click="closePasswordModal" class="text-white" type="button">
+                Cancel
+              </Button>
+              <Button variant="default" class="bg-indigo-500 hover:bg-indigo-600" :disabled="isUpdating" type="submit">
+                <span v-if="isUpdating">Updating...</span>
+                <span v-else>Done</span>
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto p-6">
+      <!-- User Profile Header -->
+      <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">
+        <div class="flex items-center gap-5">
+          <!-- User avatar -->
+          <div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
+            :style="{ backgroundColor: avatarBackground }">
+            {{ userInitial }}
           </div>
-        </form>
-      </CardContent>
-      <CardFooter class="flex flex-col space-y-3">
-        <Button 
-          type="submit" 
-          @click="updateProfile" 
-          :disabled="isUpdating" 
-          class="w-full"
-        >
-          <span v-if="isUpdating">Updating...</span>
-          <span v-else>Update Profile</span>
-        </Button>
+
+          <!-- User info -->
+          <div class="flex-1">
+            <h1 class="text-2xl font-bold text-white">{{ DisplayName || username }}</h1>
+            <p class="text-indigo-200">@{{ username }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main settings container -->
+      <div class="bg-white dark:bg-gray-800 rounded-b-lg shadow-md">
+        <!-- Error/Success Messages -->
+        <div v-if="updateError"
+          class="p-4 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-l-4 border-red-500">
+          {{ updateError }}
+        </div>
+        <div v-if="updateSuccess"
+          class="p-4 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-l-4 border-green-500">
+          {{ updateSuccess }}
+        </div>
+
+        <!-- User Account Section -->
+        <div class="p-6 border-b dark:border-gray-700">
+          <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">USER ACCOUNT</h2>
+
+          <div class="space-y-6">
+            <!-- Username -->
+            <div>
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">Username</div>
+                  <div class="text-gray-800 dark:text-gray-200">{{ username }}</div>
+                </div>
+                <Button variant="ghost" size="sm" @click="isEditingUsername = !isEditingUsername">
+                  Edit
+                </Button>
+              </div>
+
+              <!-- Inline username edit -->
+              <div v-if="isEditingUsername" class="mt-3">
+                <Input v-model="username" placeholder="Username" class="w-full" />
+              </div>
+            </div>
+
+            <!-- Display Name -->
+            <div>
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="text-sm text-gray-500 dark:text-gray-400">Display Name</div>
+                  <div class="text-gray-800 dark:text-gray-200">{{ DisplayName || "Not set" }}</div>
+                </div>
+                <Button variant="ghost" size="sm" @click="isEditingDisplayName = !isEditingDisplayName">
+                  Edit
+                </Button>
+              </div>
+
+              <!-- Inline display name edit -->
+              <div v-if="isEditingDisplayName" class="mt-3">
+                <Input v-model="DisplayName" placeholder="Display Name" class="w-full" />
+              </div>
+            </div>
+
+            <!-- Password -->
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Password</div>
+                <div class="text-gray-800 dark:text-gray-200">••••••••••••</div>
+              </div>
+              <Button variant="ghost" size="sm" @click="openPasswordModal">
+                Change Password
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy Settings Section -->
+        <div class="p-6 border-b dark:border-gray-700">
+          <h2 class="text-xl font-medium mb-6 text-gray-800 dark:text-gray-200">PRIVACY SETTINGS</h2>
+          
+          <!-- Shadow Mode Toggle -->
+          <div class="flex justify-between items-start mb-6">
+            <div class="flex-1">
+              <div class="font-medium text-gray-800 dark:text-gray-200">Shadow Mode</div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Only contacts can see your profile. Other users will not be able to search for you. Keeps your account more private. 
+              </p>
+            </div>
+            <!-- Discord-style Toggle Switch -->
+            <div 
+              class="relative inline-block w-10 h-6 cursor-pointer"
+              @click="shadowMode = !shadowMode"
+            >
+              <div
+                class="w-10 h-6 bg-gray-500 rounded-full transition-colors duration-200 ease-in-out"
+                :class="{ '!bg-green-500': shadowMode }"
+              ></div>
+              <div
+                class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out"
+                :class="{ 'translate-x-4': shadowMode }"
+              ></div>
+            </div>
+          </div>
+          
+          <!-- Full Name Search Toggle -->
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <div class="font-medium text-gray-800 dark:text-gray-200">Enable Full Name Search</div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                When enabled, people can only find you by entering your exact username. When disabled, people can find you using partial username matches.
+              </p>
+            </div>
+            <!-- Discord-style Toggle Switch -->
+            <div 
+              class="relative inline-block w-10 h-6 cursor-pointer"
+              @click="fullNameSearch = !fullNameSearch"
+            >
+              <div
+                class="w-10 h-6 bg-gray-500 rounded-full transition-colors duration-200 ease-in-out"
+                :class="{ '!bg-green-500': fullNameSearch }"
+              ></div>
+              <div
+                class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out"
+                :class="{ 'translate-x-4': fullNameSearch }"
+              ></div>
+            </div>
+          </div>
+        </div>
         
-        <Button 
-          variant="destructive" 
-          @click="logout" 
-          class="w-full"
-        >
-          Log Out
-        </Button>
-      </CardFooter>
-    </Card>
+        <!-- Message Storage Settings Section -->
+        <div class="p-6 border-b dark:border-gray-700">
+          <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MESSAGE STORAGE</h2>
+
+          <!-- Storage Type Selection -->
+          <div class="space-y-2">
+            <label for="storage-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message Storage
+              Type</label>
+            <select id="storage-type" v-model="storageType"
+              class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100">
+              <option value="ram">RAM Storage</option>
+              <option value="server">Server Storage</option>
+              <option value="file">File Storage</option>
+            </select>
+
+            <!-- Description based on selection -->
+            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded">
+              <p v-if="storageType === 'ram'">
+                RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option
+                but messages are not persistent.
+              </p>
+              <p v-else-if="storageType === 'server'">
+                Server Storage: Messages are stored securely on the server. Provides message history across devices but
+                requires server trust.
+              </p>
+              <p v-else-if="storageType === 'file'">
+                File Storage: Messages are stored locally in encrypted files. Offers persistence without server storage,
+                but only available on current device.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logout Button -->
+        <div class="p-6">
+          <Button variant="destructive" @click="logout" class="w-full">
+            Log Out
+          </Button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.bg-green-500 {
+  background-color: #43B581;
+  /* Discord green */
+}
+
+/* Switch animation */
+.transform {
+  transition: transform 150ms ease-in-out;
+}
+</style>
