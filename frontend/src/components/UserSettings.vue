@@ -8,6 +8,12 @@ import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
 import { User } from 'lucide-vue-next';
 
+enum StorageType {
+  RAM = 'ram',
+  SERVER = 'server',
+  FILE = 'file'
+}
+  
 const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
@@ -24,6 +30,7 @@ const fullNameSearch = ref(user.value?.full_name_search || false);
 const isUpdating = ref(false);
 const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
+const storageType = ref(StorageType.SERVER); 
 
 type User = {
   "username": string, 
@@ -198,6 +205,38 @@ function logout() {
                   class="rounded border-gray-300 text-primary focus:ring-primary"
                 />
                 <label for="full-name-search" class="text-sm font-medium">Allow people to find you by full name</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t">
+            <h3 class="text-lg font-medium mb-4">Message Storage Settings</h3>
+            <div class="space-y-4">
+              <!-- Storage Type Selection -->
+              <div class="space-y-2">
+                <label for="storage-type" class="text-sm font-medium">Message Storage Type</label>
+                <select 
+                  id="storage-type" 
+                  v-model="storageType" 
+                  class="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="ram">RAM Storage</option>
+                  <option value="server">Server Storage</option>
+                  <option value="file">File Storage</option>
+                </select>
+                
+                <!-- Description based on selection -->
+                <div class="mt-2 text-sm text-gray-600 bg-gray-100 p-3 rounded">
+                  <p v-if="storageType === 'ram'">
+                    RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option but messages are not persistent.
+                  </p>
+                  <p v-else-if="storageType === 'server'">
+                    Server Storage: Messages are stored securely on the server. Provides message history across devices but requires server trust.
+                  </p>
+                  <p v-else-if="storageType === 'file'">
+                    File Storage: Messages are stored locally in encrypted files. Offers persistence without server storage, but only available on current device.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
