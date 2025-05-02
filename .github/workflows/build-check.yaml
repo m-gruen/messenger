@@ -27,7 +27,7 @@ jobs:
       
       - name: type check
         working-directory: ./backend
-        run: npx tsc --noEmit
+        run: npm run build
 
   check-frontend:
     name: check frontend
