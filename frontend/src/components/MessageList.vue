@@ -60,27 +60,11 @@ const messageGroups = computed(() => {
   const oneWeekAgo = new Date(today)
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 6) // 6 days ago + today = 7 days
   
-  // Define day names in English
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  
   // Process each message
   for (const message of sortedMessages) {
     const timestamp = new Date(message.timestamp)
     const messageDate = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate())
     const dateString = messageDate.toISOString().split('T')[0]
-    
-    let dateLabel: string
-    
-    // Generate date label
-    if (messageDate.getTime() === today.getTime()) {
-      dateLabel = 'Today'
-    } else if (messageDate.getTime() === yesterday.getTime()) {
-      dateLabel = 'Yesterday'
-    } else if (messageDate >= oneWeekAgo) {
-      dateLabel = weekdays[messageDate.getDay()]
-    } else {
-      dateLabel = formatFullDate(messageDate)
-    }
     
     // Check if we need to start a new group
     if (currentDate !== dateString) {
@@ -183,7 +167,7 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 
     <div v-else class="flex flex-col space-y-6">
       <!-- Iterate through date groups -->
-      <div v-for="(group, groupIndex) in messageGroups" :key="group.dateValue">
+      <div v-for="group in messageGroups" :key="group.dateValue">
         <!-- Date header -->
         <div class="flex justify-center mb-4">
           <div class="bg-muted/70 text-muted-foreground text-xs px-4 py-1 rounded-full">
