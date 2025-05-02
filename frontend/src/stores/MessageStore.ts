@@ -50,16 +50,28 @@ export const useMessageStore = defineStore('messages', () => {
     }
 
     /**
-     * Scroll to the most recent messages
+     * Position to the most recent messages immediately (for initial load)
      */
-    function scrollToRecentMessages() {
+    function positionToRecentMessages() {
         setTimeout(() => {
-            const messageContainer = document.querySelector('.flex.flex-col-reverse.space-y-reverse.space-y-4')
-            if (messageContainer) {
-                messageContainer.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'end',
-                    inline: 'nearest'
+            const messageList = document.querySelector('.message-list-container')
+            if (messageList) {
+                // Instantly jump to the bottom without animation
+                messageList.scrollTop = messageList.scrollHeight
+            }
+        }, 100)
+    }
+
+    /**
+     * Smooth scroll to the most recent messages (for new sent messages)
+     */
+    function smoothScrollToRecentMessages() {
+        setTimeout(() => {
+            const messageList = document.querySelector('.message-list-container')
+            if (messageList) {
+                messageList.scrollTo({
+                    top: messageList.scrollHeight,
+                    behavior: 'smooth'
                 })
             }
         }, 100)
@@ -84,8 +96,8 @@ export const useMessageStore = defineStore('messages', () => {
                 return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
             })
 
-            // Automatically scroll to the recent messages
-            scrollToRecentMessages()
+            // Just position to the end without scrolling animation
+            positionToRecentMessages()
 
         } catch (err) {
             error.value = err instanceof Error ? err.message : 'Failed to load messages'
@@ -111,9 +123,6 @@ export const useMessageStore = defineStore('messages', () => {
                 token.value
             )
             
-            // The API service now handles timestamp validation and sender_uid correction,
-            // so we can directly add the message to our list
-            
             // Add the new message to the list and re-sort
             messages.value = [...messages.value, newMessage].sort((a, b) => {
                 const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
@@ -121,8 +130,8 @@ export const useMessageStore = defineStore('messages', () => {
                 return timeB - timeA;
             })
             
-            // Scroll to show the new message
-            scrollToRecentMessages()
+            // Smoothly scroll to show the new message
+            smoothScrollToRecentMessages()
             
             return newMessage
         } catch (err) {
