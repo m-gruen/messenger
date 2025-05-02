@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, watch } from 'vue'
+import { defineProps, defineEmits, ref, watch, onMounted } from 'vue'
 import { useMessageStore } from '@/stores/MessageStore'
 import ChatInterface from './ChatInterface.vue'
 import ContactDetails from './ContactDetails.vue'
@@ -41,6 +41,13 @@ const showChat = ref(props.visible) // Initialize with visible prop
 const isRemovingContact = ref(false)
 const removalError = ref<string | undefined>(undefined)
 const removalSuccess = ref(false)
+
+// Load messages immediately when component is mounted if visible and has contact
+onMounted(() => {
+  if (showChat.value && props.contact && props.contact.contactUserId) {
+    loadMessages()
+  }
+})
 
 // Watch for visibility changes
 watch(() => props.visible, (isVisible) => {
