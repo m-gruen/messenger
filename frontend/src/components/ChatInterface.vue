@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, watch } from 'vue'
 import ChatHeader from './ChatHeader.vue'
 import MessageList from './MessageList.vue'
 import MessageInput from './MessageInput.vue'
 import type { Contact } from '@/models/contact-model'
 import type { IMessage } from '@/models/message-model'
 
-defineProps({
+const props = defineProps({
   contact: {
     type: Object as () => Contact,
     required: true
@@ -20,6 +20,10 @@ defineProps({
     default: false
   },
   messagesError: {
+    type: String,
+    default: undefined
+  },
+  sendError: {
     type: String,
     default: undefined
   },
@@ -37,7 +41,16 @@ defineProps({
   }
 })
 
-const emit = defineEmits(['back', 'toggle-details', 'send-message'])
+const emit = defineEmits(['back', 'toggle-details', 'send-message', 'clear-send-error'])
+
+// Automatically dismiss send error after 5 seconds
+watch(() => props.sendError, (error) => {
+  if (error) {
+    setTimeout(() => {
+      emit('clear-send-error')
+    }, 5000)
+  }
+})
 </script>
 
 <template>
@@ -52,6 +65,18 @@ const emit = defineEmits(['back', 'toggle-details', 'send-message'])
       @back="emit('back')" 
       @details="emit('toggle-details')" 
     />
+
+    <!-- Send Error Alert -->
+    <div v-if="sendError" 
+      class="mx-4 mt-2 p-3 bg-destructive/10 text-destructive text-sm rounded-md flex items-center justify-between">
+      <span>{{ sendError }}</span>
+      <button 
+        @click="emit('clear-send-error')" 
+        class="ml-2 text-destructive hover:text-destructive/80"
+        aria-label="Dismiss error">
+        ✕
+      </button>
+    </div>
 
     <!-- Message List -->
     <MessageList 

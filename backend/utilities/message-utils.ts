@@ -13,7 +13,7 @@ export class MessageUtils extends Utils {
      * @param content Message content
      * @returns A MessageResponse object containing statusCode, data, and optional error message
      */
-    async sendMessage(sender_uid: number, receiver_uid: number, content: string): Promise<MessageResponse> {
+    async sendMessage(sender_uid: number, receiver_uid: number, content: string): Promise<BaseResponse<IMessage>> {
         if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
             return this.createErrorResponse(
                 StatusCodes.BAD_REQUEST,
@@ -72,7 +72,7 @@ export class MessageUtils extends Utils {
                 timestamp: result.rows[0].timestamp
             };
 
-            return this.createSuccessResponse([message]);
+            return this.createSuccessResponse(message);
         } catch (error) {
             console.error('Error sending message:', error);
             return this.createErrorResponse(

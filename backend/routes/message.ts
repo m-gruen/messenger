@@ -52,7 +52,7 @@ msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: Authentica
     try {
         const msgUtils = new MessageUtils(dbSession);
 
-        const response: MessageResponse = await msgUtils.sendMessage(userId, receiverId, content);
+        const response = await msgUtils.sendMessage(userId, receiverId, content);
 
         await dbSession.complete(response.statusCode === StatusCodes.OK);
 
