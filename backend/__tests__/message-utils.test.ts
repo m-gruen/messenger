@@ -91,8 +91,8 @@ describe('MessageUtils', () => {
                 }); // Message inserted
             const result = await messageUtils.sendMessage(1, 2, "Hello");
             expect(result.statusCode).toBe(StatusCodes.OK);
-            expect(result.data).toHaveLength(1);
-            expect(result.data![0].content).toBe("Hello");
+            expect(result.data).toBeDefined();
+            expect(result.data!.content).toBe("Hello");
         });
 
         it('should return an error response if message insertion fails', async () => {
