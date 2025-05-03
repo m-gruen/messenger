@@ -12,6 +12,7 @@ export interface Contact {
     userId: number;
     contactUserId: number;
     username: string;
+    display_name?: string;
     status: ContactStatus;
     createdAt: Date;
 }

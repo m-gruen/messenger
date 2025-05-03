@@ -55,11 +55,11 @@ function formatStatusText(status: ContactStatus | string): string {
     </button>
 
     <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-      {{ contact.username.charAt(0).toUpperCase() }}
+      {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
     </div>
 
     <div class="ml-3">
-      <div class="font-medium">{{ contact.username }}</div>
+      <div class="font-medium">{{ contact.display_name || contact.username }}</div>
       <div class="text-xs text-muted-foreground">
         <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="getStatusColorClass(contact.status)"></span>
         {{ formatStatusText(contact.status) }}

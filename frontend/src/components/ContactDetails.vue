@@ -145,11 +145,12 @@ function formatStatusText(status: ContactStatus | string): string {
     <div class="flex flex-col items-center py-6 px-4">
       <!-- Avatar Circle -->
       <div class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4">
-        {{ contact.username.charAt(0).toUpperCase() }}
+        {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
       </div>
       
-      <!-- Username -->
-      <h3 class="text-2xl font-medium text-white mt-2">{{ contact.username }}</h3>
+      <!-- Username and Display Name -->
+      <h3 class="text-2xl font-medium text-white mt-2">{{ contact.display_name || contact.username }}</h3>
+      <p class="text-sm text-muted-foreground mt-1" v-if="contact.display_name">@{{ contact.username }}</p>
       
       <!-- Status -->
       <div class="mt-2 flex items-center">

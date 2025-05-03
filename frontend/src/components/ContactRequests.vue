@@ -38,11 +38,12 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                {{ request.username.charAt(0).toUpperCase() }}
+                {{ (request.display_name || request.username).charAt(0).toUpperCase() }}
               </div>
               <div class="ml-3">
-                <div class="font-medium">{{ request.username }}</div>
+                <div class="font-medium">{{ request.display_name || request.username }}</div>
                 <div class="text-xs text-muted-foreground">
+                  <span v-if="request.display_name" class="opacity-70 mr-2">@{{ request.username }}</span>
                   Requested: {{ formatDate(request.createdAt) }}
                 </div>
               </div>
@@ -86,11 +87,12 @@
           <div class="flex items-center justify-between">
             <div class="flex items-center">
               <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                {{ request.username.charAt(0).toUpperCase() }}
+                {{ (request.display_name || request.username).charAt(0).toUpperCase() }}
               </div>
               <div class="ml-3">
-                <div class="font-medium">{{ request.username }}</div>
+                <div class="font-medium">{{ request.display_name || request.username }}</div>
                 <div class="text-xs text-muted-foreground">
+                  <span v-if="request.display_name" class="opacity-70 mr-2">@{{ request.username }}</span>
                   Sent: {{ formatDate(request.createdAt) }}
                 </div>
               </div>
