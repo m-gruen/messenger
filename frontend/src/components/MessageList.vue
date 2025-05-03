@@ -27,11 +27,11 @@ const props = defineProps({
   }
 })
 
-// Group messages by date
+// Group messages by date and by sender & minute
 const messageGroups = computed(() => {
   if (!props.messages.length) return []
   
-  const groups: { dateLabel: string, dateValue: string, messages: IMessage[] }[] = []
+  const groups: { dateLabel: string, dateValue: string, messages: IMessage[], minuteGroups: Array<{sender: number, messages: IMessage[], minute: string}> }[] = []
   let currentDate: string | null = null
   let currentMessages: IMessage[] = []
   
@@ -56,7 +56,8 @@ const messageGroups = computed(() => {
         groups.push({
           dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
           dateValue: currentDate,
-          messages: [...currentMessages]
+          messages: [...currentMessages],
+          minuteGroups: createMinuteGroups(currentMessages)
         })
       }
       
@@ -74,12 +75,67 @@ const messageGroups = computed(() => {
     groups.push({
       dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
       dateValue: currentDate!,
-      messages: [...currentMessages]
+      messages: [...currentMessages],
+      minuteGroups: createMinuteGroups(currentMessages)
     })
   }
   
   return groups
 })
+
+// Helper function to create minute-based message groups
+function createMinuteGroups(messages: IMessage[]) {
+  const minuteGroups: Array<{sender: number, messages: IMessage[], minute: string}> = []
+  let currentSender: number | null = null
+  let currentMinute: string | null = null
+  let currentGroup: IMessage[] = []
+  
+  for (const message of messages) {
+    const timestamp = new Date(message.timestamp)
+    const minute = `${timestamp.getHours()}:${timestamp.getMinutes()}`
+    
+    // Start a new group if the minute changes or the sender changes
+    if (currentMinute !== minute || currentSender !== message.sender_uid) {
+      if (currentMinute !== null) {
+        // Add the previous group to our list
+        minuteGroups.push({
+          sender: currentSender!,
+          minute: currentMinute,
+          messages: [...currentGroup]
+        })
+      }
+      
+      // Start a new group
+      currentMinute = minute
+      currentSender = message.sender_uid
+      currentGroup = [message]
+    } else {
+      // Add to the current group
+      currentGroup.push(message)
+    }
+  }
+  
+  // Add the last group
+  if (currentGroup.length > 0 && currentMinute !== null) {
+    minuteGroups.push({
+      sender: currentSender!,
+      minute: currentMinute,
+      messages: [...currentGroup]
+    })
+  }
+  
+  return minuteGroups
+}
+
+// Determine message position in its minute-group
+function getMessagePosition(message: IMessage, group: {sender: number, messages: IMessage[], minute: string}) {
+  if (group.messages.length === 1) return 'single'
+  
+  const index = group.messages.findIndex(m => m.mid === message.mid)
+  if (index === 0) return 'first'
+  if (index === group.messages.length - 1) return 'last'
+  return 'middle'
+}
 
 // Format time for message timestamp display
 function formatTimeForMessage(dateString: string | Date | undefined) {
@@ -89,7 +145,7 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 
 <template>
   <div class="flex-1 overflow-y-auto p-4 bg-background/95 message-list-container custom-scrollbar"
-    style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
+    style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
     <div v-if="isLoading" class="flex items-center justify-center h-full">
       <div class="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
       <span class="ml-2">Loading messages...</span>
@@ -120,21 +176,73 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
           </div>
         </div>
         
-        <!-- Messages in this group -->
+        <!-- Messages grouped by minute -->
         <div class="flex flex-col space-y-4">
-          <div v-for="message in group.messages" :key="message.mid" :class="{
-            'flex justify-end': message.sender_uid === currentUserId,
-            'flex justify-start': message.sender_uid !== currentUserId
-          }">
-            <div class="max-w-[70%] rounded-lg p-3 shadow-sm" :class="{
-              'bg-blue-600 text-white rounded-br-none': message.sender_uid === currentUserId,
-              'bg-zinc-800 text-white rounded-bl-none': message.sender_uid !== currentUserId
-            }">
-              <p class="mb-1">{{ message.content }}</p>
-              <div class="flex justify-end">
-                <span class="text-xs opacity-70">
-                  {{ formatTimeForMessage(message.timestamp) }}
-                </span>
+          <!-- Each minute group -->
+          <div v-for="(minuteGroup, groupIndex) in group.minuteGroups" :key="`${group.dateValue}-${minuteGroup.minute}-${groupIndex}`" 
+               class="flex flex-col" 
+               :class="{
+                 'items-end': minuteGroup.sender === currentUserId,
+                 'items-start': minuteGroup.sender !== currentUserId,
+                 'mb-1': true
+               }">
+            
+            <!-- Messages in this minute group - removed fixed width for the container -->
+            <div class="flex flex-col">
+              <div v-for="(message, messageIndex) in minuteGroup.messages" 
+                   :key="message.mid"
+                   class="px-3 py-2 shadow-sm inline-block"
+                   :class="[
+                     // Base styling
+                     {
+                       // Sender styles (you)
+                       'bg-blue-600 text-white': message.sender_uid === currentUserId,
+                       // Receiver styles (other person)
+                       'bg-zinc-800 text-white': message.sender_uid !== currentUserId,
+                       
+                       // Spacing between messages in the same group
+                       'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
+                       
+                       // Self-align each message
+                       'self-end': message.sender_uid === currentUserId,
+                       'self-start': message.sender_uid !== currentUserId,
+                       
+                       // Maximum width for messages
+                       'max-w-message': true
+                     },
+                     // Single message (completely rounded)
+                     getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
+                     
+                     // First message in group
+                     getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ? 
+                       'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
+                     getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ? 
+                       'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
+                     
+                     // Middle messages in group
+                     getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ? 
+                       'message-bubble-rounded-left' : '',
+                     getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ? 
+                       'message-bubble-rounded-right' : '',
+                     
+                     // Last message in group
+                     getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ? 
+                       'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
+                     getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ? 
+                       'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
+                   ]">
+                <!-- Fixed message layout to prevent text splitting and timestamp alignment issues -->
+                <div class="relative message-content">
+                  <p :class="{'pr-12': getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'}">
+                    {{ message.content }}
+                  </p>
+                  
+                  <!-- Show time only in single or last messages in a group -->
+                  <span v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'" 
+                        class="text-xs opacity-70 absolute bottom-0 right-0 whitespace-nowrap timestamp">
+                    {{ formatTimeForMessage(message.timestamp) }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -185,5 +293,59 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 .custom-scrollbar * {
   -ms-overflow-style: none;
   scrollbar-width: thin;
+}
+
+/* Custom message bubble styles with increased roundness */
+.message-bubble-rounded {
+  border-radius: 18px;
+}
+
+.message-bubble-rounded-left {
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+
+.message-bubble-rounded-right {
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
+
+.message-bubble-rounded-top {
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+}
+
+.message-bubble-rounded-bottom {
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
+
+.message-bubble-top-left {
+  border-top-left-radius: 18px;
+}
+
+.message-bubble-top-right {
+  border-top-right-radius: 18px;
+}
+
+.message-bubble-bottom-left {
+  border-bottom-left-radius: 18px;
+}
+
+.message-bubble-bottom-right {
+  border-bottom-right-radius: 18px;
+}
+
+/* Timestamp positioning */
+.message-content {
+  min-width: 14px; 
+  padding-right: 2px; 
+}
+
+.timestamp {
+  margin-left: 1px; /* Reduced spacing between text and timestamp */
+  margin-right: 1px;
+  margin-bottom: 1px;
+  padding-left: 1px; /* Reduced left padding */
 }
 </style>
