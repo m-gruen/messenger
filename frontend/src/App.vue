@@ -23,7 +23,7 @@ onMounted(() => {
   }
 
   // Listen for route changes to handle WebSocket connections based on auth state
-  router.beforeEach((to, from, next) => {
+  router.beforeEach((_to, _from, next) => {
     const user = storageService.getUser();
     const token = storageService.getToken();
     const isAuthenticated = !!user && !!token;
