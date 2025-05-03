@@ -36,7 +36,7 @@ export class WebSocketService {
         this.socket.on('new_message', (message: IMessage) => {
             // Ensure timestamp is a Date object
             if (typeof message.timestamp === 'string') {
-                message.timestamp = new Date(message.timestamp);
+                message.timestamp = new Date(message.timestamp + 'Z');
             }
 
             // Notify all registered message handlers
