@@ -7,6 +7,8 @@ import { DbSession } from './db';
 import { fileURLToPath } from 'url';
 import { contactRouter } from './routes/contact';
 import { msgRouter } from './routes/message';
+import http from 'http';
+import { Server } from 'socket.io';
 
 dotenv.config({
     path: path.resolve(
@@ -16,6 +18,33 @@ dotenv.config({
 });
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: process.env.FRONTEND_URL,
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+
+    // Join user to a personal room based on their user ID
+    socket.on('join', (userId) => {
+        socket.join(`user_${userId}`);
+        console.log(`User ${userId} joined their room`);
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+    });
+});
+
+// Export io so it can be used in other files
+export { io };
 
 app.use(express.json());
 app.use(cors());
@@ -29,7 +58,7 @@ if (!process.env.BACKEND_PORT) {
     throw new Error('BACKEND_PORT is not set');
 }
 
-app.listen(process.env.BACKEND_PORT, async () => {
+server.listen(process.env.BACKEND_PORT, async () => {
     await DbSession.ensureTablesCreated();
     console.log(`running on http://localhost:${process.env.BACKEND_PORT}`);
 });

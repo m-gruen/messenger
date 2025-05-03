@@ -1,20 +1,71 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted, watchEffect } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { apiService } from '@/services/api.service'
 import { storageService } from '@/services/storage.service'
+import { websocketService } from '@/services/websocket.service'
 
 export const useMessageStore = defineStore('messages', () => {
     // State
     const messages = ref<IMessage[]>([])
     const isLoading = ref(false)
     const error = ref<string | undefined>(undefined)
-    const sendError = ref<string | undefined>(undefined) // New state for send-related errors
+    const sendError = ref<string | undefined>(undefined)
+    const activeContactId = ref<number | null>(null)
 
     // Get user ID and token from storage service
     const user = storageService.getUser()
     const currentUserId = computed(() => user?.uid || 0)
     const token = computed(() => storageService.getToken() || '')
+
+    // Connect to WebSocket when store is created
+    if (currentUserId.value && token.value) {
+        websocketService.connect(currentUserId.value, token.value)
+    }
+
+    // Message handler for real-time updates
+    const handleNewMessage = (message: IMessage) => {
+        // Only add the message if it belongs to the current conversation
+        if (activeContactId.value !== null &&
+            ((message.sender_uid === currentUserId.value && message.receiver_uid === activeContactId.value) ||
+                (message.sender_uid === activeContactId.value && message.receiver_uid === currentUserId.value))) {
+
+            // Process the message to ensure valid date
+            const processedMessage = ensureValidDate(message)
+
+            // Add to messages if not already present
+            const messageExists = messages.value.some(m => m.mid === message.mid)
+            if (!messageExists) {
+                messages.value = [...messages.value, processedMessage].sort((a, b) => {
+                    const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+                    const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+                    return timeB - timeA;
+                })
+
+                // Smoothly scroll to show the new message
+                smoothScrollToRecentMessages()
+            }
+        }
+    }
+
+    // Register message handler
+    websocketService.onNewMessage(handleNewMessage)
+
+    // Ensure websocket is connected when user and token change
+    watchEffect(() => {
+        if (currentUserId.value && token.value) {
+            if (!websocketService.isConnected()) {
+                websocketService.connect(currentUserId.value, token.value)
+            }
+        } else {
+            websocketService.disconnect()
+        }
+    })
+
+    // Clean up on component unmount
+    onUnmounted(() => {
+        websocketService.removeMessageHandler(handleNewMessage)
+    })
 
     /**
      * Ensure message timestamp is a valid Date object
@@ -23,12 +74,12 @@ export const useMessageStore = defineStore('messages', () => {
         try {
             // Make a copy of the message to avoid mutation issues
             const processedMessage = { ...message }
-            
+
             if (processedMessage.timestamp) {
                 if (!(processedMessage.timestamp instanceof Date)) {
                     processedMessage.timestamp = new Date(processedMessage.timestamp)
                 }
-                
+
                 // Verify it's a valid date
                 if (isNaN(processedMessage.timestamp.getTime())) {
                     console.warn('Invalid timestamp detected, using current time', message)
@@ -38,7 +89,7 @@ export const useMessageStore = defineStore('messages', () => {
                 // If no timestamp provided, use current time
                 processedMessage.timestamp = new Date()
             }
-            
+
             return processedMessage
         } catch (err) {
             console.error('Error processing message timestamp:', err)
@@ -84,13 +135,14 @@ export const useMessageStore = defineStore('messages', () => {
         error.value = undefined
         isLoading.value = true
         messages.value = [] // Clear previous messages
+        activeContactId.value = contactUserId // Set active contact
 
         try {
             const fetchedMessages = await apiService.getMessages(currentUserId.value, contactUserId, token.value)
-            
+
             // Process all messages to ensure valid dates
             const processedMessages = fetchedMessages.map(ensureValidDate)
-            
+
             // Sort messages
             messages.value = processedMessages.sort((a, b) => {
                 return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -113,7 +165,7 @@ export const useMessageStore = defineStore('messages', () => {
     async function sendMessage(receiverId: number, content: string) {
         // Clear any previous send errors
         sendError.value = undefined
-        
+
         try {
             // Send the message through the API service
             const newMessage = await apiService.sendMessage(
@@ -122,17 +174,17 @@ export const useMessageStore = defineStore('messages', () => {
                 content,
                 token.value
             )
-            
+
             // Add the new message to the list and re-sort
             messages.value = [...messages.value, newMessage].sort((a, b) => {
                 const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
                 const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
                 return timeB - timeA;
             })
-            
+
             // Smoothly scroll to show the new message
             smoothScrollToRecentMessages()
-            
+
             return newMessage
         } catch (err) {
             console.error('Error sending message:', err)
@@ -148,6 +200,7 @@ export const useMessageStore = defineStore('messages', () => {
         messages.value = []
         error.value = undefined
         sendError.value = undefined
+        activeContactId.value = null
     }
 
     /**

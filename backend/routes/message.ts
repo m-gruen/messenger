@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import { DbSession } from '../db';
 import { MessageResponse, MessageUtils } from '../utilities/message-utils';
 import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-middleware';
+import { io } from '../app';
 
 export const msgRouter = Router();
 
@@ -55,6 +56,15 @@ msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: Authentica
         const response = await msgUtils.sendMessage(userId, receiverId, content);
 
         await dbSession.complete(response.statusCode === StatusCodes.OK);
+
+        // If message was successfully sent, emit a WebSocket event to both sender and receiver
+        if (response.statusCode === StatusCodes.OK && response.data) {
+            // Emit to the sender's room
+            io.to(`user_${userId}`).emit('new_message', response.data);
+
+            // Emit to the receiver's room
+            io.to(`user_${receiverId}`).emit('new_message', response.data);
+        }
 
         res.status(response.statusCode).json(
             response.data !== null ? response.data : { error: response.error }
