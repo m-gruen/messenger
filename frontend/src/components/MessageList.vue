@@ -2,6 +2,7 @@
 import { defineProps, computed } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { MessageSquare } from 'lucide-vue-next'
+import { DateFormatService } from '@/services/date-format.service'
 
 const props = defineProps({
   messages: {
@@ -26,16 +27,6 @@ const props = defineProps({
   }
 })
 
-// Format time (hours:minutes) in 24-hour format
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-// Format date with European style (dd.mm.yyyy)
-function formatFullDate(date: Date): string {
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.')
-}
-
 // Group messages by date
 const messageGroups = computed(() => {
   if (!props.messages.length) return []
@@ -52,14 +43,6 @@ const messageGroups = computed(() => {
     return dateA - dateB
   })
   
-  // Get today, yesterday, and a week ago for comparison
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const oneWeekAgo = new Date(today)
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 6) // 6 days ago + today = 7 days
-  
   // Process each message
   for (const message of sortedMessages) {
     const timestamp = new Date(message.timestamp)
@@ -71,7 +54,7 @@ const messageGroups = computed(() => {
       if (currentDate !== null) {
         // Add the previous group to our list
         groups.push({
-          dateLabel: currentMessages[0] ? getLabelForDate(new Date(currentMessages[0].timestamp)) : '',
+          dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
           dateValue: currentDate,
           messages: [...currentMessages]
         })
@@ -89,7 +72,7 @@ const messageGroups = computed(() => {
   // Don't forget to add the last group
   if (currentMessages.length > 0) {
     groups.push({
-      dateLabel: currentMessages[0] ? getLabelForDate(new Date(currentMessages[0].timestamp)) : '',
+      dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
       dateValue: currentDate!,
       messages: [...currentMessages]
     })
@@ -98,52 +81,14 @@ const messageGroups = computed(() => {
   return groups
 })
 
-// Helper function to get date label
-function getLabelForDate(date: Date): string {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const oneWeekAgo = new Date(today)
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 6)
-  
-  // Define day names in English
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  
-  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  
-  if (messageDate.getTime() === today.getTime()) {
-    return 'Today'
-  } else if (messageDate.getTime() === yesterday.getTime()) {
-    return 'Yesterday'
-  } else if (messageDate >= oneWeekAgo) {
-    return weekdays[messageDate.getDay()]
-  } else {
-    return formatFullDate(messageDate)
-  }
-}
-
 // Format time for message timestamp display
 function formatTimeForMessage(dateString: string | Date | undefined) {
-  if (!dateString) return 'Unknown time'
-
-  try {
-    const date = dateString instanceof Date ? dateString : new Date(dateString)
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      console.error('Invalid date:', dateString)
-      return 'Just now'
-    }
-    return formatTime(date)
-  } catch (err) {
-    console.error('Error formatting date:', err, dateString)
-    return 'Just now'
-  }
+  return DateFormatService.formatMessageTime(dateString);
 }
 </script>
 
 <template>
-  <div class="flex-1 overflow-y-auto p-4 bg-background/95 message-list-container"
+  <div class="flex-1 overflow-y-auto p-4 bg-background/95 message-list-container custom-scrollbar"
     style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
     <div v-if="isLoading" class="flex items-center justify-center h-full">
       <div class="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
@@ -198,3 +143,47 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px; /* Thin scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; /* Transparent background */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(128, 128, 128, 0.4); /* Semi-transparent gray */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(128, 128, 128, 0.6); /* Slightly more visible on hover */
+}
+
+/* Hide scrollbar buttons (arrows) - multiple approaches for different browsers */
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar-button:start:decrement,
+.custom-scrollbar::-webkit-scrollbar-button:end:increment {
+  display: none;
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
+}
+
+/* Additional override to ensure no buttons are shown */
+.custom-scrollbar * {
+  -ms-overflow-style: none;
+  scrollbar-width: thin;
+}
+</style>
