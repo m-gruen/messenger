@@ -2,6 +2,7 @@
 import { defineProps, computed } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { MessageSquare } from 'lucide-vue-next'
+import { DateFormatService } from '@/services/date-format.service'
 
 const props = defineProps({
   messages: {
@@ -26,16 +27,6 @@ const props = defineProps({
   }
 })
 
-// Format time (hours:minutes) in 24-hour format
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
-}
-
-// Format date with European style (dd.mm.yyyy)
-function formatFullDate(date: Date): string {
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.')
-}
-
 // Group messages by date
 const messageGroups = computed(() => {
   if (!props.messages.length) return []
@@ -52,14 +43,6 @@ const messageGroups = computed(() => {
     return dateA - dateB
   })
   
-  // Get today, yesterday, and a week ago for comparison
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const oneWeekAgo = new Date(today)
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 6) // 6 days ago + today = 7 days
-  
   // Process each message
   for (const message of sortedMessages) {
     const timestamp = new Date(message.timestamp)
@@ -71,7 +54,7 @@ const messageGroups = computed(() => {
       if (currentDate !== null) {
         // Add the previous group to our list
         groups.push({
-          dateLabel: currentMessages[0] ? getLabelForDate(new Date(currentMessages[0].timestamp)) : '',
+          dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
           dateValue: currentDate,
           messages: [...currentMessages]
         })
@@ -89,7 +72,7 @@ const messageGroups = computed(() => {
   // Don't forget to add the last group
   if (currentMessages.length > 0) {
     groups.push({
-      dateLabel: currentMessages[0] ? getLabelForDate(new Date(currentMessages[0].timestamp)) : '',
+      dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
       dateValue: currentDate!,
       messages: [...currentMessages]
     })
@@ -98,47 +81,9 @@ const messageGroups = computed(() => {
   return groups
 })
 
-// Helper function to get date label
-function getLabelForDate(date: Date): string {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const oneWeekAgo = new Date(today)
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 6)
-  
-  // Define day names in English
-  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  
-  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  
-  if (messageDate.getTime() === today.getTime()) {
-    return 'Today'
-  } else if (messageDate.getTime() === yesterday.getTime()) {
-    return 'Yesterday'
-  } else if (messageDate >= oneWeekAgo) {
-    return weekdays[messageDate.getDay()]
-  } else {
-    return formatFullDate(messageDate)
-  }
-}
-
 // Format time for message timestamp display
 function formatTimeForMessage(dateString: string | Date | undefined) {
-  if (!dateString) return 'Unknown time'
-
-  try {
-    const date = dateString instanceof Date ? dateString : new Date(dateString)
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      console.error('Invalid date:', dateString)
-      return 'Just now'
-    }
-    return formatTime(date)
-  } catch (err) {
-    console.error('Error formatting date:', err, dateString)
-    return 'Just now'
-  }
+  return DateFormatService.formatMessageTime(dateString);
 }
 </script>
 

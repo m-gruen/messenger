@@ -120,6 +120,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { Check, X } from 'lucide-vue-next';
 import { useContactStore } from '@/stores/ContactStore';
+import { DateFormatService } from '@/services/date-format.service';
 
 const activeTab = ref('incoming');
 
@@ -167,15 +168,9 @@ async function cancelRequest(contactUserId: number) {
   }
 }
 
+// Updated to use the DateFormatService class directly
 function formatDate(dateValue: Date): string {
-  if (!dateValue) return 'Unknown';
-  
-  const date = new Date(dateValue);
-  return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+  return DateFormatService.formatContactDate(dateValue);
 }
 </script>
 

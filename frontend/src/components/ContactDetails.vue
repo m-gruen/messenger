@@ -3,6 +3,7 @@ import { ref, defineProps, defineEmits } from 'vue'
 import { X, Shield } from "lucide-vue-next"
 import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
+import { DateFormatService } from '@/services/date-format.service'
 
 defineProps({
   contact: {
@@ -156,9 +157,9 @@ function formatStatusText(status: ContactStatus | string): string {
         <span class="text-white">{{ formatStatusText(contact.status) }}</span>
       </div>
       
-      <!-- Added Date -->
+      <!-- Added Date - Using DateFormatService class directly -->
       <p class="text-muted-foreground text-sm mt-4">
-        Added: {{ new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+        Added: {{ DateFormatService.formatCreationDate(contact.createdAt) }}
       </p>
     </div>
     
