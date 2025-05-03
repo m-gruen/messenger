@@ -35,6 +35,7 @@ export const useMessageStore = defineStore('messages', () => {
 
             // Add to messages if not already present
             const messageExists = messages.value.some(m => m.mid === message.mid)
+                                  
             if (!messageExists) {
                 messages.value = [...messages.value, processedMessage].sort((a, b) => {
                     const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();

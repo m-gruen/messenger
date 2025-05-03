@@ -1,6 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import { getBackendUrl } from '../lib/config';
 import type { IMessage } from '@/models/message-model';
+import { storageService } from './storage.service';
 
 export class WebSocketService {
     private socket: Socket | null = null;
@@ -34,9 +35,15 @@ export class WebSocketService {
         });
 
         this.socket.on('new_message', (message: IMessage) => {
+            // Skip processing messages that you sent yourself - they are already added by the sendMessage function
+            const currentUser = storageService.getUser();
+            if (currentUser?.uid === message.sender_uid) {
+                return;
+            }
+
             // Ensure timestamp is a Date object
             if (typeof message.timestamp === 'string') {
-                message.timestamp = new Date(message.timestamp + 'Z');
+                message.timestamp = new Date(message.timestamp);
             }
 
             // Notify all registered message handlers
