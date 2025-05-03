@@ -155,6 +155,55 @@ export const useContactStore = defineStore('contacts', () => {
         }
     }
 
+    async function blockContact(contactUserId: number) {
+        if (!currentUserId.value) return;
+
+        setPendingOperation(contactUserId, 'block', true);
+
+        try {
+            await apiService.updateContactBlockStatus(currentUserId.value, contactUserId, true, token.value);
+
+            // Update status in local state
+            const contactIndex = contacts.value.findIndex(c => c.contactUserId === contactUserId);
+            if (contactIndex >= 0) {
+                contacts.value[contactIndex].status = ContactStatus.BLOCKED;
+            }
+        } catch (err) {
+            error.value = err instanceof Error ? err.message : 'Failed to block contact';
+            console.error('Error blocking contact:', err);
+            throw err;
+        } finally {
+            setPendingOperation(contactUserId, 'block', false);
+        }
+    }
+
+    async function unblockContact(contactUserId: number) {
+        if (!currentUserId.value) return;
+
+        setPendingOperation(contactUserId, 'unblock', true);
+
+        try {
+            await apiService.updateContactBlockStatus(currentUserId.value, contactUserId, false, token.value);
+
+            // Update status in local state
+            const contactIndex = contacts.value.findIndex(c => c.contactUserId === contactUserId);
+            if (contactIndex >= 0) {
+                contacts.value[contactIndex].status = ContactStatus.ACCEPTED;
+            }
+        } catch (err) {
+            error.value = err instanceof Error ? err.message : 'Failed to unblock contact';
+            console.error('Error unblocking contact:', err);
+            throw err;
+        } finally {
+            setPendingOperation(contactUserId, 'unblock', false);
+        }
+    }
+
+    function isBlocked(contactUserId: number): boolean {
+        const contact = contacts.value.find(c => c.contactUserId === contactUserId);
+        return contact?.status === ContactStatus.BLOCKED;
+    }
+
     function setPendingOperation(contactUserId: number, action: string, value: boolean) {
         if (!pendingOperations.value[contactUserId]) {
             pendingOperations.value[contactUserId] = {};
@@ -189,6 +238,9 @@ export const useContactStore = defineStore('contacts', () => {
         rejectContactRequest,
         cancelOutgoingRequest,
         deleteContact,
+        blockContact,
+        unblockContact,
+        isBlocked,
         isPending
     };
 });

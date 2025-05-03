@@ -4,6 +4,7 @@ import { useMessageStore } from '@/stores/MessageStore'
 import ChatInterface from './ChatInterface.vue'
 import ContactDetails from './ContactDetails.vue'
 import type { Contact } from '@/models/contact-model'
+import { ContactStatus } from '@/models/contact-model'
 import { useContactStore } from '@/stores/ContactStore'
 
 const props = defineProps({
@@ -37,10 +38,14 @@ const messageStore = useMessageStore()
 const showContactDetails = ref(false)
 const showChat = ref(props.visible) // Initialize with visible prop
 
-// Contact removal state
+// Contact action states
 const isRemovingContact = ref(false)
-const removalError = ref<string | undefined>(undefined)
+const isBlockingContact = ref(false)
+const isUnblockingContact = ref(false)
+const contactActionError = ref<string | undefined>(undefined)
 const removalSuccess = ref(false)
+const blockSuccess = ref(false)
+const unblockSuccess = ref(false)
 
 // Contact details panel width in pixels - fixed value for consistency
 const contactDetailsWidth = 320 // 320px (w-80)
@@ -98,7 +103,7 @@ async function removeContact() {
   if (!props.contact || !props.contact.contactUserId) return
   
   isRemovingContact.value = true
-  removalError.value = undefined
+  contactActionError.value = undefined
   
   try {
     await contactStore.deleteContact(props.contact.contactUserId)
@@ -117,10 +122,58 @@ async function removeContact() {
       contactStore.fetchAllContacts()
     }, 1500)
   } catch (err) {
-    removalError.value = err instanceof Error ? err.message : 'Failed to remove contact'
+    contactActionError.value = err instanceof Error ? err.message : 'Failed to remove contact'
     console.error('Error removing contact:', err)
   } finally {
     isRemovingContact.value = false
+  }
+}
+
+async function blockContact() {
+  if (!props.contact || !props.contact.contactUserId) return
+  
+  isBlockingContact.value = true
+  contactActionError.value = undefined
+  
+  try {
+    await contactStore.blockContact(props.contact.contactUserId)
+    
+    // Record success for UI feedback
+    blockSuccess.value = true
+    
+    // Reset success flag after a short delay
+    setTimeout(() => {
+      blockSuccess.value = false
+    }, 3000)
+  } catch (err) {
+    contactActionError.value = err instanceof Error ? err.message : 'Failed to block contact'
+    console.error('Error blocking contact:', err)
+  } finally {
+    isBlockingContact.value = false
+  }
+}
+
+async function unblockContact() {
+  if (!props.contact || !props.contact.contactUserId) return
+  
+  isUnblockingContact.value = true
+  contactActionError.value = undefined
+  
+  try {
+    await contactStore.unblockContact(props.contact.contactUserId)
+    
+    // Record success for UI feedback
+    unblockSuccess.value = true
+    
+    // Reset success flag after a short delay
+    setTimeout(() => {
+      unblockSuccess.value = false
+    }, 3000)
+  } catch (err) {
+    contactActionError.value = err instanceof Error ? err.message : 'Failed to unblock contact'
+    console.error('Error unblocking contact:', err)
+  } finally {
+    isUnblockingContact.value = false
   }
 }
 
@@ -131,6 +184,11 @@ function toggleContactDetails() {
 function goBack() {
   showChat.value = false
   emit('close')
+}
+
+// Helper function to check if contact is blocked
+function isContactBlocked(): boolean {
+  return props.contact?.status === ContactStatus.BLOCKED;
 }
 </script>
 
@@ -157,10 +215,17 @@ function goBack() {
       :contact="contact"
       :show="showContactDetails"
       :is-removing="isRemovingContact"
-      :removal-error="removalError"
+      :is-blocking="isBlockingContact"
+      :is-unblocking="isUnblockingContact"
+      :action-error="contactActionError"
       :removal-success="removalSuccess"
+      :block-success="blockSuccess"
+      :unblock-success="unblockSuccess"
+      :is-blocked="isContactBlocked()"
       @close="toggleContactDetails"
       @remove="removeContact"
+      @block="blockContact"
+      @unblock="unblockContact"
       @cancel-remove="() => {}" 
     />
   </div>
