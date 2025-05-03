@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, watch, onMounted } from 'vue'
+import { defineProps, defineEmits, ref, watch, onMounted, computed } from 'vue'
 import { useMessageStore } from '@/stores/MessageStore'
 import ChatInterface from './ChatInterface.vue'
 import ContactDetails from './ContactDetails.vue'
@@ -41,6 +41,19 @@ const showChat = ref(props.visible) // Initialize with visible prop
 const isRemovingContact = ref(false)
 const removalError = ref<string | undefined>(undefined)
 const removalSuccess = ref(false)
+
+// Contact details panel width in pixels - fixed value for consistency
+const contactDetailsWidth = 320 // 320px (w-80)
+
+// Dynamic chat width when contact details are shown
+const chatWidth = computed(() => {
+  if (showContactDetails.value) {
+    // When contact details are shown, subtract their width from the total available width
+    return `calc(${props.width} - ${contactDetailsWidth}px)`
+  }
+  // Otherwise use full width as provided by parent
+  return props.width
+})
 
 // Load messages immediately when component is mounted if visible and has contact
 onMounted(() => {
@@ -122,7 +135,7 @@ function goBack() {
 </script>
 
 <template>
-  <div v-if="showChat">
+  <div v-if="showChat" class="relative">
     <!-- Chat Interface -->
     <ChatInterface 
       :contact="contact"
@@ -132,14 +145,14 @@ function goBack() {
       :send-error="messageStore.sendError"
       :current-user-id="messageStore.currentUserId"
       :left-position="leftPosition"
-      :width="width"
+      :width="chatWidth"
       @back="goBack"
       @toggle-details="toggleContactDetails"
       @send-message="sendMessage"
       @clear-send-error="messageStore.clearSendError"
     />
 
-    <!-- Contact Details -->
+    <!-- Contact Details (positioned adjacent to chat instead of on top) -->
     <ContactDetails
       :contact="contact"
       :show="showContactDetails"
@@ -150,6 +163,5 @@ function goBack() {
       @remove="removeContact"
       @cancel-remove="() => {}" 
     />
-    <!-- Empty handler as it's handled within ContactDetails -->
   </div>
 </template>

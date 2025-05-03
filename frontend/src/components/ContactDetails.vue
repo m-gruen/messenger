@@ -82,7 +82,7 @@ function formatStatusText(status: ContactStatus | string): string {
 
 <template>
   <div v-if="show" 
-    class="fixed top-0 right-0 bottom-0 z-30 w-80 bg-black overflow-y-auto transform transition-transform duration-300 ease-in-out shadow-xl">
+    class="fixed top-0 right-0 bottom-0 z-10 w-80 bg-black overflow-y-auto transform transition-all duration-300 ease-in-out shadow-xl">
     <!-- Header with Close Button -->
     <div class="p-4 border-b border-border">
       <div class="flex items-center justify-between">
