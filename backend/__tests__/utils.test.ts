@@ -76,47 +76,67 @@ describe('Utils', () => {
         it('should return false if no contact relationship exists', async () => {
             (dbSessionMock.query as jest.Mock).mockResolvedValue({ rowCount: 0 });
             const result = await utils.canSendMessage(1, 2);
-            expect(result).toBe(false);
+            expect(result.canSend).toBe(false);
+            expect(result.reason).toBe('No contact relationship');
         });
 
         it('should return true if the user can send messages', async () => {
-            (dbSessionMock.query as jest.Mock).mockResolvedValue({
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ status: ContactStatus.ACCEPTED }]
+            }).mockResolvedValueOnce({
                 rowCount: 1,
                 rows: [{ status: ContactStatus.ACCEPTED }]
             });
             const result = await utils.canSendMessage(1, 2);
-            expect(result).toBe(true);
+            expect(result.canSend).toBe(true);
         });
 
-        it('should return false if the user is blocked', async () => {
-            (dbSessionMock.query as jest.Mock).mockResolvedValue({
+        it('should return false if the sender has blocked the receiver', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
                 rowCount: 1,
                 rows: [{ status: ContactStatus.BLOCKED }]
             });
             const result = await utils.canSendMessage(1, 2);
-            expect(result).toBe(false);
+            expect(result.canSend).toBe(false);
+            expect(result.reason).toBe('you_blocked');
+        });
+
+        it('should return false if the receiver has blocked the sender', async () => {
+            (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ status: ContactStatus.ACCEPTED }]
+            }).mockResolvedValueOnce({
+                rowCount: 1,
+                rows: [{ status: ContactStatus.BLOCKED }]
+            });
+            const result = await utils.canSendMessage(1, 2);
+            expect(result.canSend).toBe(false);
+            expect(result.reason).toBe('user_blocked');
         });
 
         it('should return false for invalid sender ID', async () => {
             const result = await utils.canSendMessage(-1, 2);
-            expect(result).toBe(false);
+            expect(result.canSend).toBe(false);
+            expect(result.reason).toBe('Invalid user ID');
         });
 
         it('should return false for invalid receiver ID', async () => {
             const result = await utils.canSendMessage(1, -2);
-            expect(result).toBe(false);
+            expect(result.canSend).toBe(false);
+            expect(result.reason).toBe('Invalid user ID');
         });
     });
 
     describe('isUserBlocked', () => {
         it('should return true if the user is blocked', async () => {
-            jest.spyOn(utils, 'canSendMessage').mockResolvedValue(false);
+            jest.spyOn(utils, 'canSendMessage').mockResolvedValue({ canSend: false, reason: 'user_blocked' });
             const result = await utils.isUserBlocked(1, 2);
             expect(result).toBe(true);
         });
 
         it('should return false if the user is not blocked', async () => {
-            jest.spyOn(utils, 'canSendMessage').mockResolvedValue(true);
+            jest.spyOn(utils, 'canSendMessage').mockResolvedValue({ canSend: true });
             const result = await utils.isUserBlocked(1, 2);
             expect(result).toBe(false);
         });
