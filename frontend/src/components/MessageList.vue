@@ -30,15 +30,15 @@ const props = defineProps({
 // Scroll tracking refs
 const messageListRef = ref<HTMLElement | null>(null);
 const isViewingOlderMessages = ref(false);
-const scrollThreshold = 5000; 
+const scrollThreshold = 5000;
 
 // Scroll handler to detect when user is viewing older messages
 const handleScroll = () => {
   if (!messageListRef.value) return;
-  
+
   const { scrollTop, scrollHeight, clientHeight } = messageListRef.value;
   const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-  
+
   // Show notification when scrolled up beyond threshold
   isViewingOlderMessages.value = distanceFromBottom > scrollThreshold;
 };
@@ -46,7 +46,7 @@ const handleScroll = () => {
 // Function to scroll to the latest messages
 const scrollToLatest = () => {
   if (!messageListRef.value) return;
-  
+
   messageListRef.value.scrollTop = messageListRef.value.scrollHeight;
 };
 
@@ -71,11 +71,11 @@ onMounted(() => {
 // Group messages by date and by sender & minute
 const messageGroups = computed(() => {
   if (!props.messages.length) return []
-  
-  const groups: { dateLabel: string, dateValue: string, messages: IMessage[], minuteGroups: Array<{sender: number, messages: IMessage[], minute: string}> }[] = []
+
+  const groups: { dateLabel: string, dateValue: string, messages: IMessage[], minuteGroups: Array<{ sender: number, messages: IMessage[], minute: string }> }[] = []
   let currentDate: string | null = null
   let currentMessages: IMessage[] = []
-  
+
   // Create a copy of messages and sort by timestamp (oldest first)
   // This is needed because the UI displays messages in reverse order (newest at bottom)
   const sortedMessages = [...props.messages].sort((a, b) => {
@@ -83,13 +83,13 @@ const messageGroups = computed(() => {
     const dateB = new Date(b.timestamp).getTime()
     return dateA - dateB
   })
-  
+
   // Process each message
   for (const message of sortedMessages) {
     const timestamp = new Date(message.timestamp)
     const messageDate = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate())
     const dateString = messageDate.toISOString().split('T')[0]
-    
+
     // Check if we need to start a new group
     if (currentDate !== dateString) {
       if (currentDate !== null) {
@@ -101,7 +101,7 @@ const messageGroups = computed(() => {
           minuteGroups: createMinuteGroups(currentMessages)
         })
       }
-      
+
       // Start a new group
       currentDate = dateString
       currentMessages = [message]
@@ -110,7 +110,7 @@ const messageGroups = computed(() => {
       currentMessages.push(message)
     }
   }
-  
+
   // Don't forget to add the last group
   if (currentMessages.length > 0) {
     groups.push({
@@ -120,21 +120,21 @@ const messageGroups = computed(() => {
       minuteGroups: createMinuteGroups(currentMessages)
     })
   }
-  
+
   return groups
 })
 
 // Helper function to create minute-based message groups
 function createMinuteGroups(messages: IMessage[]) {
-  const minuteGroups: Array<{sender: number, messages: IMessage[], minute: string}> = []
+  const minuteGroups: Array<{ sender: number, messages: IMessage[], minute: string }> = []
   let currentSender: number | null = null
   let currentMinute: string | null = null
   let currentGroup: IMessage[] = []
-  
+
   for (const message of messages) {
     const timestamp = new Date(message.timestamp)
     const minute = `${timestamp.getHours()}:${timestamp.getMinutes()}`
-    
+
     // Start a new group if the minute changes or the sender changes
     if (currentMinute !== minute || currentSender !== message.sender_uid) {
       if (currentMinute !== null) {
@@ -145,7 +145,7 @@ function createMinuteGroups(messages: IMessage[]) {
           messages: [...currentGroup]
         })
       }
-      
+
       // Start a new group
       currentMinute = minute
       currentSender = message.sender_uid
@@ -155,7 +155,7 @@ function createMinuteGroups(messages: IMessage[]) {
       currentGroup.push(message)
     }
   }
-  
+
   // Add the last group
   if (currentGroup.length > 0 && currentMinute !== null) {
     minuteGroups.push({
@@ -164,14 +164,14 @@ function createMinuteGroups(messages: IMessage[]) {
       messages: [...currentGroup]
     })
   }
-  
+
   return minuteGroups
 }
 
 // Determine message position in its minute-group
-function getMessagePosition(message: IMessage, group: {sender: number, messages: IMessage[], minute: string}) {
+function getMessagePosition(message: IMessage, group: { sender: number, messages: IMessage[], minute: string }) {
   if (group.messages.length === 1) return 'single'
-  
+
   const index = group.messages.findIndex(m => m.mid === message.mid)
   if (index === 0) return 'first'
   if (index === group.messages.length - 1) return 'last'
@@ -189,12 +189,12 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
     ref="messageListRef"
     style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
     <!-- Viewing Older Messages Notification -->
-    <div v-if="isViewingOlderMessages" 
-         class="absolute bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
-         style="bottom: 15px; left: 50%; transform: translateX(-50%);">
+    <div v-if="isViewingOlderMessages"
+      class="absolute bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
+      style="bottom: 15px; left: 50%; transform: translateX(-50%);">
       <span class="text-sm">You're Viewing Older Messages</span>
-      <button @click="scrollToLatest" 
-              class="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs flex items-center">
+      <button @click="scrollToLatest"
+        class="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs flex items-center">
         <span>Jump To Present</span>
         <ArrowDown class="h-3 w-3 ml-1" />
       </button>
@@ -229,71 +229,70 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
             {{ group.dateLabel }}
           </div>
         </div>
-        
+
         <!-- Messages grouped by minute -->
         <div class="flex flex-col space-y-4">
           <!-- Each minute group -->
-          <div v-for="(minuteGroup, groupIndex) in group.minuteGroups" :key="`${group.dateValue}-${minuteGroup.minute}-${groupIndex}`" 
-               class="flex flex-col" 
-               :class="{
-                 'items-end pr-2': minuteGroup.sender === currentUserId,
-                 'items-start pl-2': minuteGroup.sender !== currentUserId,
-                 'mb-1': true
-               }">
-            
+          <div v-for="(minuteGroup, groupIndex) in group.minuteGroups"
+            :key="`${group.dateValue}-${minuteGroup.minute}-${groupIndex}`" class="flex flex-col" :class="{
+              'items-end pr-2': minuteGroup.sender === currentUserId,
+              'items-start pl-2': minuteGroup.sender !== currentUserId,
+              'mb-1': true
+            }">
+
             <!-- Messages in this minute group - reduced width from 80% to 75% -->
             <div class="flex flex-col" style="max-width: 75%;">
-              <div v-for="(message, messageIndex) in minuteGroup.messages" 
-                   :key="message.mid"
-                   class="px-3 py-2 shadow-sm inline-block"
-                   :class="[
-                     // Base styling
-                     {
-                       // Sender styles (you)
-                       'bg-blue-600 text-white': message.sender_uid === currentUserId,
-                       // Receiver styles (other person)
-                       'bg-zinc-800 text-white': message.sender_uid !== currentUserId,
-                       
-                       // Spacing between messages in the same group
-                       'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
-                       
-                       // Self-align each message
-                       'self-end': message.sender_uid === currentUserId,
-                       'self-start': message.sender_uid !== currentUserId,
-                       
-                       // Maximum width for messages
-                       'max-w-message': true
-                     },
-                     // Single message (completely rounded)
-                     getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
-                     
-                     // First message in group
-                     getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ? 
-                       'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
-                     getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ? 
-                       'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
-                     
-                     // Middle messages in group
-                     getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ? 
-                       'message-bubble-rounded-left' : '',
-                     getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ? 
-                       'message-bubble-rounded-right' : '',
-                     
-                     // Last message in group
-                     getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ? 
-                       'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
-                     getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ? 
-                       'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
-                   ]">
+              <div v-for="(message, messageIndex) in minuteGroup.messages" :key="message.mid"
+                class="px-3 py-2 shadow-sm inline-block" :class="[
+                  // Base styling
+                  {
+                    // Sender styles (you)
+                    'bg-blue-600 text-white': message.sender_uid === currentUserId,
+                    // Receiver styles (other person)
+                    'bg-zinc-800 text-white': message.sender_uid !== currentUserId,
+
+                    // Spacing between messages in the same group
+                    'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
+
+                    // Self-align each message
+                    'self-end': message.sender_uid === currentUserId,
+                    'self-start': message.sender_uid !== currentUserId,
+
+                    // Maximum width for messages
+                    'max-w-message': true
+                  },
+                  // Single message (completely rounded)
+                  getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
+
+                  // First message in group
+                  getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
+                    'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
+                  getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ?
+                    'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
+
+                  // Middle messages in group
+                  getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ?
+                    'message-bubble-rounded-left' : '',
+                  getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ?
+                    'message-bubble-rounded-right' : '',
+
+                  // Last message in group
+                  getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ?
+                    'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
+                  getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ?
+                    'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
+                ]">
                 <!-- Fixed message layout with only last line having padding for timestamp -->
                 <div class="relative message-content">
-                  <p :class="['message-text', (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
+                  <p
+                    :class="['message-text', (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     {{ message.content }}
                   </p>
-                  
+
                   <!-- Show time only in single or last messages in a group -->
-                  <span v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'" 
-                        class="text-xs opacity-70 message-timestamp">
+                  <span
+                    v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
+                    class="text-xs opacity-70 message-timestamp">
                     {{ formatTimeForMessage(message.timestamp) }}
                   </span>
                 </div>
@@ -309,20 +308,24 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 <style scoped>
 /* Custom scrollbar styling */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px; /* Thin scrollbar */
+  width: 4px;
+  /* Thin scrollbar */
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent; /* Transparent background */
+  background: transparent;
+  /* Transparent background */
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(128, 128, 128, 0.4); /* Semi-transparent gray */
+  background-color: rgba(128, 128, 128, 0.4);
+  /* Semi-transparent gray */
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(128, 128, 128, 0.6); /* Slightly more visible on hover */
+  background-color: rgba(128, 128, 128, 0.6);
+  /* Slightly more visible on hover */
 }
 
 /* Hide scrollbar buttons (arrows) - multiple approaches for different browsers */
@@ -409,7 +412,8 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 .message-text.has-timestamp::after {
   content: '';
   display: inline-block;
-  width: 40px; /* Space for timestamp */
+  width: 40px;
+  /* Space for timestamp */
 }
 
 .message-timestamp {
@@ -434,7 +438,14 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translate(-50%, 10px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 </style>

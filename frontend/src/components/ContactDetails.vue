@@ -93,7 +93,7 @@ function unblockContact() {
 }
 
 function getStatusColorClass(status: ContactStatus | string): string {
-  switch(status) {
+  switch (status) {
     case ContactStatus.ACCEPTED:
       return 'bg-green-500';
     case ContactStatus.INCOMING_REQUEST:
@@ -111,7 +111,7 @@ function getStatusColorClass(status: ContactStatus | string): string {
 
 function formatStatusText(status: ContactStatus | string): string {
   let statusString: string;
-  
+
   if (status === ContactStatus.ACCEPTED) statusString = 'accepted';
   else if (status === ContactStatus.INCOMING_REQUEST) statusString = 'incoming_request';
   else if (status === ContactStatus.OUTGOING_REQUEST) statusString = 'outgoing_request';
@@ -119,7 +119,7 @@ function formatStatusText(status: ContactStatus | string): string {
   else if (status === ContactStatus.BLOCKED) statusString = 'blocked';
   else if (status === ContactStatus.DELETED) statusString = 'deleted';
   else statusString = status as string;
-  
+
   return statusString
     .split('_')
     .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -128,7 +128,7 @@ function formatStatusText(status: ContactStatus | string): string {
 </script>
 
 <template>
-  <div v-if="show" 
+  <div v-if="show"
     class="fixed top-0 right-0 bottom-0 z-10 w-80 bg-black overflow-y-auto transform transition-all duration-300 ease-in-out shadow-xl">
     <!-- Header with Close Button -->
     <div class="p-4 border-b border-border">
@@ -140,48 +140,49 @@ function formatStatusText(status: ContactStatus | string): string {
       </div>
       <p class="text-sm text-muted-foreground mt-1">View and manage contact details</p>
     </div>
-    
+
     <!-- Contact Info -->
     <div class="flex flex-col items-center py-6 px-4">
       <!-- Avatar Circle -->
-      <div class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4">
+      <div
+        class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4">
         {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
       </div>
-      
+
       <!-- Username and Display Name -->
       <h3 class="text-2xl font-medium text-white mt-2">{{ contact.display_name || contact.username }}</h3>
       <p class="text-sm text-muted-foreground mt-1" v-if="contact.display_name">@{{ contact.username }}</p>
-      
+
       <!-- Status -->
       <div class="mt-2 flex items-center">
         <span class="inline-flex h-3 w-3 rounded-full mr-2" :class="getStatusColorClass(contact.status)"></span>
         <span class="text-white">{{ formatStatusText(contact.status) }}</span>
       </div>
-      
+
       <!-- Added Date - Using DateFormatService class directly -->
       <p class="text-muted-foreground text-sm mt-4">
         Added: {{ DateFormatService.formatCreationDate(contact.createdAt) }}
       </p>
     </div>
-    
+
     <!-- Divider -->
     <div class="border-t border-border mx-4 my-2"></div>
-    
+
     <!-- Actions Section -->
     <div class="px-4 py-6 space-y-4">
       <!-- Error/Success Messages -->
       <div v-if="actionError" class="bg-destructive/10 text-destructive p-4 rounded-md mb-4">
         {{ actionError }}
       </div>
-      
+
       <div v-if="blockSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
         Contact blocked successfully!
       </div>
-      
+
       <div v-if="unblockSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
         Contact unblocked successfully!
       </div>
-      
+
       <div v-if="removalSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
         Contact removed successfully!
       </div>
@@ -189,28 +190,27 @@ function formatStatusText(status: ContactStatus | string): string {
       <!-- Block/Unblock Confirmation -->
       <div v-if="showBlockConfirmation" class="mb-4">
         <p class="text-white text-center mb-2">Are you sure you want to block this contact?</p>
-        <p class="text-muted-foreground text-sm text-center mb-4">Blocked contacts cannot message you, and you cannot message them.</p>
+        <p class="text-muted-foreground text-sm text-center mb-4">Blocked contacts cannot message you, and you cannot
+          message them.</p>
         <div class="flex justify-center gap-4">
-          <button @click="blockContact" 
-            class="bg-orange-800 hover:bg-orange-700 text-white py-2 px-4 rounded-md">
+          <button @click="blockContact" class="bg-orange-800 hover:bg-orange-700 text-white py-2 px-4 rounded-md">
             Confirm
           </button>
-          <button @click="showBlockConfirmation = false" 
+          <button @click="showBlockConfirmation = false"
             class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
             Cancel
           </button>
         </div>
       </div>
-      
+
       <div v-else-if="showUnblockConfirmation" class="mb-4">
         <p class="text-white text-center mb-2">Are you sure you want to unblock this contact?</p>
         <p class="text-muted-foreground text-sm text-center mb-4">You will be able to exchange messages again.</p>
         <div class="flex justify-center gap-4">
-          <button @click="unblockContact" 
-            class="bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded-md">
+          <button @click="unblockContact" class="bg-green-800 hover:bg-green-700 text-white py-2 px-4 rounded-md">
             Confirm
           </button>
-          <button @click="showUnblockConfirmation = false" 
+          <button @click="showUnblockConfirmation = false"
             class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
             Cancel
           </button>
@@ -221,17 +221,15 @@ function formatStatusText(status: ContactStatus | string): string {
       <div v-else-if="showRemoveConfirmation" class="mb-4">
         <p class="text-white text-center mb-2">Are you sure you want to remove this contact?</p>
         <div class="flex justify-center gap-4">
-          <button @click="removeContact" 
-            class="bg-red-900 hover:bg-red-800 text-white py-2 px-4 rounded-md">
+          <button @click="removeContact" class="bg-red-900 hover:bg-red-800 text-white py-2 px-4 rounded-md">
             Confirm
           </button>
-          <button @click="cancelRemoveContact" 
-            class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
+          <button @click="cancelRemoveContact" class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
             Cancel
           </button>
         </div>
       </div>
-      
+
       <!-- Loading Indicators -->
       <div v-else-if="isRemoving || isBlocking || isUnblocking" class="flex justify-center items-center mb-4">
         <div class="animate-spin w-6 h-6 border-3 border-primary border-t-transparent rounded-full"></div>
@@ -239,7 +237,7 @@ function formatStatusText(status: ContactStatus | string): string {
           {{ isRemoving ? 'Removing contact...' : isBlocking ? 'Blocking contact...' : 'Unblocking contact...' }}
         </span>
       </div>
-      
+
       <!-- Action Buttons -->
       <div v-else class="flex flex-col gap-3">
         <!-- Block/Unblock Button -->
@@ -248,15 +246,15 @@ function formatStatusText(status: ContactStatus | string): string {
           <Shield class="h-5 w-5" />
           Block Contact
         </button>
-        
+
         <button v-else @click="unblockContact"
           class="w-full bg-green-800 hover:bg-green-700 text-white py-3 rounded-md flex justify-center items-center gap-2">
           <Shield class="h-5 w-5" />
           Unblock Contact
         </button>
-        
+
         <!-- Remove Button -->
-        <button @click="removeContact" 
+        <button @click="removeContact"
           class="w-full bg-red-900 hover:bg-red-800 text-white py-3 rounded-md flex justify-center items-center">
           Remove Contact
         </button>

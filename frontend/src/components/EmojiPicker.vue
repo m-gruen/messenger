@@ -147,7 +147,7 @@ watch(() => props.isOpen, (isOpen) => {
 
       <div v-for="category in filteredCategories" :key="category.id" :id="`emoji-category-${category.id}`">
         <div class="text-xs font-semibold text-zinc-400 px-3 pt-2 pb-1 sticky top-0 bg-zinc-800 z-10">{{ category.name
-          }}</div>
+        }}</div>
         <div class="grid grid-cols-8 gap-1 p-2">
           <button v-for="emoji in category.emojis" :key="`${category.id}-${emoji}`"
             class="emoji-btn p-1 rounded hover:bg-zinc-700 text-xl" @click="selectEmoji(emoji)">

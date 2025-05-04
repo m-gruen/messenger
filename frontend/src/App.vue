@@ -17,7 +17,7 @@ const router = useRouter();
 onMounted(() => {
   const user = storageService.getUser();
   const token = storageService.getToken();
-  
+
   if (user?.uid && token) {
     websocketService.connect(user.uid, token);
   }
@@ -27,16 +27,16 @@ onMounted(() => {
     const user = storageService.getUser();
     const token = storageService.getToken();
     const isAuthenticated = !!user && !!token;
-    
+
     // Connect to WebSocket when user logs in or navigates while authenticated
     if (isAuthenticated && !websocketService.isConnected()) {
       websocketService.connect(user.uid, token);
-    } 
+    }
     // Disconnect from WebSocket when user logs out
     else if (!isAuthenticated && websocketService.isConnected()) {
       websocketService.disconnect();
     }
-    
+
     next();
   });
 });
