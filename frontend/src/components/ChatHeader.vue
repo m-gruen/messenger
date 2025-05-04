@@ -54,17 +54,19 @@ function formatStatusText(status: ContactStatus | string): string {
       <ChevronLeft class="h-5 w-5" />
     </button>
 
-    <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-      {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
-    </div>
-
-    <div class="ml-3">
-      <div class="font-medium">{{ contact.display_name || contact.username }}</div>
-      <div class="text-xs text-muted-foreground">
-        <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="getStatusColorClass(contact.status)"></span>
-        {{ formatStatusText(contact.status) }}
+    <button @click="emit('details')" class="flex items-center">
+      <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+        {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
       </div>
-    </div>
+  
+      <div class="ml-3">
+        <div class="font-medium">{{ contact.display_name || contact.username }}</div>
+        <div class="text-xs text-muted-foreground">
+          <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="getStatusColorClass(contact.status)"></span>
+          {{ formatStatusText(contact.status) }}
+        </div>
+      </div>
+    </button>
 
     <button @click="emit('details')" class="ml-auto rounded-full p-1.5 hover:bg-accent">
       <MoreHorizontal class="h-5 w-5" />
