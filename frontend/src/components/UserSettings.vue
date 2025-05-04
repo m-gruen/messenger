@@ -144,10 +144,10 @@ async function updateProfile(): Promise<void> {
           ...response,
           token: token // Make sure token is included in the user object
         };
-        
+
         // Check if the user originally used persistent storage (localStorage)
         const isPersistent = localStorage.getItem('user') !== null;
-        
+
         // Update both in-memory user reference and persistent storage
         storageService.storeUser(updatedUser, isPersistent);
         user.value = updatedUser;
@@ -376,7 +376,8 @@ function logout() {
 
               <!-- Inline username edit -->
               <div v-if="isEditingUsername" class="mt-3">
-                <Input v-model="username" placeholder="Username" class="w-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
+                <Input v-model="username" placeholder="Username"
+                  class="w-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
               </div>
             </div>
 
@@ -394,7 +395,8 @@ function logout() {
 
               <!-- Inline display name edit -->
               <div v-if="isEditingDisplayName" class="mt-3">
-                <Input v-model="DisplayName" placeholder="Display Name" class="w-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
+                <Input v-model="DisplayName" placeholder="Display Name"
+                  class="w-full border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
               </div>
             </div>
 
@@ -414,56 +416,46 @@ function logout() {
         <!-- Privacy Settings Section -->
         <div class="p-6 border-b dark:border-gray-700">
           <h2 class="text-xl font-medium mb-6 text-gray-800 dark:text-gray-200">PRIVACY SETTINGS</h2>
-          
+
           <!-- Shadow Mode Toggle -->
           <div class="flex justify-between items-start mb-6">
             <div class="flex-1">
               <div class="font-medium text-gray-800 dark:text-gray-200">Shadow Mode</div>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                Only contacts can see your profile. Other users will not be able to search for you. Keeps your account more private. 
+                Only contacts can see your profile. Other users will not be able to search for you. Keeps your account
+                more private.
               </p>
             </div>
             <!-- Discord-style Toggle Switch -->
-            <div 
-              class="relative inline-block w-10 h-6 cursor-pointer"
-              @click="shadowMode = !shadowMode"
-            >
-              <div
-                class="w-10 h-6 bg-gray-500 rounded-full transition-colors duration-200 ease-in-out"
-                :class="{ '!bg-green-500': shadowMode }"
-              ></div>
+            <div class="relative inline-block w-10 h-6 cursor-pointer" @click="shadowMode = !shadowMode">
+              <div class="w-10 h-6 bg-gray-500 rounded-full transition-colors duration-200 ease-in-out"
+                :class="{ '!bg-green-500': shadowMode }"></div>
               <div
                 class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out"
-                :class="{ 'translate-x-4': shadowMode }"
-              ></div>
+                :class="{ 'translate-x-4': shadowMode }"></div>
             </div>
           </div>
-          
+
           <!-- Full Name Search Toggle -->
           <div class="flex justify-between items-start">
             <div class="flex-1">
               <div class="font-medium text-gray-800 dark:text-gray-200">Enable Full Name Search</div>
               <p class="text-sm text-gray-500 dark:text-gray-400">
-                When enabled, people can only find you by entering your exact username. When disabled, people can find you using partial username matches.
+                When enabled, people can only find you by entering your exact username. When disabled, people can find
+                you using partial username matches.
               </p>
             </div>
             <!-- Discord-style Toggle Switch -->
-            <div 
-              class="relative inline-block w-10 h-6 cursor-pointer"
-              @click="fullNameSearch = !fullNameSearch"
-            >
-              <div
-                class="w-10 h-6 bg-gray-500 rounded-full transition-colors duration-200 ease-in-out"
-                :class="{ '!bg-green-500': fullNameSearch }"
-              ></div>
+            <div class="relative inline-block w-10 h-6 cursor-pointer" @click="fullNameSearch = !fullNameSearch">
+              <div class="w-10 h-6 bg-gray-500 rounded-full transition-colors duration-200 ease-in-out"
+                :class="{ '!bg-green-500': fullNameSearch }"></div>
               <div
                 class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out"
-                :class="{ 'translate-x-4': fullNameSearch }"
-              ></div>
+                :class="{ 'translate-x-4': fullNameSearch }"></div>
             </div>
           </div>
         </div>
-        
+
         <!-- Message Storage Settings Section -->
         <div class="p-6 border-b dark:border-gray-700">
           <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MESSAGE STORAGE</h2>
@@ -480,7 +472,8 @@ function logout() {
             </select>
 
             <!-- Description based on selection -->
-            <div class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded border border-gray-200 dark:border-gray-600">
+            <div
+              class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded border border-gray-200 dark:border-gray-600">
               <p v-if="storageType === 'ram'">
                 RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option
                 but messages are not persistent.
@@ -510,7 +503,8 @@ function logout() {
 
 <style scoped>
 .bg-green-500 {
-  background-color: #43B581; /* Discord green */
+  background-color: #43B581;
+  /* Discord green */
 }
 
 /* Switch animation */
@@ -519,11 +513,13 @@ function logout() {
 }
 
 /* Input field styling */
-input, select {
+input,
+select {
   border-width: 2px !important;
 }
 
-.dark input, .dark select {
+.dark input,
+.dark select {
   color: white !important;
   background-color: #2D3748 !important;
 }

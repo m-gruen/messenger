@@ -54,38 +54,28 @@ watch(() => props.sendError, (error) => {
 </script>
 
 <template>
-  <div class="fixed z-10 top-0 bottom-0 border-r border-border bg-background transition-all duration-300 ease-in-out flex flex-col"
+  <div
+    class="fixed z-10 top-0 bottom-0 border-r border-border bg-background transition-all duration-300 ease-in-out flex flex-col"
     :style="{
       left: leftPosition,
       width: width
     }">
     <!-- Chat Header -->
-    <ChatHeader 
-      :contact="contact" 
-      @back="emit('back')" 
-      @details="emit('toggle-details')" 
-    />
+    <ChatHeader :contact="contact" @back="emit('back')" @details="emit('toggle-details')" />
 
     <!-- Send Error Alert -->
-    <div v-if="sendError" 
+    <div v-if="sendError"
       class="mx-4 mt-2 p-3 bg-destructive/10 text-destructive text-sm rounded-md flex items-center justify-between">
       <span>{{ sendError }}</span>
-      <button 
-        @click="emit('clear-send-error')" 
-        class="ml-2 text-destructive hover:text-destructive/80"
+      <button @click="emit('clear-send-error')" class="ml-2 text-destructive hover:text-destructive/80"
         aria-label="Dismiss error">
         ✕
       </button>
     </div>
 
     <!-- Message List -->
-    <MessageList 
-      :messages="messages"
-      :current-user-id="currentUserId"
-      :is-loading="isLoadingMessages"
-      :error="messagesError"
-      :contact-username="contact.username"
-    />
+    <MessageList :messages="messages" :current-user-id="currentUserId" :is-loading="isLoadingMessages"
+      :error="messagesError" :contact-username="contact.username" />
 
     <!-- Message Input -->
     <MessageInput @send="content => emit('send-message', content)" />

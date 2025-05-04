@@ -121,14 +121,8 @@ function closeChat() {
 <template>
   <div class="flex">
     <!-- Left Sidebar Navigation -->
-    <SidebarNavigation 
-      :collapsed="sidebarCollapsed"
-      @toggle-collapsed="toggleSidebar"
-      @toggle-contacts="toggleContacts"
-      @toggle-requests="toggleRequests"
-      @toggle-search="toggleSearch"
-      @toggle-settings="toggleUserSettings"
-    />
+    <SidebarNavigation :collapsed="sidebarCollapsed" @toggle-collapsed="toggleSidebar" @toggle-contacts="toggleContacts"
+      @toggle-requests="toggleRequests" @toggle-search="toggleSearch" @toggle-settings="toggleUserSettings" />
 
     <!-- Contacts List Panel -->
     <div v-if="showContacts"
@@ -161,30 +155,21 @@ function closeChat() {
       :style="{ left: sidebarWidth, right: '0' }">
       <!-- Back button header -->
       <div class="p-3 border-b flex items-center bg-card z-50 sticky top-0">
-        <button 
-          @click="toggleUserSettings" 
-          class="p-2 rounded-md hover:bg-background/80 mr-2"
-          aria-label="Return to application"
-        >
+        <button @click="toggleUserSettings" class="p-2 rounded-md hover:bg-background/80 mr-2"
+          aria-label="Return to application">
           <ArrowLeft class="h-5 w-5" />
         </button>
         <h1 class="font-medium">User Settings</h1>
       </div>
-      
+
       <div class="h-[calc(100vh-56px)] overflow-y-auto">
         <UserSettings />
       </div>
     </div>
 
     <!-- Chat Panel - Use our new component -->
-    <ChatPanel
-      v-if="selectedContact"
-      :contact="selectedContact"
-      :visible="showChat"
-      :left-position="chatLeftPosition"
-      :width="chatWidth"
-      @close="closeChat"
-    />
+    <ChatPanel v-if="selectedContact" :contact="selectedContact" :visible="showChat" :left-position="chatLeftPosition"
+      :width="chatWidth" @close="closeChat" />
   </div>
 </template>
 
