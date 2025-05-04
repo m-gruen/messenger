@@ -182,13 +182,13 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
           <div v-for="(minuteGroup, groupIndex) in group.minuteGroups" :key="`${group.dateValue}-${minuteGroup.minute}-${groupIndex}`" 
                class="flex flex-col" 
                :class="{
-                 'items-end': minuteGroup.sender === currentUserId,
-                 'items-start': minuteGroup.sender !== currentUserId,
+                 'items-end pr-2': minuteGroup.sender === currentUserId,
+                 'items-start pl-2': minuteGroup.sender !== currentUserId,
                  'mb-1': true
                }">
             
-            <!-- Messages in this minute group - removed fixed width for the container -->
-            <div class="flex flex-col">
+            <!-- Messages in this minute group - reduced width from 80% to 75% -->
+            <div class="flex flex-col" style="max-width: 75%;">
               <div v-for="(message, messageIndex) in minuteGroup.messages" 
                    :key="message.mid"
                    class="px-3 py-2 shadow-sm inline-block"
@@ -231,15 +231,15 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
                      getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ? 
                        'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
                    ]">
-                <!-- Fixed message layout to prevent text splitting and timestamp alignment issues -->
+                <!-- Fixed message layout with only last line having padding for timestamp -->
                 <div class="relative message-content">
-                  <p :class="{'pr-12': getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'}">
+                  <p :class="['message-text', (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     {{ message.content }}
                   </p>
                   
                   <!-- Show time only in single or last messages in a group -->
                   <span v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'" 
-                        class="text-xs opacity-70 absolute bottom-0 right-0 whitespace-nowrap timestamp">
+                        class="text-xs opacity-70 message-timestamp">
                     {{ formatTimeForMessage(message.timestamp) }}
                   </span>
                 </div>
@@ -338,14 +338,38 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 
 /* Timestamp positioning */
 .message-content {
-  min-width: 14px; 
-  padding-right: 2px; 
+  min-width: 14px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-.timestamp {
-  margin-left: 1px; /* Reduced spacing between text and timestamp */
-  margin-right: 1px;
-  margin-bottom: 1px;
-  padding-left: 1px; /* Reduced left padding */
+.message-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  padding: 0;
+}
+
+/* Only add space for timestamp in messages that have it */
+.message-text.has-timestamp::after {
+  content: '';
+  display: inline-block;
+  width: 40px; /* Space for timestamp */
+}
+
+.message-timestamp {
+  position: absolute;
+  right: 3px;
+  bottom: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+/* Control maximum width of messages */
+.max-w-message {
+  max-width: 100%;
 }
 </style>
