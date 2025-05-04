@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
+import { DateFormatService } from './date-format.service';
 
 export class ApiService {
     private baseUrl: string;
@@ -175,7 +176,7 @@ export class ApiService {
 
         return data.map((contact: any) => ({
             ...contact,
-            createdAt: new Date(contact.createdAt)
+            createdAt: DateFormatService.createDateWithTimezone(contact.createdAt)
         }));
     }
 
@@ -235,7 +236,7 @@ export class ApiService {
 
         return data.map((contact: any) => ({
             ...contact,
-            createdAt: new Date(contact.createdAt)
+            createdAt: DateFormatService.createDateWithTimezone(contact.createdAt)
         }));
     }
 
@@ -252,7 +253,7 @@ export class ApiService {
 
         return data.map((contact: any) => ({
             ...contact,
-            createdAt: new Date(contact.createdAt)
+            createdAt: DateFormatService.createDateWithTimezone(contact.createdAt)
         }));
     }
 
@@ -294,7 +295,7 @@ export class ApiService {
 
         return data.map((message: any) => ({
             ...message,
-            timestamp: new Date(message.timestamp)
+            timestamp: DateFormatService.createDateWithTimezone(message.timestamp)
         }));
     }
 
@@ -316,7 +317,7 @@ export class ApiService {
 
         return {
             ...data,
-            timestamp: new Date(data.timestamp)
+            timestamp: DateFormatService.createDateWithTimezone(data.timestamp)
         };
     }
 }

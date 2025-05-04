@@ -33,6 +33,10 @@ while ! docker exec -it messenger_postgres pg_isready -U $DB_USER > /dev/null 2>
     sleep 1
 done
 
+# Set timezone to UTC for consistency with Docker environment
+export TZ=UTC
+echo "Setting timezone to UTC for Node.js processes to match Docker environment"
+
 # start backend in dev mode
 npm run dev --prefix ./backend &
 BACKEND_PID=$!

@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import { getBackendUrl } from '../lib/config';
 import type { IMessage } from '@/models/message-model';
 import { storageService } from './storage.service';
+import { DateFormatService } from './date-format.service';
 
 export class WebSocketService {
     private socket: Socket | null = null;
@@ -41,9 +42,8 @@ export class WebSocketService {
                 return;
             }
 
-            // Ensure timestamp is a Date object
             if (typeof message.timestamp === 'string') {
-                message.timestamp = new Date(message.timestamp);
+                message.timestamp = DateFormatService.createDateWithTimezone(message.timestamp);
             }
 
             // Notify all registered message handlers
