@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { defineProps, computed } from 'vue'
+import { defineProps, computed, ref, onMounted, nextTick, watch } from 'vue'
 import type { IMessage } from '@/models/message-model'
-import { MessageSquare } from 'lucide-vue-next'
+import { MessageSquare, ArrowDown } from 'lucide-vue-next'
 import { DateFormatService } from '@/services/date-format.service'
 
 const props = defineProps({
@@ -26,6 +26,47 @@ const props = defineProps({
     required: true
   }
 })
+
+// Scroll tracking refs
+const messageListRef = ref<HTMLElement | null>(null);
+const isViewingOlderMessages = ref(false);
+const scrollThreshold = 5000; 
+
+// Scroll handler to detect when user is viewing older messages
+const handleScroll = () => {
+  if (!messageListRef.value) return;
+  
+  const { scrollTop, scrollHeight, clientHeight } = messageListRef.value;
+  const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+  
+  // Show notification when scrolled up beyond threshold
+  isViewingOlderMessages.value = distanceFromBottom > scrollThreshold;
+};
+
+// Function to scroll to the latest messages
+const scrollToLatest = () => {
+  if (!messageListRef.value) return;
+  
+  messageListRef.value.scrollTop = messageListRef.value.scrollHeight;
+};
+
+// Auto-scroll to bottom when new messages arrive
+watch(() => props.messages, async (newMessages, oldMessages) => {
+  // Only auto-scroll if we're already at the bottom or there are new messages
+  if (!isViewingOlderMessages.value || (oldMessages && newMessages && newMessages.length > oldMessages.length)) {
+    await nextTick();
+    scrollToLatest();
+  }
+}, { deep: true });
+
+// Set up scroll event listener
+onMounted(() => {
+  if (messageListRef.value) {
+    messageListRef.value.addEventListener('scroll', handleScroll);
+    // Initial scroll to bottom
+    scrollToLatest();
+  }
+});
 
 // Group messages by date and by sender & minute
 const messageGroups = computed(() => {
@@ -144,8 +185,21 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 </script>
 
 <template>
-  <div class="flex-1 overflow-y-auto p-4 bg-background/95 message-list-container custom-scrollbar"
+  <div class="relative flex-1 overflow-y-auto p-4 bg-background/95 message-list-container custom-scrollbar"
+    ref="messageListRef"
     style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
+    <!-- Viewing Older Messages Notification -->
+    <div v-if="isViewingOlderMessages" 
+         class="absolute bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
+         style="bottom: 15px; left: 50%; transform: translateX(-50%);">
+      <span class="text-sm">You're Viewing Older Messages</span>
+      <button @click="scrollToLatest" 
+              class="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs flex items-center">
+        <span>Jump To Present</span>
+        <ArrowDown class="h-3 w-3 ml-1" />
+      </button>
+    </div>
+
     <div v-if="isLoading" class="flex items-center justify-center h-full">
       <div class="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
       <span class="ml-2">Loading messages...</span>
@@ -371,5 +425,16 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 /* Control maximum width of messages */
 .max-w-message {
   max-width: 100%;
+}
+
+/* Viewing older messages notification styling */
+.older-messages-notification {
+  animation: fadeIn 0.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 </style>
