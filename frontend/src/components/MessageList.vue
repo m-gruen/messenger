@@ -182,6 +182,41 @@ function getMessagePosition(message: IMessage, group: { sender: number, messages
 function formatTimeForMessage(dateString: string | Date | undefined) {
   return DateFormatService.formatMessageTime(dateString);
 }
+
+// Emoji detection and styling utilities
+function isEmojiOnly(text: string): boolean {
+  // Regex to detect emoji characters
+  const emojiRegex = /^(\p{Emoji}|\p{Emoji_Presentation}|\p{Emoji_Modifier}|\p{Emoji_Component}|\s)+$/u;
+  return emojiRegex.test(text);
+}
+
+function countEmojis(text: string): number {
+  // Count emojis in a string, accounting for skin tone modifiers and ZWJ sequences
+  // This is a simplified approach - emoji counting can be complex due to ZWJ sequences
+  // and variation selectors
+  
+  // Match emoji characters or emoji sequences
+  const emojiMatches = text.match(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\p{Emoji_Modifier}|\u200D\p{Emoji})*|\s+/gu);
+  return emojiMatches ? emojiMatches.filter(match => match.trim().length > 0).length : 0;
+}
+
+function getEmojiMessageStyle(text: string): string | null {
+  if (!isEmojiOnly(text)) {
+    return null; // Not an emoji-only message
+  }
+  
+  const count = countEmojis(text);
+  
+  if (count === 1) {
+    return 'emoji-only emoji-single'; // Single emoji, very large
+  } else if (count <= 3) {
+    return 'emoji-only emoji-few'; // 2-3 emojis, large
+  } else if (count <= 8) {
+    return 'emoji-only emoji-several'; // 4-8 emojis, medium
+  } else {
+    return null; // 9+ emojis, normal message styling
+  }
+}
 </script>
 
 <template>
@@ -243,13 +278,16 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
             <!-- Messages in this minute group - reduced width from 80% to 75% -->
             <div class="flex flex-col" style="max-width: 75%;">
               <div v-for="(message, messageIndex) in minuteGroup.messages" :key="message.mid"
-                class="px-3 py-2 shadow-sm inline-block" :class="[
+                :class="[
+                  // Check if this is an emoji-only message
+                  getEmojiMessageStyle(message.content) || 'px-3 py-2 shadow-sm inline-block',
+                  
                   // Base styling
                   {
-                    // Sender styles (you)
-                    'bg-blue-600 text-white': message.sender_uid === currentUserId,
-                    // Receiver styles (other person)
-                    'bg-zinc-800 text-white': message.sender_uid !== currentUserId,
+                    // Sender styles (you) - only if not emoji-only message
+                    'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(message.content),
+                    // Receiver styles (other person) - only if not emoji-only message
+                    'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(message.content),
 
                     // Spacing between messages in the same group
                     'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
@@ -261,26 +299,29 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
                     // Maximum width for messages
                     'max-w-message': true
                   },
-                  // Single message (completely rounded)
-                  getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
+                  // Only apply bubble styling for non-emoji messages
+                  !getEmojiMessageStyle(message.content) ? [
+                    // Single message (completely rounded)
+                    getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
 
-                  // First message in group
-                  getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
-                    'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
-                  getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ?
-                    'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
+                    // First message in group
+                    getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
+                      'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
+                    getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ?
+                      'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
 
-                  // Middle messages in group
-                  getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ?
-                    'message-bubble-rounded-left' : '',
-                  getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ?
-                    'message-bubble-rounded-right' : '',
+                    // Middle messages in group
+                    getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ?
+                      'message-bubble-rounded-left' : '',
+                    getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ?
+                      'message-bubble-rounded-right' : '',
 
-                  // Last message in group
-                  getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ?
-                    'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
-                  getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ?
-                    'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
+                    // Last message in group
+                    getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ?
+                      'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
+                    getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ?
+                      'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
+                  ] : []
                 ]">
                 <!-- Fixed message layout with only last line having padding for timestamp -->
                 <div class="relative message-content">
@@ -292,7 +333,8 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
                   <!-- Show time only in single or last messages in a group -->
                   <span
                     v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
-                    class="text-xs opacity-70 message-timestamp">
+                    class="text-xs opacity-70 message-timestamp"
+                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(message.content) }">
                     {{ formatTimeForMessage(message.timestamp) }}
                   </span>
                 </div>
@@ -429,6 +471,39 @@ function formatTimeForMessage(dateString: string | Date | undefined) {
 /* Control maximum width of messages */
 .max-w-message {
   max-width: 100%;
+}
+
+/* Emoji-only message styling */
+.emoji-only {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 2px !important;
+}
+
+/* Single emoji - very large */
+.emoji-single {
+  font-size: 4rem;
+  line-height: 1.2;
+  padding: 4px !important;
+}
+
+/* 2-3 emojis - large */
+.emoji-few {
+  font-size: 2.75rem;
+  line-height: 1.2;
+}
+
+/* 4-8 emojis - medium */
+.emoji-several {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+/* Adjusting timestamp for emoji messages */
+.emoji-timestamp {
+  color: rgba(155, 155, 155, 0.8) !important;
+  bottom: -1.2em !important;
+  right: 0 !important;
 }
 
 /* Viewing older messages notification styling */
