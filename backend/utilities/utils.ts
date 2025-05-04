@@ -100,41 +100,65 @@ export abstract class Utils {
      * Checks if a user can send messages to another user
      * @param sender_uid The sender's user ID
      * @param receiver_uid The receiver's user ID
-     * @returns True if the user can send messages, false otherwise
+     * @returns Object with permission status and reason if denied
      */
-    public async canSendMessage(sender_uid: number, receiver_uid: number): Promise<boolean> {
+    public async canSendMessage(sender_uid: number, receiver_uid: number): Promise<{ canSend: boolean; reason?: string }> {
         if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
-            return false;
+            return { canSend: false, reason: 'Invalid user ID' };
         }
 
         try {
-            const contactQuery = await this.dbSession.query(`
+            // First check if sender has blocked receiver or other non-accepted status
+            const senderContactQuery = await this.dbSession.query(`
                 SELECT status 
                 FROM contact 
                 WHERE user_id = $1 AND contact_user_id = $2`,
                 [sender_uid, receiver_uid]
             );
 
-            if (contactQuery.rowCount === 0) {
-                return false;
+            if (senderContactQuery.rowCount === 0) {
+                return { canSend: false, reason: 'No contact relationship' };
             }
 
-            const status = contactQuery.rows[0].status;
+            const senderStatus = senderContactQuery.rows[0].status;
+
+            // Check if sender has blocked the receiver
+            if (senderStatus === ContactStatus.BLOCKED) {
+                return { canSend: false, reason: 'you_blocked' };
+            }
 
             if (
-                status === ContactStatus.BLOCKED ||
-                status === ContactStatus.INCOMING_REQUEST ||
-                status === ContactStatus.OUTGOING_REQUEST ||
-                status === ContactStatus.DELETED ||
-                status === ContactStatus.REJECTED
+                senderStatus === ContactStatus.INCOMING_REQUEST ||
+                senderStatus === ContactStatus.OUTGOING_REQUEST ||
+                senderStatus === ContactStatus.DELETED ||
+                senderStatus === ContactStatus.REJECTED
             ) {
-                return false;
+                return { canSend: false, reason: 'Not an accepted contact' };
             }
 
-            return true;
+            // Next check if receiver has blocked sender
+            const receiverContactQuery = await this.dbSession.query(`
+                SELECT status 
+                FROM contact 
+                WHERE user_id = $1 AND contact_user_id = $2`,
+                [receiver_uid, sender_uid]
+            );
+
+            if (receiverContactQuery.rowCount === 0) {
+                return { canSend: false, reason: 'No reverse contact relationship' };
+            }
+
+            const receiverStatus = receiverContactQuery.rows[0].status;
+
+            // Check if receiver has blocked the sender
+            if (receiverStatus === ContactStatus.BLOCKED) {
+                return { canSend: false, reason: 'user_blocked' };
+            }
+
+            return { canSend: true };
         } catch (error) {
             console.error('Error checking if user can send messages:', error);
-            return false;
+            return { canSend: false, reason: 'Error checking message permission' };
         }
     }
 
@@ -146,7 +170,7 @@ export abstract class Utils {
      * @returns True if the user is blocked or has a pending request
      */
     public async isUserBlocked(sender_uid: number, receiver_uid: number): Promise<boolean> {
-        return !(await this.canSendMessage(sender_uid, receiver_uid));
+        return !(await this.canSendMessage(sender_uid, receiver_uid)).canSend;
     }
 
     /**
@@ -202,7 +226,7 @@ export abstract class Utils {
 
         return true;
     }
-    
+
     /**
      * Validates if a value is a boolean or a string representation of a boolean
      * @param value The value to validate
@@ -212,12 +236,12 @@ export abstract class Utils {
         if (typeof value === 'boolean') {
             return true;
         }
-        
+
         if (typeof value === 'string') {
             const lowerValue = value.toLowerCase();
             return lowerValue === 'true' || lowerValue === 'false';
         }
-        
+
         return false;
     }
 }

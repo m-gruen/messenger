@@ -42,11 +42,27 @@ export class MessageUtils extends Utils {
             );
         }
 
-        if (!(await this.canSendMessage(sender_uid, receiver_uid))) {
-            return this.createErrorResponse(
-                StatusCodes.FORBIDDEN,
-                'Cannot send message to this user'
-            );
+        // Check if the user can send messages and get specific reason if not
+        const messagePermission = await this.canSendMessage(sender_uid, receiver_uid);
+        if (!messagePermission.canSend) {
+            // Provide more specific error messages based on the reason
+            if (messagePermission.reason === 'you_blocked') {
+                return this.createErrorResponse(
+                    StatusCodes.FORBIDDEN,
+                    'Cannot message, you have blocked this user'
+                );
+            } else if (messagePermission.reason === 'user_blocked') {
+                return this.createErrorResponse(
+                    StatusCodes.FORBIDDEN,
+                    'Cannot message user, user has blocked you'
+                );
+            } else {
+                // Default message for other cases
+                return this.createErrorResponse(
+                    StatusCodes.FORBIDDEN,
+                    'Cannot send message to this user'
+                );
+            }
         }
 
         try {
