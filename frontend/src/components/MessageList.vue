@@ -454,8 +454,13 @@ function getEmojiMessageStyle(text: string): string | null {
 .message-text.has-timestamp::after {
   content: '';
   display: inline-block;
-  width: 40px;
-  /* Space for timestamp */
+  width: 40px; /* Space for timestamp */
+}
+
+/* Remove the extra space for emoji-only messages with timestamps */
+.emoji-only .message-text.has-timestamp::after {
+  width: 0;
+  display: none;
 }
 
 .message-timestamp {
@@ -503,7 +508,9 @@ function getEmojiMessageStyle(text: string): string | null {
 .emoji-timestamp {
   color: rgba(155, 155, 155, 0.8) !important;
   bottom: -1.2em !important;
-  right: 0 !important;
+  right: 3px !important;
+  font-size: 0.75rem !important; 
+  font-weight: 500 !important;  
 }
 
 /* Viewing older messages notification styling */
