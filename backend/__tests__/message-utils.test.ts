@@ -62,12 +62,43 @@ describe('MessageUtils', () => {
             expect(result.error).toBe('Users are not contacts');
         });
 
+        it('should return an error response if sender has blocked receiver', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
+                .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // Contact relationship exists
+            
+            // Mock the canSendMessage method correctly
+            jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: false, reason: 'you_blocked' });
+            
+            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
+            expect(result.error).toBe('Cannot message, you have blocked this user');
+        });
+
+        it('should return an error response if receiver has blocked sender', async () => {
+            (dbSessionMock.query as jest.Mock)
+                .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
+                .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
+                .mockResolvedValueOnce({ rowCount: 1 }); // Contact relationship exists
+            
+            // Mock the canSendMessage method correctly
+            jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: false, reason: 'user_blocked' });
+            
+            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
+            expect(result.error).toBe('Cannot message user, user has blocked you');
+        });
+
         it('should return an error response if sender cannot send message to receiver', async () => {
             (dbSessionMock.query as jest.Mock)
                 .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
                 .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
-                .mockResolvedValueOnce({ rowCount: 1 }) // Contact relationship exists
-                .mockResolvedValueOnce({ rowCount: 0 }); // Cannot send message
+                .mockResolvedValueOnce({ rowCount: 1 }); // Contact relationship exists
+            
+            // Mock the canSendMessage method correctly
+            jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: false, reason: 'Not an accepted contact' });
+            
             const result = await messageUtils.sendMessage(1, 2, "Hello");
             expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
             expect(result.error).toBe('Cannot send message to this user');
@@ -75,10 +106,9 @@ describe('MessageUtils', () => {
 
         it('should return a success response when message is sent', async () => {
             (dbSessionMock.query as jest.Mock)
-                .mockResolvedValueOnce({ rowCount: 1,  }) // Sender exists
-                .mockResolvedValueOnce({ rowCount: 1,  }) // Receiver exists
-                .mockResolvedValueOnce({ rowCount: 1, }) // Contact relationship exists
-                .mockResolvedValueOnce({ rowCount: 1, rows: [{}]}) // Can send message
+                .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
+                .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
+                .mockResolvedValueOnce({ rowCount: 1 }) // Contact relationship exists
                 .mockResolvedValueOnce({
                     rowCount: 1,
                     rows: [{
@@ -89,6 +119,10 @@ describe('MessageUtils', () => {
                         timestamp: new Date()
                     }]
                 }); // Message inserted
+            
+            // Mock the canSendMessage method correctly
+            jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: true });
+            
             const result = await messageUtils.sendMessage(1, 2, "Hello");
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data).toBeDefined();
@@ -100,8 +134,11 @@ describe('MessageUtils', () => {
                 .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
                 .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
                 .mockResolvedValueOnce({ rowCount: 1 }) // Contact relationship exists
-                .mockResolvedValueOnce({ rowCount: 1, rows: [{}] }) // Can send message
                 .mockResolvedValueOnce({ rowCount: 0 }); // Message insertion failed
+            
+            // Mock the canSendMessage method correctly
+            jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: true });
+            
             const result = await messageUtils.sendMessage(1, 2, "Hello");
             expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
             expect(result.error).toBe('Failed to send message');
