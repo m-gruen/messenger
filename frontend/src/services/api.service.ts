@@ -4,6 +4,7 @@ import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 import { DateFormatService } from './date-format.service';
+import { storageService } from '@/services/storage.service';
 import sodium from 'libsodium-wrappers';
 
 export class ApiService {
@@ -66,7 +67,7 @@ export class ApiService {
         const senderPublicKey = sodium.from_base64(sender.public_key, sodium.base64_variants.ORIGINAL);
         const receiverPublicKey = sodium.from_base64(receiver.public_key, sodium.base64_variants.ORIGINAL);
 
-        const { sharedTx: sharedKey } = sodium.crypto_kx_client_session_keys(senderPrivateKey, senderPublicKey, receiverPublicKey);
+        const { sharedTx: sharedKey } = sodium.crypto_kx_client_session_keys(senderPublicKey, senderPrivateKey, receiverPublicKey);
         return sharedKey;
     }
 
@@ -351,15 +352,10 @@ export class ApiService {
         }, token);
 
         const receiver: User = await this.getUserById(receiverId, token);
+        const sender: AuthenticatedUser | null = storageService.getUser();
 
-        const senderJSON = localStorage.getItem('user');
-        if (!senderJSON) {
-            throw new Error('User not found in localStorage');
-        }
-
-        const sender = JSON.parse(senderJSON);
-        if (!sender.privateKey) {
-            throw new Error('Private key not found in user data');
+        if (!sender) {
+            throw new Error('User not found in sessionStorage');
         }
 
         return await Promise.all(
@@ -389,15 +385,10 @@ export class ApiService {
      */
     public async sendMessage(senderId: number, receiverId: number, content: string, token: string): Promise<IMessage> {
         const receiver: User = await this.getUserById(receiverId, token);
+        const sender: AuthenticatedUser | null = storageService.getUser();
 
-        const senderJSON = localStorage.getItem('user');
-        if (!senderJSON) {
-            throw new Error('User not found in localStorage');
-        }
-
-        const sender = JSON.parse(senderJSON);
-        if (!sender.privateKey) {
-            throw new Error('Private key not found in user data');
+        if (!sender) {
+            throw new Error('User not found in sessionStorage');
         }
 
         const { encryptedContentBase64, nonceBase64 } = await this.encryptMessage(sender, receiver, content);
