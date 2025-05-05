@@ -125,7 +125,17 @@ export class UserUtils extends Utils {
                 public_key
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7) 
-            RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search`,
+            RETURNING
+                uid,
+                username,
+                created_at,
+                display_name,
+                is_deleted,
+                shadow_mode,
+                full_name_search,
+                private_key,
+                public_key
+            `,
                 [
                     username,
                     hashedPassword,
@@ -157,6 +167,8 @@ export class UserUtils extends Utils {
                 is_deleted: result.rows[0].is_deleted,
                 shadow_mode: result.rows[0].shadow_mode,
                 full_name_search: result.rows[0].full_name_search,
+                private_key: result.rows[0].private_key,
+                public_key: result.rows[0].public_key,
                 token: token
             };
 
@@ -193,7 +205,7 @@ export class UserUtils extends Utils {
 
         try {
             const result = await this.dbSession.query(`
-                SELECT uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search
+                SELECT uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search, public_key
                 FROM account 
                 WHERE uid = $1`,
                 [uid]
@@ -213,7 +225,8 @@ export class UserUtils extends Utils {
                     uid: user.uid,
                     username: user.username,
                     display_name: user.display_name,
-                    created_at: user.created_at
+                    created_at: user.created_at,
+                    public_key: user.public_key
                 });
             }
 
@@ -232,7 +245,9 @@ export class UserUtils extends Utils {
                 uid: user.uid,
                 username: user.username,
                 display_name: user.display_name,
-                created_at: user.created_at
+                created_at: user.created_at,
+                public_key: user.public_key
+
             };
 
             return this.createSuccessResponse(userData);
@@ -261,7 +276,17 @@ export class UserUtils extends Utils {
 
         try {
             const result = await this.dbSession.query(`
-                SELECT uid, username, password_hash, created_at, display_name, is_deleted, shadow_mode, full_name_search
+                SELECT
+                    uid,
+                    username,
+                    password_hash,
+                    created_at,
+                    display_name,
+                    is_deleted,
+                    shadow_mode,
+                    full_name_search,
+                    private_key,
+                    public_key
                 FROM account 
                 WHERE username = $1`,
                 [username]
@@ -297,6 +322,8 @@ export class UserUtils extends Utils {
                 is_deleted: user.is_deleted,
                 shadow_mode: user.shadow_mode,
                 full_name_search: user.full_name_search,
+                private_key: user.private_key,
+                public_key: user.public_key,
                 token: token
             };
 
@@ -511,7 +538,17 @@ export class UserUtils extends Utils {
 
             updateQuery += ` ${updateFields.join(', ')} 
             WHERE uid = $${updateParams.length + 1} 
-            RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search`;
+            RETURNING
+                uid,
+                username,
+                created_at,
+                display_name,
+                is_deleted,
+                shadow_mode,
+                full_name_search,
+                private_key,
+                public_key
+            `;
             updateParams.push(uid);
 
             const result = await this.dbSession.query(updateQuery, updateParams);
@@ -537,7 +574,9 @@ export class UserUtils extends Utils {
                 display_name: user.display_name,
                 is_deleted: user.is_deleted,
                 shadow_mode: user.shadow_mode,
-                full_name_search: user.full_name_search
+                full_name_search: user.full_name_search,
+                private_key: user.private_key,
+                public_key: user.public_key
             };
 
             return this.createSuccessResponse(userData);
@@ -578,7 +617,18 @@ export class UserUtils extends Utils {
 
         try {
             const userQuery = await this.dbSession.query(
-                `SELECT uid, username, password_hash, created_at, display_name, is_deleted, shadow_mode, full_name_search FROM account WHERE uid = $1 AND is_deleted = FALSE`,
+                `SELECT
+                    uid,
+                    username,
+                    password_hash,
+                    created_at,
+                    display_name,
+                    is_deleted,
+                    shadow_mode,
+                    full_name_search,
+                    private_key,
+                    public_key
+                FROM account WHERE uid = $1 AND is_deleted = FALSE`,
                 [uid]
             );
 
@@ -590,10 +640,10 @@ export class UserUtils extends Utils {
             }
 
             const user = userQuery.rows[0];
-            
+
             // Verify current password
             const passwordValid = await this.verifyPassword(user.password_hash, currentPassword);
-            
+
             if (!passwordValid) {
                 return this.createErrorResponse(
                     StatusCodes.UNAUTHORIZED,
@@ -603,7 +653,7 @@ export class UserUtils extends Utils {
 
             // Hash and set the new password
             const hashedNewPassword = await this.hashPassword(newPassword);
-            
+
             const updateResult = await this.dbSession.query(
                 `UPDATE account SET password_hash = $2 WHERE uid = $1 
                 RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search`,
@@ -631,6 +681,8 @@ export class UserUtils extends Utils {
                 is_deleted: updatedUser.is_deleted,
                 shadow_mode: updatedUser.shadow_mode,
                 full_name_search: updatedUser.full_name_search,
+                private_key: updatedUser.private_key,
+                public_key: updatedUser.public_key,
                 token: token
             };
 
@@ -664,7 +716,7 @@ export class UserUtils extends Utils {
 
         try {
             const searchResults = await this.dbSession.query(`
-                SELECT uid, username, display_name, created_at
+                SELECT uid, username, display_name, created_at, public_key
                 FROM account
                 WHERE 
                     (shadow_mode IS NULL OR shadow_mode = false)
@@ -682,7 +734,8 @@ export class UserUtils extends Utils {
                 uid: row.uid,
                 username: row.username,
                 display_name: row.display_name,
-                created_at: row.created_at
+                created_at: row.created_at,
+                public_key: row.public_key
             }));
 
             return this.createSuccessResponse(users);
