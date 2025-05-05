@@ -83,20 +83,20 @@ describe('UserUtils', () => {
 
     describe('createUser', () => {
         it('should return an error response for an invalid username', async () => {
-            const result = await userUtils.createUser('ab', 'password123');
+            const result = await userUtils.createUser('ab', 'password123', 'privateKey123', 'publicKey123');
             expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
             expect(result.error).toBe('Username must be valid string between 3 and 20 characters and can only contain letters, numbers, and underscores');
         });
 
         it('should return an error response for an invalid password', async () => {
-            const result = await userUtils.createUser('validUsername', '');
+            const result = await userUtils.createUser('validUsername', '', 'privateKey123', 'publicKey123');
             expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
             expect(result.error).toBe('Password must be valid string');
         });
 
         it('should return an error response if the username already exists', async () => {
             (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 1 });
-            const result = await userUtils.createUser('existingUser', 'password123');
+            const result = await userUtils.createUser('existingUser', 'password123', 'privateKey123', 'publicKey123');
             expect(result.statusCode).toBe(StatusCodes.CONFLICT);
             expect(result.error).toBe('Username already exists');
         });
@@ -106,30 +106,41 @@ describe('UserUtils', () => {
                 .mockResolvedValueOnce({ rowCount: 0 }) // Check for existing user
                 .mockRejectedValue(new Error('Database error')); // Insert new user
 
-            const result = await userUtils.createUser('newUser', 'password123');
+            const result = await userUtils.createUser('newUser', 'password123', 'privateKey123', 'publicKey123');
             expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
             expect(result.error).toBe('An unexpected error occurred while creating the user.');
         });
 
-        it('should create a new user and return a success response', async () => {
+        it('should create a new user and return a success response with key data', async () => {
             (dbSessionMock.query as jest.Mock)
                 .mockResolvedValueOnce({ rowCount: 0 }) // Check for existing user
                 .mockResolvedValueOnce({
                     rowCount: 1,
-                    rows: [{ uid: 1, username: 'newUser', created_at: new Date(), display_name: null, is_deleted: false, shadow_mode: false, full_name_search: false }]
+                    rows: [{ 
+                        uid: 1, 
+                        username: 'newUser', 
+                        created_at: new Date(), 
+                        display_name: null, 
+                        is_deleted: false, 
+                        shadow_mode: false, 
+                        full_name_search: false,
+                        private_key: 'privateKey123',
+                        public_key: 'publicKey123'
+                    }]
                 }); // Insert new user
-
 
             (argon2.hash as jest.Mock).mockResolvedValue('hashed-password');
 
-            const result = await userUtils.createUser('newUser', 'password123');
+            const result = await userUtils.createUser('newUser', 'password123', 'privateKey123', 'publicKey123');
             expect(result.statusCode).toBe(StatusCodes.CREATED);
             expect(result.data?.username).toBe('newUser');
+            expect(result.data?.private_key).toBe('privateKey123');
+            expect(result.data?.public_key).toBe('publicKey123');
         });
 
         it('should return an error response if the database query fails', async () => {
             (dbSessionMock.query as jest.Mock).mockRejectedValue(new Error('Database error'));
-            const result = await userUtils.createUser('newUser', 'password123');
+            const result = await userUtils.createUser('newUser', 'password123', 'privateKey123', 'publicKey123');
             expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
             expect(result.error).toBe('An unexpected error occurred while creating the user.');
         });
@@ -155,7 +166,7 @@ describe('UserUtils', () => {
             expect(result.error).toBe('User not found');
         });
 
-        it('should return a success response when a user requests their own data', async () => {
+        it('should return a success response when a user requests their own data with public key', async () => {
             const userId = 1;
             const requestingUserId = 1; // Same user
             
@@ -168,7 +179,8 @@ describe('UserUtils', () => {
                     display_name: 'Test User', 
                     is_deleted: false, 
                     shadow_mode: true, // Even with privacy features enabled
-                    full_name_search: true 
+                    full_name_search: true,
+                    public_key: 'userPublicKey123'
                 }]
             });
             
@@ -177,9 +189,10 @@ describe('UserUtils', () => {
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data?.username).toBe('testUser');
             expect(result.data?.uid).toBe(userId);
+            expect(result.data?.public_key).toBe('userPublicKey123');
         });
         
-        it('should return a success response when a user has no privacy restrictions', async () => {
+        it('should include public key when returning another user', async () => {
             const userId = 1;
             const requestingUserId = 2; // Different user
             
@@ -192,7 +205,8 @@ describe('UserUtils', () => {
                     display_name: 'Test User', 
                     is_deleted: false, 
                     shadow_mode: false,
-                    full_name_search: false 
+                    full_name_search: false,
+                    public_key: 'userPublicKey123'
                 }]
             });
             
@@ -200,6 +214,7 @@ describe('UserUtils', () => {
             
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data?.username).toBe('testUser');
+            expect(result.data?.public_key).toBe('userPublicKey123');
         });
         
         it('should return a success response when requesting user has contact with shadow mode user', async () => {
@@ -216,7 +231,8 @@ describe('UserUtils', () => {
                     display_name: 'Private User', 
                     is_deleted: false, 
                     shadow_mode: true,
-                    full_name_search: false 
+                    full_name_search: false,
+                    public_key: 'userPublicKey123'
                 }]
             });
             
@@ -227,6 +243,7 @@ describe('UserUtils', () => {
             
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data?.username).toBe('privateUser');
+            expect(result.data?.public_key).toBe('userPublicKey123');
         });
         
         it('should return an error when requesting user has no contact with shadow mode user', async () => {
@@ -243,7 +260,8 @@ describe('UserUtils', () => {
                     display_name: 'Private User', 
                     is_deleted: false, 
                     shadow_mode: true,
-                    full_name_search: false 
+                    full_name_search: false,
+                    public_key: 'userPublicKey123'
                 }]
             });
             
@@ -275,15 +293,24 @@ describe('UserUtils', () => {
             expect(result.error).toBe('Invalid username or password');
         });
 
-        it('should return a success response with user data and token', async () => {
+        it('should return a success response with user data including keys', async () => {
             (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({
                 rowCount: 1,
-                rows: [{ uid: 1, username: 'testUser', password_hash: 'hashed-password', created_at: new Date() }]
+                rows: [{ 
+                    uid: 1, 
+                    username: 'testUser', 
+                    password_hash: 'hashed-password', 
+                    created_at: new Date(),
+                    private_key: 'privateKey123',
+                    public_key: 'publicKey123' 
+                }]
             });
             (argon2.verify as jest.Mock).mockResolvedValue(true);
             const result = await userUtils.loginUser('testUser', 'password123');
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data?.username).toBe('testUser');
+            expect(result.data?.private_key).toBe('privateKey123');
+            expect(result.data?.public_key).toBe('publicKey123');
         });
     });
 

@@ -16,20 +16,20 @@ describe('MessageUtils', () => {
 
     describe('sendMessage', () => {
         it('should return an error response for invalid sender UID', async () => {
-            const result = await messageUtils.sendMessage(-1, 2, "Hello");
+            const result = await messageUtils.sendMessage(-1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
             expect(result.error).toBe('Invalid UID');
         });
 
         it('should return an error response for invalid receiver UID', async () => {
-            const result = await messageUtils.sendMessage(1, -2, "Hello");
+            const result = await messageUtils.sendMessage(1, -2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
             expect(result.error).toBe('Invalid UID');
         });
 
         it('should return an error response if sender does not exist', async () => {
             (dbSessionMock.query as jest.Mock).mockResolvedValueOnce({ rowCount: 0 });
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
             expect(result.error).toBe('User not found');
         });
@@ -38,7 +38,7 @@ describe('MessageUtils', () => {
             (dbSessionMock.query as jest.Mock)
                 .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
                 .mockResolvedValueOnce({ rowCount: 0 }); // Receiver does not exist
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.NOT_FOUND);
             expect(result.error).toBe('User not found');
         });
@@ -47,7 +47,7 @@ describe('MessageUtils', () => {
             (dbSessionMock.query as jest.Mock)
                 .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
                 .mockResolvedValueOnce({ rowCount: 1 }); // Receiver exists
-            const result = await messageUtils.sendMessage(1, 1, "Hello");
+            const result = await messageUtils.sendMessage(1, 1, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.BAD_REQUEST);
             expect(result.error).toBe('Cannot send message to self');
         });
@@ -57,7 +57,7 @@ describe('MessageUtils', () => {
                 .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
                 .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
                 .mockResolvedValueOnce({ rowCount: 0 }); // No contact relationship
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
             expect(result.error).toBe('Users are not contacts');
         });
@@ -71,7 +71,7 @@ describe('MessageUtils', () => {
             // Mock the canSendMessage method correctly
             jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: false, reason: 'you_blocked' });
             
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
             expect(result.error).toBe('Cannot message, you have blocked this user');
         });
@@ -85,7 +85,7 @@ describe('MessageUtils', () => {
             // Mock the canSendMessage method correctly
             jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: false, reason: 'user_blocked' });
             
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
             expect(result.error).toBe('Cannot message user, user has blocked you');
         });
@@ -99,7 +99,7 @@ describe('MessageUtils', () => {
             // Mock the canSendMessage method correctly
             jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: false, reason: 'Not an accepted contact' });
             
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.FORBIDDEN);
             expect(result.error).toBe('Cannot send message to this user');
         });
@@ -116,6 +116,7 @@ describe('MessageUtils', () => {
                         sender_uid: 1,
                         receiver_uid: 2,
                         content: "Hello",
+                        nonce: "nonceString123",
                         timestamp: new Date()
                     }]
                 }); // Message inserted
@@ -123,10 +124,11 @@ describe('MessageUtils', () => {
             // Mock the canSendMessage method correctly
             jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: true });
             
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data).toBeDefined();
             expect(result.data!.content).toBe("Hello");
+            expect(result.data!.nonce).toBe("nonceString123");
         });
 
         it('should return an error response if message insertion fails', async () => {
@@ -139,7 +141,7 @@ describe('MessageUtils', () => {
             // Mock the canSendMessage method correctly
             jest.spyOn(messageUtils, 'canSendMessage').mockResolvedValueOnce({ canSend: true });
             
-            const result = await messageUtils.sendMessage(1, 2, "Hello");
+            const result = await messageUtils.sendMessage(1, 2, "Hello", "nonceString123");
             expect(result.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR);
             expect(result.error).toBe('Failed to send message');
         });
@@ -183,7 +185,7 @@ describe('MessageUtils', () => {
             expect(result.error).toBe('Cannot fetch messages with self');
         });
 
-        it('should return a success response with messages', async () => {
+        it('should return a success response with messages including nonce for e2e encryption', async () => {
             (dbSessionMock.query as jest.Mock)
             .mockResolvedValueOnce({ rowCount: 1 }) // Sender exists
             .mockResolvedValueOnce({ rowCount: 1 }) // Receiver exists
@@ -195,6 +197,7 @@ describe('MessageUtils', () => {
                         sender_uid: 1,
                         receiver_uid: 2,
                         content: "Hello",
+                        nonce: "nonceString123",
                         timestamp: new Date()
                     },
                     {
@@ -202,6 +205,7 @@ describe('MessageUtils', () => {
                         sender_uid: 2,
                         receiver_uid: 1,
                         content: "Hi",
+                        nonce: "nonceString456",
                         timestamp: new Date()
                     }
                 ]
@@ -210,7 +214,9 @@ describe('MessageUtils', () => {
             expect(result.statusCode).toBe(StatusCodes.OK);
             expect(result.data).toHaveLength(2);
             expect(result.data![0].content).toBe("Hello");
+            expect(result.data![0].nonce).toBe("nonceString123");
             expect(result.data![1].content).toBe("Hi");
+            expect(result.data![1].nonce).toBe("nonceString456");
         });
     });
 });
