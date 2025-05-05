@@ -95,7 +95,7 @@ export class DbSession {
                     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
                     shadow_mode BOOLEAN NOT NULL DEFAULT FALSE,
                     full_name_search BOOLEAN NOT NULL DEFAULT FALSE,
-                    encrypted_private_key VARCHAR(5000),
+                    private_key VARCHAR(5000),
                     public_key VARCHAR(5000)
                 )`,
                 `CREATE TABLE IF NOT EXISTS message (

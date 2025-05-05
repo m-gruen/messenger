@@ -121,7 +121,7 @@ export class UserUtils extends Utils {
                 display_name,
                 shadow_mode,
                 full_name_search,
-                encrypted_private_key,
+                private_key,
                 public_key
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7) 
