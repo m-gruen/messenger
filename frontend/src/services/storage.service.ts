@@ -17,30 +17,88 @@ export class StorageService {
     }
 
     public storeMessages(IncomingMessages: IMessage[]): void {
-
-        if (IncomingMessages.length > 0) {
-
-            const userId: number = IncomingMessages.at(0)!.sender_uid;
-            const receiverId: number = IncomingMessages.at(0)!.receiver_uid;
-
-            const messageStore: IConversationStore = {
-                lastUpdated: Date.now().toString(),
-                messages: IncomingMessages
-            };
-            const receiverStore: IUserMessagesStore = {};
-            const userStore: ILocalMessagesStore = {};
-
-            receiverStore[receiverId] = messageStore;
-            userStore[userId] = receiverStore;
-
-            localStorage.setItem('local_message_storing', JSON.stringify(userStore));
-
-        }
-        else {
-            console.log("No Messages to Store")
+        if (IncomingMessages.length === 0) {
+            console.log("No Messages to Store");
+            return;
         }
 
+        const userId: number = IncomingMessages[0].sender_uid;
+        const receiverId: number = IncomingMessages[0].receiver_uid;
 
+        
+        const userIdStr = userId.toString();
+        const receiverIdStr = receiverId.toString();
+
+        const messageStore: IConversationStore = {
+            lastUpdated: Date.now().toString(),
+            messages: IncomingMessages
+        };
+
+        
+        const existingMessagesStr = localStorage.getItem('local_message_storing');
+        let existingMessages: ILocalMessagesStore = {};
+
+        if (existingMessagesStr) {
+            try {
+                existingMessages = JSON.parse(existingMessagesStr);
+            } catch (e) {
+                console.error('Error parsing existing messages:', e);
+            }
+        }
+
+        
+        if (!existingMessages[userIdStr]) {
+            existingMessages[userIdStr] = {};
+        }
+
+        
+        if (existingMessages[userIdStr][receiverIdStr]) {
+            
+            const existingMids = new Set(existingMessages[userIdStr][receiverIdStr].messages.map(msg => msg.mid));
+            const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
+
+            existingMessages[userIdStr][receiverIdStr].messages = [
+                ...existingMessages[userIdStr][receiverIdStr].messages,
+                ...uniqueNewMessages
+            ];
+            existingMessages[userIdStr][receiverIdStr].lastUpdated = Date.now().toString();
+        } else {
+            
+            existingMessages[userIdStr][receiverIdStr] = messageStore;
+        }
+
+        
+        localStorage.setItem('local_message_storing', JSON.stringify(existingMessages));
+    }
+
+    /**
+     * Retrieve stored messages for a specific conversation
+     * @param userId Current user ID
+     * @param contactId Contact user ID to get messages for
+     * @returns Array of messages or empty array if none found
+     */
+    public getStoredMessages(userId: number, contactId: number): IMessage[] {
+        
+        const userIdStr = userId.toString();
+        const contactIdStr = contactId.toString();
+        
+        const existingMessagesStr = localStorage.getItem('local_message_storing');
+        if (!existingMessagesStr) {
+            return [];
+        }
+        
+        try {
+            const existingMessages: ILocalMessagesStore = JSON.parse(existingMessagesStr);
+            
+            
+            if (existingMessages[userIdStr]?.[contactIdStr]?.messages) {
+                return existingMessages[userIdStr][contactIdStr].messages;
+            }
+            return [];
+        } catch (e) {
+            console.error('Error retrieving stored messages:', e);
+            return [];
+        }
     }
 
     /**

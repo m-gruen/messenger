@@ -196,22 +196,26 @@ export const useMessageStore = defineStore('messages', () => {
     }
 
     async function storeMessagesOnDevice(userId: number): Promise<boolean> {
-
         const contactsId: Contact[] = await apiService.getContacts(userId, token.value);
+        console.log('Storing messages for contacts:', contactsId);
 
         try {
-            contactsId.forEach(async contact => {
+
+            for (const contact of contactsId) {
                 const contactId = contact.contactUserId;
+                console.log(`Fetching messages for contact ${contactId}`);
                 const messages = await apiService.getMessages(userId, contactId, token.value);
-                await storageService.storeMessages(messages);
-            });
+                
+                if (messages && messages.length > 0) {
+                    storageService.storeMessages(messages);
+                }
+            }
+            return true;
         }
         catch (error) {
-            console.error('Error sending Message', error)
-            sendError.value = error instanceof Error ? error.message : 'Failed to send message'
-            throw error
-        } finally {
-            return true;
+            console.error('Error storing messages:', error);
+            sendError.value = error instanceof Error ? error.message : 'Failed to store messages';
+            throw error;
         }
     }
 
