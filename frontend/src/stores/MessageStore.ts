@@ -30,21 +30,71 @@ export const useMessageStore = defineStore('messages', () => {
             ((message.sender_uid === currentUserId.value && message.receiver_uid === activeContactId.value) ||
                 (message.sender_uid === activeContactId.value && message.receiver_uid === currentUserId.value))) {
 
-            // Process the message to ensure valid date
-            const processedMessage = ensureValidDate(message)
+            try {
+                // Process the message to ensure valid date
+                const processedMessage = ensureValidDate({ ...message })
 
-            // Add to messages if not already present
-            const messageExists = messages.value.some(m => m.mid === message.mid)
-                                  
-            if (!messageExists) {
-                messages.value = [...messages.value, processedMessage].sort((a, b) => {
-                    const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
-                    const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
-                    return timeB - timeA;
-                })
+                // Add to messages if not already present with a temporary "Decrypting..." message if needed
+                const messageExists = messages.value.some(m => m.mid === message.mid)
 
-                // Smoothly scroll to show the new message
-                smoothScrollToRecentMessages()
+                if (!messageExists) {
+                    if (message.content && message.nonce) {
+                        // Store the message with a potentially encrypted content first
+                        messages.value = [...messages.value, processedMessage].sort((a, b) => {
+                            const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+                            const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+                            return timeB - timeA;
+                        })
+
+                        // Get the other user involved in the conversation (the contact)
+                        const otherUserId = message.sender_uid === currentUserId.value
+                            ? message.receiver_uid
+                            : message.sender_uid;
+
+                        // Get the contact user data for encryption keys
+                        apiService.getUserById(otherUserId, token.value).then(contactUser => {
+                            const currentUser = storageService.getUser();
+
+                            if (contactUser && currentUser) {
+                                // Determine if current user is the sender
+                                const isSender = message.sender_uid === currentUserId.value;
+
+                                // Decrypt the message
+                                apiService.decryptMessage(
+                                    contactUser,
+                                    currentUser,
+                                    processedMessage.content,
+                                    processedMessage.nonce,
+                                    isSender
+                                ).then(decryptedContent => {
+                                    // Create a new message object with decrypted content to maintain reactivity
+                                    const decryptedMessage = {
+                                        ...processedMessage,
+                                        content: decryptedContent
+                                    };
+
+                                    // Replace the old message with the decrypted one
+                                    const messageIndex = messages.value.findIndex(m => m.mid === processedMessage.mid);
+                                    if (messageIndex !== -1) {
+                                        messages.value.splice(messageIndex, 1, decryptedMessage);
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        // No encryption needed, just add the message
+                        messages.value = [...messages.value, processedMessage].sort((a, b) => {
+                            const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+                            const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+                            return timeB - timeA;
+                        })
+                    }
+
+                    // Smoothly scroll to show the new message
+                    smoothScrollToRecentMessages()
+                }
+            } catch (err) {
+                console.error('Error processing WebSocket message:', err)
             }
         }
     }
@@ -176,12 +226,49 @@ export const useMessageStore = defineStore('messages', () => {
                 token.value
             )
 
-            // Add the new message to the list and re-sort
-            messages.value = [...messages.value, newMessage].sort((a, b) => {
+            // Process the message to ensure valid date
+            const processedMessage = ensureValidDate({ ...newMessage })
+
+            // Add the new message to the list and re-sort (with potentially encrypted content)
+            messages.value = [...messages.value, processedMessage].sort((a, b) => {
                 const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
                 const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
                 return timeB - timeA;
             })
+
+            // Decrypt the message if it has content and nonce
+            if (processedMessage.content && processedMessage.nonce) {
+                // Get the contact user data for encryption keys
+                const contactUser = await apiService.getUserById(receiverId, token.value)
+                const currentUser = storageService.getUser()
+
+                if (contactUser && currentUser) {
+                    try {
+                        // Decrypt the message (current user is the sender in this case)
+                        const decryptedContent = await apiService.decryptMessage(
+                            contactUser,
+                            currentUser,
+                            processedMessage.content,
+                            processedMessage.nonce,
+                            true // Current user is the sender
+                        )
+
+                        // Create new message object with decrypted content to maintain reactivity
+                        const decryptedMessage = {
+                            ...processedMessage,
+                            content: decryptedContent
+                        }
+
+                        // Replace the encrypted message with the decrypted one
+                        const messageIndex = messages.value.findIndex(m => m.mid === processedMessage.mid)
+                        if (messageIndex !== -1) {
+                            messages.value.splice(messageIndex, 1, decryptedMessage)
+                        }
+                    } catch (decryptError) {
+                        console.error('Error decrypting sent message:', decryptError)
+                    }
+                }
+            }
 
             // Smoothly scroll to show the new message
             smoothScrollToRecentMessages()

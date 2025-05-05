@@ -106,7 +106,7 @@ export class ApiService {
         };
     }
 
-    private async decryptMessage(
+    public async decryptMessage(
         client: { public_key: string },
         server: { private_key: string, public_key: string },
         encryptedContentBase64: string,
