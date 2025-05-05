@@ -30,17 +30,29 @@ const props = defineProps({
 // Scroll tracking refs
 const messageListRef = ref<HTMLElement | null>(null);
 const isViewingOlderMessages = ref(false);
-const scrollThreshold = 5000;
+// Update scroll threshold to 300px as requested
+const scrollThreshold = 3000;
+// Add a new ref for smooth transitions
+const notificationOpacity = ref(0);
 
-// Scroll handler to detect when user is viewing older messages
+// Enhanced scroll handler to create smooth transitions
 const handleScroll = () => {
   if (!messageListRef.value) return;
 
   const { scrollTop, scrollHeight, clientHeight } = messageListRef.value;
   const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
 
-  // Show notification when scrolled up beyond threshold
-  isViewingOlderMessages.value = distanceFromBottom > scrollThreshold;
+  if (distanceFromBottom > scrollThreshold) {
+    // If we're beyond the threshold, start showing the notification
+    isViewingOlderMessages.value = true;
+    // Calculate opacity based on how far beyond threshold (with a max of 1)
+    const extraScroll = distanceFromBottom - scrollThreshold;
+    notificationOpacity.value = Math.min(1, extraScroll / 100);
+  } else {
+    // We're within threshold, immediately hide notification
+    notificationOpacity.value = 0;
+    isViewingOlderMessages.value = false;
+  }
 };
 
 // Function to scroll to the latest messages
@@ -48,6 +60,9 @@ const scrollToLatest = () => {
   if (!messageListRef.value) return;
 
   messageListRef.value.scrollTop = messageListRef.value.scrollHeight;
+  // Immediately reset notification state when manually scrolling to bottom
+  isViewingOlderMessages.value = false;
+  notificationOpacity.value = 0;
 };
 
 // Auto-scroll to bottom when new messages arrive
@@ -58,6 +73,17 @@ watch(() => props.messages, async (newMessages, oldMessages) => {
     scrollToLatest();
   }
 }, { deep: true });
+
+// Reset scroll state when switching chats
+watch(() => props.contactUsername, () => {
+  isViewingOlderMessages.value = false;
+  notificationOpacity.value = 0;
+  
+  // Need to wait for DOM to update before scrolling to bottom
+  nextTick(() => {
+    scrollToLatest();
+  });
+});
 
 // Set up scroll event listener
 onMounted(() => {
@@ -225,8 +251,8 @@ function getEmojiMessageStyle(text: string): string | null {
     style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
     <!-- Viewing Older Messages Notification -->
     <div v-if="isViewingOlderMessages"
-      class="absolute bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
-      style="bottom: 15px; left: 50%; transform: translateX(-50%);">
+      class="fixed bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
+      :style="{ opacity: notificationOpacity, bottom: '100px', left: '50%', transform: 'translateX(-50%)' }">
       <span class="text-sm">You're Viewing Older Messages</span>
       <button @click="scrollToLatest"
         class="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs flex items-center">
