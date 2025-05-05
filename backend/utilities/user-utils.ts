@@ -58,6 +58,8 @@ export class UserUtils extends Utils {
     public async createUser(
         username: string,
         password: string,
+        privateKey: string,
+        publicKey: string,
         displayName?: string,
         shadowMode: boolean | string = false,
         fullNameSearch: boolean | string = false
@@ -118,16 +120,20 @@ export class UserUtils extends Utils {
                 password_hash,
                 display_name,
                 shadow_mode,
-                full_name_search
+                full_name_search,
+                encrypted_private_key,
+                public_key
             )
-            VALUES ($1, $2, $3, $4, $5) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7) 
             RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search`,
                 [
                     username,
                     hashedPassword,
                     displayName || null,
                     shadowModeValue,
-                    fullNameSearchValue
+                    fullNameSearchValue,
+                    privateKey,
+                    publicKey
                 ]
             );
 

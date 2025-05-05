@@ -7,7 +7,7 @@ import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-midd
 export const userRouter = Router();
 
 userRouter.post('/', async (req: Request, res: Response) => {
-    const { username, password, displayName, shadowMode, fullNameSearch } = req.body;
+    const { username, password, displayName, shadowMode, fullNameSearch, privateKey, publicKey } = req.body;
 
     let dbSession = await DbSession.create(false);
     try {
@@ -15,10 +15,12 @@ userRouter.post('/', async (req: Request, res: Response) => {
 
         const response: UserResponse = await userUtils.createUser(
             username, 
-            password, 
+            password,
+            privateKey,
+            publicKey,
             displayName,
             shadowMode,
-            fullNameSearch
+            fullNameSearch,
         );
 
         res.status(response.statusCode).json(
