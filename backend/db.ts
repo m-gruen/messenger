@@ -103,6 +103,7 @@ export class DbSession {
                     sender_uid INTEGER NOT NULL,
                     receiver_uid INTEGER NOT NULL,
                     content TEXT NOT NULL,
+                    nonce VARCHAR(255) NOT NULL,
                     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (sender_uid) REFERENCES account(uid),
                     FOREIGN KEY (receiver_uid) REFERENCES account(uid)

@@ -13,7 +13,7 @@ export class MessageUtils extends Utils {
      * @param content Message content
      * @returns A MessageResponse object containing statusCode, data, and optional error message
      */
-    async sendMessage(sender_uid: number, receiver_uid: number, content: string): Promise<BaseResponse<IMessage>> {
+    async sendMessage(sender_uid: number, receiver_uid: number, content: string, nonce: string): Promise<BaseResponse<IMessage>> {
         if (!this.isValidUserId(sender_uid) || !this.isValidUserId(receiver_uid)) {
             return this.createErrorResponse(
                 StatusCodes.BAD_REQUEST,
@@ -67,10 +67,10 @@ export class MessageUtils extends Utils {
 
         try {
             const result = await this.dbSession.query(`
-            INSERT INTO message (sender_uid, receiver_uid, content)
-            VALUES ($1, $2, $3)
-            RETURNING mid, sender_uid, receiver_uid, content, timestamp`,
-                [sender_uid, receiver_uid, content]
+            INSERT INTO message (sender_uid, receiver_uid, content, nonce)
+            VALUES ($1, $2, $3, $4)
+            RETURNING mid, sender_uid, receiver_uid, content, nonce, timestamp`,
+                [sender_uid, receiver_uid, content, nonce]
             );
 
             if (result.rowCount === 0) {
@@ -85,6 +85,7 @@ export class MessageUtils extends Utils {
                 sender_uid: result.rows[0].sender_uid,
                 receiver_uid: result.rows[0].receiver_uid,
                 content: result.rows[0].content,
+                nonce: result.rows[0].nonce,
                 timestamp: result.rows[0].timestamp
             };
 
@@ -128,7 +129,7 @@ export class MessageUtils extends Utils {
 
         try {
             const result = await this.dbSession.query(`
-            SELECT m.mid, m.sender_uid, m.receiver_uid, m.content, m.timestamp
+            SELECT m.mid, m.sender_uid, m.receiver_uid, m.content, m.nonce, m.timestamp
             FROM message m
             WHERE (m.sender_uid = $1 AND m.receiver_uid = $2) 
                OR (m.sender_uid = $2 AND m.receiver_uid = $1)
@@ -141,6 +142,7 @@ export class MessageUtils extends Utils {
                 sender_uid: row.sender_uid,
                 receiver_uid: row.receiver_uid,
                 content: row.content,
+                nonce: row.nonce,
                 timestamp: row.timestamp
             }));
 
