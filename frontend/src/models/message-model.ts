@@ -5,3 +5,17 @@ export interface IMessage {
     content: string;
     timestamp: Date;
 }
+
+export interface ConversationStore {
+    lastUpdated: string;
+    messages: IMessage[];
+}
+
+export interface UserMessagesStore {
+    [contactUserId: string]: ConversationStore;
+}
+
+export interface LocalMessagesStore {
+    [userId: string]: UserMessagesStore;
+}
+
