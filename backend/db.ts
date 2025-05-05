@@ -94,13 +94,16 @@ export class DbSession {
                     display_name VARCHAR(255),
                     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
                     shadow_mode BOOLEAN NOT NULL DEFAULT FALSE,
-                    full_name_search BOOLEAN NOT NULL DEFAULT FALSE
+                    full_name_search BOOLEAN NOT NULL DEFAULT FALSE,
+                    private_key VARCHAR(5000),
+                    public_key VARCHAR(5000)
                 )`,
                 `CREATE TABLE IF NOT EXISTS message (
                     mid SERIAL PRIMARY KEY,
                     sender_uid INTEGER NOT NULL,
                     receiver_uid INTEGER NOT NULL,
                     content TEXT NOT NULL,
+                    nonce VARCHAR(255) NOT NULL,
                     timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (sender_uid) REFERENCES account(uid),
                     FOREIGN KEY (receiver_uid) REFERENCES account(uid)

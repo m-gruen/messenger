@@ -6,6 +6,8 @@ export interface AuthenticatedUser {
     is_deleted?: boolean;
     shadow_mode?: boolean;
     full_name_search?: boolean;
+    private_key: string;
+    public_key: string;
     token: string;
 }
 
@@ -14,4 +16,5 @@ export interface User {
     username: string;
     display_name?: string;
     created_at: Date;
+    public_key: string;
 }

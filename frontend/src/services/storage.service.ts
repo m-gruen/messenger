@@ -26,6 +26,8 @@ export class StorageService {
             sessionStorage.setItem('user', JSON.stringify(user));
             sessionStorage.setItem('uid', String(user.uid));
             sessionStorage.setItem('username', user.username);
+            sessionStorage.setItem('private_key', user.private_key);
+            sessionStorage.setItem('public_key', user.public_key);
             if (user.created_at) {
                 sessionStorage.setItem('created_at', new Date(user.created_at).toISOString());
             }
@@ -72,13 +74,17 @@ export class StorageService {
                 const display_name = sessionStorage.getItem('display_name');
                 const shadow_mode_str = sessionStorage.getItem('shadow_mode');
                 const full_name_search_str = sessionStorage.getItem('full_name_search');
+                const private_key = sessionStorage.getItem('private_key');
+                const public_key = sessionStorage.getItem('public_key');
                 
-                if (uid && username && token) {
+                if (uid && username && token && private_key && public_key) {
                     user = {
                         uid: Number(uid),
                         username,
                         created_at: created_at ? new Date(created_at) : new Date(),
-                        token
+                        token,
+                        private_key,
+                        public_key
                     };
                     
                     if (display_name) {
@@ -122,6 +128,8 @@ export class StorageService {
         sessionStorage.removeItem('display_name');
         sessionStorage.removeItem('shadow_mode');
         sessionStorage.removeItem('full_name_search');
+        sessionStorage.removeItem('private_key');
+        sessionStorage.removeItem('public_key');
     }
 }
 

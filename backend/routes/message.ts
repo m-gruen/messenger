@@ -40,7 +40,7 @@ msgRouter.get('/:userId', authenticateToken, async (req: AuthenticatedRequest, r
 msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const userId = parseInt(req.params.userId);
     const receiverId = parseInt(req.params.receiverId);
-    const { content } = req.body;
+    const { content, nonce } = req.body;
 
     if (userId !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).send({
@@ -53,7 +53,7 @@ msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: Authentica
     try {
         const msgUtils = new MessageUtils(dbSession);
 
-        const response = await msgUtils.sendMessage(userId, receiverId, content);
+        const response = await msgUtils.sendMessage(userId, receiverId, content, nonce);
 
         await dbSession.complete(response.statusCode === StatusCodes.OK);
 

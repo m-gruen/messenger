@@ -4,6 +4,8 @@ import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 import { DateFormatService } from './date-format.service';
+import { storageService } from '@/services/storage.service';
+import sodium from 'libsodium-wrappers';
 
 export class ApiService {
     private baseUrl: string;
@@ -55,6 +57,79 @@ export class ApiService {
         return data as T;
     }
 
+    private async getSharedKeyClient(
+        client: { private_key: string, public_key: string },
+        server: { public_key: string }
+    ): Promise<sodium.CryptoKX> {
+        await sodium.ready;
+
+        const clientPrivateKey = sodium.from_base64(client.private_key, sodium.base64_variants.ORIGINAL);
+        const clientPublicKey = sodium.from_base64(client.public_key, sodium.base64_variants.ORIGINAL);
+        const serverPublicKey = sodium.from_base64(server.public_key, sodium.base64_variants.ORIGINAL);
+
+        return sodium.crypto_kx_client_session_keys(clientPublicKey, clientPrivateKey, serverPublicKey);
+    }
+
+    private async getSharedKeyServer(
+        client: { public_key: string },
+        server: { private_key: string, public_key: string }
+    ): Promise<sodium.CryptoKX> {
+        await sodium.ready;
+
+        const clientPublicKey = sodium.from_base64(client.public_key, sodium.base64_variants.ORIGINAL);
+        const serverPrivateKey = sodium.from_base64(server.private_key, sodium.base64_variants.ORIGINAL);
+        const serverPublicKey = sodium.from_base64(server.public_key, sodium.base64_variants.ORIGINAL);
+
+        return sodium.crypto_kx_server_session_keys(serverPublicKey, serverPrivateKey, clientPublicKey);
+    }
+
+    private async encryptMessage(
+        sender: { private_key: string, public_key: string },
+        receiver: { public_key: string },
+        content: string
+    ): Promise<{ encryptedContentBase64: string, nonceBase64: string }> {
+        await sodium.ready;
+
+        const sharedKey = await this.getSharedKeyClient(sender, receiver);
+        console.log(sharedKey);
+
+        const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
+        const encryptedContent = sodium.crypto_secretbox_easy(
+            sodium.from_string(content),
+            nonce,
+            sharedKey.sharedTx
+        );
+
+        return {
+            encryptedContentBase64: sodium.to_base64(encryptedContent, sodium.base64_variants.ORIGINAL),
+            nonceBase64: sodium.to_base64(nonce, sodium.base64_variants.ORIGINAL)
+        };
+    }
+
+    public async decryptMessage(
+        client: { public_key: string },
+        server: { private_key: string, public_key: string },
+        encryptedContentBase64: string,
+        nonceBase64: string,
+        isSender: boolean
+    ): Promise<string> {
+        await sodium.ready;
+
+        const sharedKey = isSender
+            ? await this.getSharedKeyClient(server, client)
+            : await this.getSharedKeyServer(client, server);
+
+        const encryptedContent = sodium.from_base64(encryptedContentBase64, sodium.base64_variants.ORIGINAL);
+        const nonce = sodium.from_base64(nonceBase64, sodium.base64_variants.ORIGINAL);
+
+        const decryptedContent = sodium.crypto_secretbox_open_easy(
+            encryptedContent,
+            nonce,
+            isSender ? sharedKey.sharedTx : sharedKey.sharedRx
+        );
+        return sodium.to_string(decryptedContent);
+    }
+
     /**
      * Login a user
      * @param username User's username
@@ -81,12 +156,19 @@ export class ApiService {
      * @returns User data with token
      */
     public async register(username: string, password: string, displayName?: string): Promise<AuthenticatedUser> {
+        await sodium.ready;
+        const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
+        const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
+        const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
+
         const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user`, {
             method: 'POST',
             body: JSON.stringify({
                 username,
                 password,
-                displayName
+                displayName,
+                publicKey,
+                privateKey
             })
         });
 
@@ -293,10 +375,29 @@ export class ApiService {
             method: 'GET'
         }, token);
 
-        return data.map((message: any) => ({
-            ...message,
-            timestamp: DateFormatService.createDateWithTimezone(message.timestamp)
-        }));
+        const server: User = await this.getUserById(receiverId, token);
+        const client: AuthenticatedUser | null = storageService.getUser();
+
+        if (!client) {
+            throw new Error('User not found in sessionStorage');
+        }
+
+        return await Promise.all(
+            data.map(async (message: any) => {
+                const decryptedContent = await this.decryptMessage(
+                    server,
+                    client,
+                    message.content,
+                    message.nonce,
+                    client.uid === message.sender_uid
+                );
+                return {
+                    ...message,
+                    content: decryptedContent,
+                    timestamp: DateFormatService.createDateWithTimezone(message.timestamp)
+                };
+            })
+        );
     }
 
     /**
@@ -308,10 +409,20 @@ export class ApiService {
      * @returns The sent message
      */
     public async sendMessage(senderId: number, receiverId: number, content: string, token: string): Promise<IMessage> {
+        const receiver: User = await this.getUserById(receiverId, token);
+        const sender: AuthenticatedUser | null = storageService.getUser();
+
+        if (!sender) {
+            throw new Error('User not found in sessionStorage');
+        }
+
+        const { encryptedContentBase64, nonceBase64 } = await this.encryptMessage(sender, receiver, content);
+
         const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
             method: 'POST',
             body: JSON.stringify({
-                content
+                content: encryptedContentBase64,
+                nonce: nonceBase64
             })
         }, token);
 
