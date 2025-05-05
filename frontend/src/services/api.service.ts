@@ -4,6 +4,7 @@ import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 import { DateFormatService } from './date-format.service';
+import { getDiffieHellman } from 'diffie-hellman';
 
 export class ApiService {
     private baseUrl: string;
@@ -81,12 +82,18 @@ export class ApiService {
      * @returns User data with token
      */
     public async register(username: string, password: string, displayName?: string): Promise<AuthenticatedUser> {
+        const diffieHellman = getDiffieHellman('modp16');
+        const publicKey = diffieHellman.generateKeys();
+        const privateKey = diffieHellman.getPrivateKey();
+
         const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user`, {
             method: 'POST',
             body: JSON.stringify({
                 username,
                 password,
-                displayName
+                displayName,
+                publicKey,
+                privateKey
             })
         });
 
