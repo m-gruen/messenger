@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onUnmounted, watchEffect } from 'vue'
 import type { IMessage } from '@/models/message-model'
-import { apiService } from '@/services/api.service'
+import { ApiService, apiService } from '@/services/api.service'
 import { StorageService, storageService } from '@/services/storage.service'
 import { websocketService } from '@/services/websocket.service'
+import { Contact } from '@/models/contact-model'
 
 export const useMessageStore = defineStore('messages', () => {
     // State
@@ -194,19 +195,23 @@ export const useMessageStore = defineStore('messages', () => {
         }
     }
 
-    async function storeMessagesOnDevice(userId: number, receiverId:number): Promise<boolean> {
+    async function storeMessagesOnDevice(userId: number): Promise<boolean> {
 
-        sendError.value = undefined;
+        const contactsId: Contact[] = await apiService.getContacts(userId,token.value);
 
         try {
-            storageService.storeMessages(await apiService.getMessages(userId,receiverId, token.value));
-            
-            
+            contactsId.forEach(async contact => {
+                const id = contact.contactUserId;
+                const messages = await apiService.getMessages(userId,id,token.value);
+                await storageService.storeMessages(messages);
+            });
         }
         catch(error) {
             console.error('Error sending Message', error)
             sendError.value = error instanceof Error ? error.message : 'Failed to send message'
             throw error
+        }finally{
+            return true;
         }
 
 

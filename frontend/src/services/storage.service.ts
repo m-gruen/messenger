@@ -1,5 +1,6 @@
 import type { AuthenticatedUser } from '@/models/user-model';
-import type { IMessage,IUserMessagesStore,IConversationStore,ILocalMessagesStore } from '@/models/message-model';
+import type { IMessage, IUserMessagesStore, IConversationStore, ILocalMessagesStore } from '@/models/message-model';
+
 
 export class StorageService {
     /**
@@ -15,10 +16,31 @@ export class StorageService {
         }
     }
 
-    public storeMessages(messages: IMessage[]): void {
-        messages.forEach(message => {
-            localStorage.setItem('local_message_store', JSON.stringify(message));
-        });
+    public storeMessages(IncomingMessages: IMessage[]): void {
+
+        if (IncomingMessages.length > 0) {
+
+            const userId: number = IncomingMessages.at(0)!.sender_uid;
+            const receiverId: number = IncomingMessages.at(0)!.receiver_uid;
+
+            const messageStore: IConversationStore = {
+                lastUpdated: Date.now().toString(),
+                messages: IncomingMessages
+            };
+            const receiverStore: IUserMessagesStore = {};
+            const userStore: ILocalMessagesStore = {};
+
+            receiverStore[receiverId] = messageStore;
+            userStore[userId] = receiverStore;
+
+            localStorage.setItem('local_message_storing', JSON.stringify(userStore));
+
+        }
+        else {
+            console.log("No Messages to Store")
+        }
+
+
     }
 
     /**
@@ -83,7 +105,7 @@ export class StorageService {
                 const full_name_search_str = sessionStorage.getItem('full_name_search');
                 const private_key = sessionStorage.getItem('private_key');
                 const public_key = sessionStorage.getItem('public_key');
-                
+
                 if (uid && username && token && private_key && public_key) {
                     user = {
                         uid: Number(uid),
@@ -93,7 +115,7 @@ export class StorageService {
                         private_key,
                         public_key
                     };
-                    
+
                     if (display_name) {
                         user.display_name = display_name;
                     }
