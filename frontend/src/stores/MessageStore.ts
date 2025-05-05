@@ -4,7 +4,7 @@ import type { IMessage } from '@/models/message-model'
 import { ApiService, apiService } from '@/services/api.service'
 import { StorageService, storageService } from '@/services/storage.service'
 import { websocketService } from '@/services/websocket.service'
-import { Contact } from '@/models/contact-model'
+import type { Contact } from '@/models/contact-model'
 
 export const useMessageStore = defineStore('messages', () => {
     // State
@@ -36,7 +36,7 @@ export const useMessageStore = defineStore('messages', () => {
 
             // Add to messages if not already present
             const messageExists = messages.value.some(m => m.mid === message.mid)
-                                  
+
             if (!messageExists) {
                 messages.value = [...messages.value, processedMessage].sort((a, b) => {
                     const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
@@ -197,27 +197,22 @@ export const useMessageStore = defineStore('messages', () => {
 
     async function storeMessagesOnDevice(userId: number): Promise<boolean> {
 
-        const contactsId: Contact[] = await apiService.getContacts(userId,token.value);
+        const contactsId: Contact[] = await apiService.getContacts(userId, token.value);
 
         try {
             contactsId.forEach(async contact => {
-                const id = contact.contactUserId;
-                const messages = await apiService.getMessages(userId,id,token.value);
+                const contactId = contact.contactUserId;
+                const messages = await apiService.getMessages(userId, contactId, token.value);
                 await storageService.storeMessages(messages);
             });
         }
-        catch(error) {
+        catch (error) {
             console.error('Error sending Message', error)
             sendError.value = error instanceof Error ? error.message : 'Failed to send message'
             throw error
-        }finally{
+        } finally {
             return true;
         }
-
-
-        return true;
-        
-    
     }
 
     /**
