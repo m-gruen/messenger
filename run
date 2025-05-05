@@ -13,8 +13,8 @@ shutdown() {
 trap shutdown INT
 
 # install npm modules
-[ ! -d "./backend/node_modules" ] && npm i --prefix ./backend > /dev/null
-[ ! -d "./frontend/node_modules" ] && npm i --prefix ./frontend > /dev/null
+npm ci --prefix ./backend > /dev/null
+npm ci --prefix ./frontend > /dev/null
 
 if ! docker volume ls | grep messenger_messengerdb > /dev/null; then
     docker volume create messenger_messengerdb > /dev/null
