@@ -4,7 +4,7 @@ import type { AuthenticatedUser, User } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 import type { Contact } from '@/models/contact-model';
 import { DateFormatService } from './date-format.service';
-import { getDiffieHellman } from 'diffie-hellman';
+import sodium from 'libsodium-wrappers';
 
 export class ApiService {
     private baseUrl: string;
@@ -82,9 +82,10 @@ export class ApiService {
      * @returns User data with token
      */
     public async register(username: string, password: string, displayName?: string): Promise<AuthenticatedUser> {
-        const diffieHellman = getDiffieHellman('modp16');
-        const publicKey = diffieHellman.generateKeys();
-        const privateKey = diffieHellman.getPrivateKey();
+        await sodium.ready;
+        const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
+        const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
+        const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
 
         const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user`, {
             method: 'POST',
