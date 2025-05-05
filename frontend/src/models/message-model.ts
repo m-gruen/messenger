@@ -6,16 +6,16 @@ export interface IMessage {
     timestamp: Date;
 }
 
-export interface ConversationStore {
+export interface IConversationStore {
     lastUpdated: string;
     messages: IMessage[];
 }
 
-export interface UserMessagesStore {
-    [contactUserId: string]: ConversationStore;
+export interface IUserMessagesStore {
+    [contactUserId: string]: IConversationStore;
 }
 
-export interface LocalMessagesStore {
-    [userId: string]: UserMessagesStore;
+export interface ILocalMessagesStore {
+    [userId: string]: IUserMessagesStore;
 }
 

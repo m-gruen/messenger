@@ -1,4 +1,5 @@
 import type { AuthenticatedUser } from '@/models/user-model';
+import type { IMessage,IUserMessagesStore,IConversationStore,ILocalMessagesStore } from '@/models/message-model';
 
 export class StorageService {
     /**
@@ -12,6 +13,12 @@ export class StorageService {
         } else {
             sessionStorage.setItem('token', token);
         }
+    }
+
+    public storeMessages(messages: IMessage[]): void {
+        messages.forEach(message => {
+            localStorage.setItem('local_message_store', JSON.stringify(message));
+        });
     }
 
     /**
