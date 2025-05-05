@@ -57,18 +57,30 @@ export class ApiService {
         return data as T;
     }
 
-    private async getSharedKey(
-        sender: { private_key: string, public_key: string },
-        receiver: { public_key: string }
-    ): Promise<Uint8Array<ArrayBufferLike>> {
+    private async getSharedKeyClient(
+        client: { private_key: string, public_key: string },
+        server: { public_key: string }
+    ): Promise<sodium.CryptoKX> {
         await sodium.ready;
 
-        const senderPrivateKey = sodium.from_base64(sender.private_key, sodium.base64_variants.ORIGINAL);
-        const senderPublicKey = sodium.from_base64(sender.public_key, sodium.base64_variants.ORIGINAL);
-        const receiverPublicKey = sodium.from_base64(receiver.public_key, sodium.base64_variants.ORIGINAL);
+        const clientPrivateKey = sodium.from_base64(client.private_key, sodium.base64_variants.ORIGINAL);
+        const clientPublicKey = sodium.from_base64(client.public_key, sodium.base64_variants.ORIGINAL);
+        const serverPublicKey = sodium.from_base64(server.public_key, sodium.base64_variants.ORIGINAL);
 
-        const { sharedTx: sharedKey } = sodium.crypto_kx_client_session_keys(senderPublicKey, senderPrivateKey, receiverPublicKey);
-        return sharedKey;
+        return sodium.crypto_kx_client_session_keys(clientPublicKey, clientPrivateKey, serverPublicKey);
+    }
+
+    private async getSharedKeyServer(
+        client: { public_key: string },
+        server: { private_key: string, public_key: string }
+    ): Promise<sodium.CryptoKX> {
+        await sodium.ready;
+
+        const clientPublicKey = sodium.from_base64(client.public_key, sodium.base64_variants.ORIGINAL);
+        const serverPrivateKey = sodium.from_base64(server.private_key, sodium.base64_variants.ORIGINAL);
+        const serverPublicKey = sodium.from_base64(server.public_key, sodium.base64_variants.ORIGINAL);
+
+        return sodium.crypto_kx_server_session_keys(serverPublicKey, serverPrivateKey, clientPublicKey);
     }
 
     private async encryptMessage(
@@ -78,10 +90,10 @@ export class ApiService {
     ): Promise<{ encryptedContentBase64: string, nonceBase64: string }> {
         await sodium.ready;
 
-        const sharedKey = await this.getSharedKey(sender, receiver);
+        const sharedKey = await this.getSharedKeyClient(sender, receiver);
 
         const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-        const encryptedContent = sodium.crypto_secretbox_easy(content, nonce, sharedKey);
+        const encryptedContent = sodium.crypto_secretbox_easy(content, nonce, sharedKey.sharedTx);
 
         return {
             encryptedContentBase64: sodium.to_base64(encryptedContent, sodium.base64_variants.ORIGINAL),
@@ -90,19 +102,19 @@ export class ApiService {
     }
 
     private async decryptMessage(
-        sender: { private_key: string, public_key: string },
-        receiver: { public_key: string },
+        sender: { public_key: string },
+        receiver: { private_key: string, public_key: string },
         encryptedContentBase64: string,
         nonceBase64: string
     ): Promise<string> {
         await sodium.ready;
 
-        const sharedKey = await this.getSharedKey(sender, receiver);
+        const sharedKey = await this.getSharedKeyServer(sender, receiver);
 
         const encryptedContent = sodium.from_base64(encryptedContentBase64, sodium.base64_variants.ORIGINAL);
         const nonce = sodium.from_base64(nonceBase64, sodium.base64_variants.ORIGINAL);
 
-        const decryptedContent = sodium.crypto_secretbox_open_easy(encryptedContent, nonce, sharedKey);
+        const decryptedContent = sodium.crypto_secretbox_open_easy(encryptedContent, nonce, sharedKey.sharedRx);
         return sodium.to_string(decryptedContent);
     }
 
@@ -351,10 +363,10 @@ export class ApiService {
             method: 'GET'
         }, token);
 
-        const receiver: User = await this.getUserById(receiverId, token);
-        const sender: AuthenticatedUser | null = storageService.getUser();
+        const sender: User = await this.getUserById(userId, token);
+        const receiver: AuthenticatedUser | null = storageService.getUser();
 
-        if (!sender) {
+        if (!receiver) {
             throw new Error('User not found in sessionStorage');
         }
 
