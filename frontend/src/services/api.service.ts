@@ -91,6 +91,7 @@ export class ApiService {
         await sodium.ready;
 
         const sharedKey = await this.getSharedKeyClient(sender, receiver);
+        console.log(sharedKey);
 
         const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
         const encryptedContent = sodium.crypto_secretbox_easy(
@@ -106,17 +107,17 @@ export class ApiService {
     }
 
     private async decryptMessage(
-        sender: { public_key: string },
-        receiver: { private_key: string, public_key: string },
+        client: { public_key: string },
+        server: { private_key: string, public_key: string },
         encryptedContentBase64: string,
         nonceBase64: string,
         isSender: boolean
     ): Promise<string> {
         await sodium.ready;
 
-        const sharedKey = await this.getSharedKeyServer(sender, receiver);
-        console.log(sender, receiver, isSender);
-        console.log('shared Key:', sharedKey);
+        const sharedKey = isSender
+            ? await this.getSharedKeyClient(server, client)
+            : await this.getSharedKeyServer(client, server);
 
         const encryptedContent = sodium.from_base64(encryptedContentBase64, sodium.base64_variants.ORIGINAL);
         const nonce = sodium.from_base64(nonceBase64, sodium.base64_variants.ORIGINAL);
@@ -124,7 +125,7 @@ export class ApiService {
         const decryptedContent = sodium.crypto_secretbox_open_easy(
             encryptedContent,
             nonce,
-            sharedKey.sharedRx
+            isSender ? sharedKey.sharedTx : sharedKey.sharedRx
         );
         return sodium.to_string(decryptedContent);
     }
@@ -374,21 +375,21 @@ export class ApiService {
             method: 'GET'
         }, token);
 
-        const sender: User = await this.getUserById(receiverId, token);
-        const receiver: AuthenticatedUser | null = storageService.getUser();
+        const server: User = await this.getUserById(receiverId, token);
+        const client: AuthenticatedUser | null = storageService.getUser();
 
-        if (!receiver) {
+        if (!client) {
             throw new Error('User not found in sessionStorage');
         }
 
         return await Promise.all(
             data.map(async (message: any) => {
                 const decryptedContent = await this.decryptMessage(
-                    sender,
-                    receiver,
+                    server,
+                    client,
                     message.content,
                     message.nonce,
-                    sender.uid === message.sender_uid
+                    client.uid === message.sender_uid
                 );
                 return {
                     ...message,
