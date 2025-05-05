@@ -93,7 +93,11 @@ export class ApiService {
         const sharedKey = await this.getSharedKeyClient(sender, receiver);
 
         const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-        const encryptedContent = sodium.crypto_secretbox_easy(content, nonce, sharedKey.sharedTx);
+        const encryptedContent = sodium.crypto_secretbox_easy(
+            sodium.from_string(content),
+            nonce,
+            sharedKey.sharedTx
+        );
 
         return {
             encryptedContentBase64: sodium.to_base64(encryptedContent, sodium.base64_variants.ORIGINAL),
@@ -105,16 +109,23 @@ export class ApiService {
         sender: { public_key: string },
         receiver: { private_key: string, public_key: string },
         encryptedContentBase64: string,
-        nonceBase64: string
+        nonceBase64: string,
+        isSender: boolean
     ): Promise<string> {
         await sodium.ready;
 
         const sharedKey = await this.getSharedKeyServer(sender, receiver);
+        console.log(sender, receiver, isSender);
+        console.log('shared Key:', sharedKey);
 
         const encryptedContent = sodium.from_base64(encryptedContentBase64, sodium.base64_variants.ORIGINAL);
         const nonce = sodium.from_base64(nonceBase64, sodium.base64_variants.ORIGINAL);
 
-        const decryptedContent = sodium.crypto_secretbox_open_easy(encryptedContent, nonce, sharedKey.sharedRx);
+        const decryptedContent = sodium.crypto_secretbox_open_easy(
+            encryptedContent,
+            nonce,
+            sharedKey.sharedRx
+        );
         return sodium.to_string(decryptedContent);
     }
 
@@ -363,7 +374,7 @@ export class ApiService {
             method: 'GET'
         }, token);
 
-        const sender: User = await this.getUserById(userId, token);
+        const sender: User = await this.getUserById(receiverId, token);
         const receiver: AuthenticatedUser | null = storageService.getUser();
 
         if (!receiver) {
@@ -376,7 +387,8 @@ export class ApiService {
                     sender,
                     receiver,
                     message.content,
-                    message.nonce
+                    message.nonce,
+                    sender.uid === message.sender_uid
                 );
                 return {
                     ...message,
