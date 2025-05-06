@@ -472,7 +472,7 @@ export class UserUtils extends Utils {
                 }
             }
 
-            if (displayName !== undefined && displayName !== null && !this.isValidString(displayName, 1, 100)) {
+            if (displayName !== undefined && displayName !== null && displayName !== '' && !this.isValidString(displayName, 0, 100)) {
                 return this.createErrorResponse(
                     StatusCodes.BAD_REQUEST,
                     'Display name must be a valid string between 1 and 100 characters'
