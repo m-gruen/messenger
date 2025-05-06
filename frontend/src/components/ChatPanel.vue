@@ -6,6 +6,7 @@ import ContactDetails from './ContactDetails.vue'
 import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
 import { useContactStore } from '@/stores/ContactStore'
+import { storageService } from '@/services/storage.service.ts'
 
 const props = defineProps({
   contact: {
@@ -86,6 +87,7 @@ function loadMessages() {
   if (props.contact && props.contact.contactUserId) {
     messageStore.clearMessages()
     messageStore.fetchMessages(props.contact.contactUserId)
+    messageStore.storeMessagesOnDevice(storageService.getUser()!.uid);
   }
 }
 

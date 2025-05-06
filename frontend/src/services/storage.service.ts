@@ -1,6 +1,5 @@
 import type { AuthenticatedUser } from '@/models/user-model';
-import type { IMessage, IUserMessagesStore, IConversationStore, ILocalMessagesStore } from '@/models/message-model';
-
+import type { IMessage, ILocalMessagesStore } from '@/models/message-model';
 
 export class StorageService {
     /**
@@ -18,56 +17,72 @@ export class StorageService {
 
     public storeMessages(IncomingMessages: IMessage[]): void {
         if (IncomingMessages.length === 0) {
-            console.log("No Messages to Store");
+            console.log("messages");
             return;
         }
 
         const userId: number = IncomingMessages[0].sender_uid;
         const receiverId: number = IncomingMessages[0].receiver_uid;
 
-        
         const userIdStr = userId.toString();
         const receiverIdStr = receiverId.toString();
 
-        const messageStore: IConversationStore = {
-            lastUpdated: Date.now().toString(),
-            messages: IncomingMessages
-        };
-
-        
         const existingMessagesStr = localStorage.getItem('local_message_storing');
-        let existingMessages: ILocalMessagesStore = {};
+        let existingMessages: any = { messages: {} };
 
         if (existingMessagesStr) {
             try {
-                existingMessages = JSON.parse(existingMessagesStr);
+                const parsed = JSON.parse(existingMessagesStr);
+                // Handle transition from old format to new format with "messages" as top level key
+                existingMessages = parsed.messages ? parsed : { messages: parsed };
             } catch (e) {
                 console.error('Error parsing existing messages:', e);
             }
         }
 
+        // Initialize message stores for both users if they don't exist
+        if (!existingMessages.messages[userIdStr]) {
+            existingMessages.messages[userIdStr] = {};
+        }
         
-        if (!existingMessages[userIdStr]) {
-            existingMessages[userIdStr] = {};
+        if (!existingMessages.messages[receiverIdStr]) {
+            existingMessages.messages[receiverIdStr] = {};
         }
 
-        
-        if (existingMessages[userIdStr][receiverIdStr]) {
-            
-            const existingMids = new Set(existingMessages[userIdStr][receiverIdStr].messages.map(msg => msg.mid));
+        // Update sender's message store
+        if (existingMessages.messages[userIdStr][receiverIdStr]) {
+            const existingMids = new Set(existingMessages.messages[userIdStr][receiverIdStr].messages.map(msg => msg.mid));
             const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
 
-            existingMessages[userIdStr][receiverIdStr].messages = [
-                ...existingMessages[userIdStr][receiverIdStr].messages,
+            existingMessages.messages[userIdStr][receiverIdStr].messages = [
+                ...existingMessages.messages[userIdStr][receiverIdStr].messages,
                 ...uniqueNewMessages
             ];
-            existingMessages[userIdStr][receiverIdStr].lastUpdated = Date.now().toString();
+            existingMessages.messages[userIdStr][receiverIdStr].lastUpdated = Date.now().toString();
         } else {
-            
-            existingMessages[userIdStr][receiverIdStr] = messageStore;
+            existingMessages.messages[userIdStr][receiverIdStr] = {
+                lastUpdated: Date.now().toString(),
+                messages: IncomingMessages
+            };
         }
 
-        
+        // Store the same messages for the receiver so they can be accessed from both sides
+        if (existingMessages.messages[receiverIdStr][userIdStr]) {
+            const existingMids = new Set(existingMessages.messages[receiverIdStr][userIdStr].messages.map(msg => msg.mid));
+            const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
+
+            existingMessages.messages[receiverIdStr][userIdStr].messages = [
+                ...existingMessages.messages[receiverIdStr][userIdStr].messages,
+                ...uniqueNewMessages
+            ];
+            existingMessages.messages[receiverIdStr][userIdStr].lastUpdated = Date.now().toString();
+        } else {
+            existingMessages.messages[receiverIdStr][userIdStr] = {
+                lastUpdated: Date.now().toString(),
+                messages: IncomingMessages
+            };
+        }
+
         localStorage.setItem('local_message_storing', JSON.stringify(existingMessages));
     }
 
@@ -88,12 +103,28 @@ export class StorageService {
         }
         
         try {
-            const existingMessages: ILocalMessagesStore = JSON.parse(existingMessagesStr);
+            const existingMessages: any = JSON.parse(existingMessagesStr);
             
+            // Get messages from both directions (user->contact and contact->user)
+            const userToContactMessages = existingMessages.messages[userIdStr]?.[contactIdStr]?.messages || [];
+            const contactToUserMessages = existingMessages.messages[contactIdStr]?.[userIdStr]?.messages || [];
             
-            if (existingMessages[userIdStr]?.[contactIdStr]?.messages) {
-                return existingMessages[userIdStr][contactIdStr].messages;
+            // Merge messages from both directions
+            if (userToContactMessages.length > 0 || contactToUserMessages.length > 0) {
+                // Combine messages and remove duplicates based on message ID
+                const allMessages = [...userToContactMessages, ...contactToUserMessages];
+                const uniqueMessages = Array.from(
+                    new Map(allMessages.map(msg => [msg.mid, msg])).values()
+                );
+                
+                // Sort messages by timestamp
+                return uniqueMessages.sort((a, b) => {
+                    const timeA = new Date(a.timestamp).getTime();
+                    const timeB = new Date(b.timestamp).getTime();
+                    return timeA - timeB;
+                });
             }
+            
             return [];
         } catch (e) {
             console.error('Error retrieving stored messages:', e);
