@@ -1,5 +1,5 @@
 import type { AuthenticatedUser } from '@/models/user-model';
-import type { IMessage, ILocalMessagesStore } from '@/models/message-model';
+import type { IMessage } from '@/models/message-model';
 
 export class StorageService {
     /**
