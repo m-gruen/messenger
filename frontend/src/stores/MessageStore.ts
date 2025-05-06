@@ -4,6 +4,7 @@ import type { IMessage } from '@/models/message-model'
 import { apiService } from '@/services/api.service'
 import { storageService } from '@/services/storage.service'
 import { websocketService } from '@/services/websocket.service'
+import { encryptionService } from '@/services/encryption.service'
 
 export const useMessageStore = defineStore('messages', () => {
     // State
@@ -60,11 +61,13 @@ export const useMessageStore = defineStore('messages', () => {
                                 const isSender = message.sender_uid === currentUserId.value;
 
                                 // Decrypt the message
-                                apiService.decryptMessage(
+                                encryptionService.decryptMessage(
                                     contactUser,
                                     currentUser,
-                                    processedMessage.content,
-                                    processedMessage.nonce,
+                                    {
+                                        encryptedContentBase64: processedMessage.content,
+                                        nonceBase64: processedMessage.nonce
+                                    },
                                     isSender
                                 ).then(decryptedContent => {
                                     // Create a new message object with decrypted content to maintain reactivity
@@ -245,11 +248,13 @@ export const useMessageStore = defineStore('messages', () => {
                 if (contactUser && currentUser) {
                     try {
                         // Decrypt the message (current user is the sender in this case)
-                        const decryptedContent = await apiService.decryptMessage(
+                        const decryptedContent = await encryptionService.decryptMessage(
                             contactUser,
                             currentUser,
-                            processedMessage.content,
-                            processedMessage.nonce,
+                            {
+                                encryptedContentBase64: processedMessage.content,
+                                nonceBase64: processedMessage.nonce
+                            },
                             true // Current user is the sender
                         )
 
