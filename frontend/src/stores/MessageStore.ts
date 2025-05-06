@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed, onUnmounted, watchEffect } from 'vue'
 import type { IMessage } from '@/models/message-model'
-import { apiService } from '@/services/api.service'
-import { storageService } from '@/services/storage.service'
+import { ApiService, apiService } from '@/services/api.service'
+import { StorageService, storageService } from '@/services/storage.service'
 import { websocketService } from '@/services/websocket.service'
 import { encryptionService } from '@/services/encryption.service'
+import type { Contact } from '@/models/contact-model'
 
 export const useMessageStore = defineStore('messages', () => {
     // State
@@ -30,14 +31,14 @@ export const useMessageStore = defineStore('messages', () => {
         if (activeContactId.value !== null &&
             ((message.sender_uid === currentUserId.value && message.receiver_uid === activeContactId.value) ||
                 (message.sender_uid === activeContactId.value && message.receiver_uid === currentUserId.value))) {
+        
+            // Process the message to ensure valid date
+            const processedMessage = ensureValidDate(message)
 
+            // Add to messages if not already present with a temporary "Decrypting..." message if needed
+            const messageExists = messages.value.some(m => m.mid === message.mid)
+            
             try {
-                // Process the message to ensure valid date
-                const processedMessage = ensureValidDate({ ...message })
-
-                // Add to messages if not already present with a temporary "Decrypting..." message if needed
-                const messageExists = messages.value.some(m => m.mid === message.mid)
-
                 if (!messageExists) {
                     if (message.content && message.nonce) {
                         // Store the message with a potentially encrypted content first
@@ -286,6 +287,30 @@ export const useMessageStore = defineStore('messages', () => {
         }
     }
 
+    async function storeMessagesOnDevice(userId: number): Promise<boolean> {
+        const contactsId: Contact[] = await apiService.getContacts(userId, token.value);
+        console.log('Storing messages for contacts:', contactsId);
+
+        try {
+
+            for (const contact of contactsId) {
+                const contactId = contact.contactUserId;
+                console.log(`Fetching messages for contact ${contactId}`);
+                const messages = await apiService.getMessages(userId, contactId, token.value);
+                
+                if (messages && messages.length > 0) {
+                    storageService.storeMessages(messages);
+                }
+            }
+            return true;
+        }
+        catch (error) {
+            console.error('Error storing messages:', error);
+            sendError.value = error instanceof Error ? error.message : 'Failed to store messages';
+            throw error;
+        }
+    }
+
     /**
      * Clear all messages and error state
      */
@@ -312,6 +337,7 @@ export const useMessageStore = defineStore('messages', () => {
         sendMessage,
         clearMessages,
         clearSendError,
+        storeMessagesOnDevice,
         currentUserId
     }
 })
