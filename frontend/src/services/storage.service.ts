@@ -33,14 +33,14 @@ export class StorageService {
         if (existingMessagesStr) {
             try {
                 const parsed = JSON.parse(existingMessagesStr);
-                // Handle transition from old format to new format with "messages" as top level key
+
                 existingMessages = parsed.messages ? parsed : { messages: parsed };
             } catch (e) {
                 console.error('Error parsing existing messages:', e);
             }
         }
 
-        // Initialize message stores for both users if they don't exist
+
         if (!existingMessages.messages[userIdStr]) {
             existingMessages.messages[userIdStr] = {};
         }
@@ -49,7 +49,7 @@ export class StorageService {
             existingMessages.messages[receiverIdStr] = {};
         }
 
-        // Update sender's message store
+
         if (existingMessages.messages[userIdStr][receiverIdStr]) {
             const existingMids = new Set(existingMessages.messages[userIdStr][receiverIdStr].messages.map(msg => msg.mid));
             const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
@@ -66,7 +66,6 @@ export class StorageService {
             };
         }
 
-        // Store the same messages for the receiver so they can be accessed from both sides
         if (existingMessages.messages[receiverIdStr][userIdStr]) {
             const existingMids = new Set(existingMessages.messages[receiverIdStr][userIdStr].messages.map(msg => msg.mid));
             const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
@@ -105,19 +104,16 @@ export class StorageService {
         try {
             const existingMessages: any = JSON.parse(existingMessagesStr);
             
-            // Get messages from both directions (user->contact and contact->user)
             const userToContactMessages = existingMessages.messages[userIdStr]?.[contactIdStr]?.messages || [];
             const contactToUserMessages = existingMessages.messages[contactIdStr]?.[userIdStr]?.messages || [];
             
-            // Merge messages from both directions
             if (userToContactMessages.length > 0 || contactToUserMessages.length > 0) {
-                // Combine messages and remove duplicates based on message ID
+
                 const allMessages = [...userToContactMessages, ...contactToUserMessages];
                 const uniqueMessages = Array.from(
                     new Map(allMessages.map(msg => [msg.mid, msg])).values()
                 );
                 
-                // Sort messages by timestamp
                 return uniqueMessages.sort((a, b) => {
                     const timeA = new Date(a.timestamp).getTime();
                     const timeB = new Date(b.timestamp).getTime();

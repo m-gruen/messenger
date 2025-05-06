@@ -185,7 +185,9 @@ function toggleContactDetails() {
 
 function goBack() {
   showChat.value = false
+  messageStore.storeMessagesOnDevice(storageService.getUser()!.uid);
   emit('close')
+  
 }
 
 // Helper function to check if contact is blocked
