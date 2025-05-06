@@ -51,7 +51,7 @@ export class StorageService {
 
 
         if (existingMessages.messages[userIdStr][receiverIdStr]) {
-            const existingMids = new Set(existingMessages.messages[userIdStr][receiverIdStr].messages.map(msg => msg.mid));
+            const existingMids = new Set(existingMessages.messages[userIdStr][receiverIdStr].messages.map((msg: IMessage) => msg.mid));
             const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
 
             existingMessages.messages[userIdStr][receiverIdStr].messages = [
@@ -67,7 +67,7 @@ export class StorageService {
         }
 
         if (existingMessages.messages[receiverIdStr][userIdStr]) {
-            const existingMids = new Set(existingMessages.messages[receiverIdStr][userIdStr].messages.map(msg => msg.mid));
+            const existingMids = new Set(existingMessages.messages[receiverIdStr][userIdStr].messages.map((msg: IMessage) => msg.mid));
             const uniqueNewMessages = IncomingMessages.filter(msg => !existingMids.has(msg.mid));
 
             existingMessages.messages[receiverIdStr][userIdStr].messages = [
@@ -111,7 +111,7 @@ export class StorageService {
 
                 const allMessages = [...userToContactMessages, ...contactToUserMessages];
                 const uniqueMessages = Array.from(
-                    new Map(allMessages.map(msg => [msg.mid, msg])).values()
+                    new Map(allMessages.map((msg: IMessage) => [msg.mid, msg])).values()
                 );
                 
                 return uniqueMessages.sort((a, b) => {
