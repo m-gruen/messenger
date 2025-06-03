@@ -79,7 +79,26 @@ export class ApiService {
             // If we have a stored private key for this user, add it to the response
             data.private_key = storedUser.private_key;
         } else {
-            console.warn('No private key found for user. You may need to reset your keys.');
+            console.warn('No private key found for user. Generating new key pair...');
+            // Generate new keypair for the user
+            await sodium.ready;
+            const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
+            const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
+            const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
+            
+            // Update public key on the server
+            try {
+                await this.fetchApi<void>(`${this.baseUrl}/user/${data.uid}/keys`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ publicKey })
+                }, data.token);
+                
+                // Add the private key to the data
+                data.private_key = privateKey;
+                data.public_key = publicKey;
+            } catch (error) {
+                console.error('Failed to update keys during login:', error);
+            }
         }
 
         return data;
@@ -328,29 +347,53 @@ export class ApiService {
         const client: AuthenticatedUser | null = storageService.getUser();
 
         if (!client) {
-            throw new Error('User not found in storage');
+            console.error('User not found in storage');
+            // Return messages with error indicators instead of throwing
+            return data.map(message => ({
+                ...message,
+                content: "⚠️ Cannot decrypt message: User authentication error.",
+                timestamp: DateFormatService.createDateWithTimezone(message.timestamp),
+                decryptionFailed: true
+            }));
         }
 
         if (!client.private_key) {
-            throw new Error('No private key found. Unable to decrypt messages.');
+            console.error('No private key found. Unable to decrypt messages.');
+            // Return messages with error indicators instead of throwing
+            return data.map(message => ({
+                ...message,
+                content: "⚠️ Cannot decrypt message: Private key is missing.",
+                timestamp: DateFormatService.createDateWithTimezone(message.timestamp),
+                decryptionFailed: true
+            }));
         }
 
         return await Promise.all(
             data.map(async (message: any) => {
-                const decryptedContent = await encryptionService.decryptMessage(
-                    server,
-                    client,
-                    {
-                        encryptedContentBase64: message.content,
-                        nonceBase64: message.nonce
-                    },
-                    client.uid === message.sender_uid
-                );
-                return {
-                    ...message,
-                    content: decryptedContent,
-                    timestamp: DateFormatService.createDateWithTimezone(message.timestamp)
-                };
+                try {
+                    const decryptedContent = await encryptionService.decryptMessage(
+                        server,
+                        client,
+                        {
+                            encryptedContentBase64: message.content,
+                            nonceBase64: message.nonce
+                        },
+                        client.uid === message.sender_uid
+                    );
+                    return {
+                        ...message,
+                        content: decryptedContent,
+                        timestamp: DateFormatService.createDateWithTimezone(message.timestamp)
+                    };
+                } catch (error) {
+                    console.error('Failed to decrypt message:', error);
+                    return {
+                        ...message,
+                        content: "⚠️ This message cannot be decrypted. The encryption key might have changed.",
+                        timestamp: DateFormatService.createDateWithTimezone(message.timestamp),
+                        decryptionFailed: true
+                    };
+                }
             })
         );
     }
@@ -372,23 +415,57 @@ export class ApiService {
         }
 
         if (!sender.private_key) {
-            throw new Error('No private key found. Unable to encrypt messages.');
+            // Instead of throwing, we'll log and send a special message
+            console.error('No private key found. Unable to encrypt messages.');
+            // Send an unencrypted message indicating the error
+            const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    content: "⚠️ Message could not be encrypted. Private key is missing.",
+                    nonce: "error"
+                })
+            }, token);
+            
+            return {
+                ...data,
+                content: "⚠️ Message could not be encrypted. Private key is missing.",
+                timestamp: DateFormatService.createDateWithTimezone(data.timestamp)
+            };
         }
 
-        const { encryptedContentBase64, nonceBase64 } = await encryptionService.encryptMessage(sender, receiver, content);
+        try {
+            const { encryptedContentBase64, nonceBase64 } = await encryptionService.encryptMessage(sender, receiver, content);
 
-        const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
-            method: 'POST',
-            body: JSON.stringify({
-                content: encryptedContentBase64,
-                nonce: nonceBase64
-            })
-        }, token);
+            const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    content: encryptedContentBase64,
+                    nonce: nonceBase64
+                })
+            }, token);
 
-        return {
-            ...data,
-            timestamp: DateFormatService.createDateWithTimezone(data.timestamp)
-        };
+            return {
+                ...data,
+                timestamp: DateFormatService.createDateWithTimezone(data.timestamp)
+            };
+        } catch (error) {
+            console.error('Failed to encrypt or send message:', error);
+            
+            // Send an unencrypted message indicating the error
+            const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    content: "⚠️ Message could not be encrypted. Encryption failed.",
+                    nonce: "error"
+                })
+            }, token);
+            
+            return {
+                ...data,
+                content: "⚠️ Message could not be encrypted. Encryption failed.",
+                timestamp: DateFormatService.createDateWithTimezone(data.timestamp)
+            };
+        }
     }
 
     /**

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
 import KeyRecovery from '@/components/KeyRecovery.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
@@ -28,6 +29,8 @@ const updateSuccess = ref<string | null>(null);
 const isEditingUsername = ref(false);
 const isEditingDisplayName = ref(false);
 const showPasswordModal = ref(false);
+const showLogoutConfirm = ref(false);
+const showDeleteDataConfirm = ref(false);
 
 // Track original values to detect changes
 const originalValues = ref({
@@ -240,16 +243,18 @@ function closePasswordModal() {
 }
 
 function logout() {
+  // Clear all data including messages
   storageService.clearAuth();
+  localStorage.removeItem('local_message_storing');
+  localStorage.clear(); // Clear everything else
   router.push('/login');
 }
 
-// Data deletion confirmation
-function confirmDataDeletion() {
-  if (confirm('Are you sure you want to delete all your data? This action cannot be undone.')) {
-    deleteUserData();
-  }
+function confirmLogout() {
+  showLogoutConfirm.value = true;
 }
+
+// We've replaced the use of this function with directly setting showDeleteDataConfirm = true
 
 // Delete user data
 async function deleteUserData() {
@@ -494,20 +499,36 @@ async function deleteUserData() {
                 <div class="text-gray-800 dark:text-gray-200">
                   Permanently delete all your messages and data. This action cannot be undone.
                 </div>
-              </div>
-              <Button variant="destructive" size="sm" @click="confirmDataDeletion">
-                Delete
-              </Button>
+              </div>              <Button variant="destructive" size="sm" @click="showDeleteDataConfirm = true">
+                  Delete
+                </Button>
             </div>
           </div>
         </div>
 
         <!-- Logout Button -->
         <div class="p-6">
-          <Button variant="destructive" @click="logout" class="w-full">
+          <Button variant="destructive" @click="confirmLogout" class="w-full">
             Log Out
           </Button>
         </div>
+        
+        <!-- Confirmation Dialogs -->
+        <ConfirmDialog 
+          v-model:show="showLogoutConfirm"
+          title="Confirm Logout"
+          message="Are you sure you want to log out? All local data including messages will be cleared from this device."
+          confirm-label="Logout"
+          @confirm="logout"
+        />
+        
+        <ConfirmDialog 
+          v-model:show="showDeleteDataConfirm"
+          title="Confirm Data Deletion"
+          message="Are you sure you want to delete all your data? This action cannot be undone."
+          confirm-label="Delete All Data"
+          @confirm="deleteUserData"
+        />
       </div>
     </div>
   </div>
