@@ -1,245 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
+import UserSettingsPage from '@/components/settings/UserSettingsPage.vue';
+import PrivacySettingsPage from '@/components/settings/PrivacySettingsPage.vue';
+import MessageStoragePage from '@/components/settings/MessageStoragePage.vue';
 import { apiService } from '@/services/api.service';
 import KeyRecovery from '@/components/KeyRecovery.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const router = useRouter();
-const user = ref(storageService.getUser());
-const token = storageService.getToken()!;
-const UserId = storageService.getUser()!.uid;
+const activeSection = ref('user'); // 'user', 'privacy', 'storage'
 
-// Form fields
-const username = ref(user.value?.username || '');
-const DisplayName = ref(user.value?.display_name || '');
-const currentPassword = ref('');
-const newPassword = ref('');
-const confirmPassword = ref('');
-const shadowMode = ref(user.value?.shadow_mode || false);
-const fullNameSearch = ref(user.value?.full_name_search || false);
-
-// UI state
-const isUpdating = ref(false);
-const updateError = ref<string | null>(null);
-const updateSuccess = ref<string | null>(null);
-const isEditingUsername = ref(false);
-const isEditingDisplayName = ref(false);
-const showPasswordModal = ref(false);
-const showLogoutConfirm = ref(false);
-const showDeleteDataConfirm = ref(false);
-
-// Track original values to detect changes
-const originalValues = ref({
-  username: user.value?.username || '',
-  displayName: user.value?.display_name || '',
-  shadowMode: user.value?.shadow_mode || false,
-  fullNameSearch: user.value?.full_name_search || false,
-});
-
-// Calculate if there are unsaved changes
-const hasUnsavedChanges = computed(() => {
-  return username.value !== originalValues.value.username ||
-    DisplayName.value !== originalValues.value.displayName ||
-    shadowMode.value !== originalValues.value.shadowMode ||
-    fullNameSearch.value !== originalValues.value.fullNameSearch;
-});
-
-// Get the profile initial (first letter of username or display name)
-const userInitial = computed(() => {
-  if (DisplayName.value && DisplayName.value.length > 0) {
-    return DisplayName.value[0].toUpperCase();
-  }
-  if (username.value && username.value.length > 0) {
-    return username.value[0].toUpperCase();
-  }
-  return '?';
-});
-
-// Generate a background color based on username for avatar
-const avatarBackground = computed(() => {
-  const colors = [
-    '#7289DA', // Discord blue
-    '#43B581', // Discord green
-    '#FAA61A', // Discord yellow
-    '#F04747', // Discord red
-    '#593695', // Discord purple
-  ];
-
-  if (!username.value) return colors[0];
-
-  // Simple hash function to get consistent color for a username
-  let hash = 0;
-  for (let i = 0; i < username.value.length; i++) {
-    hash = username.value.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-});
-
-function resetForm() {
-  username.value = originalValues.value.username;
-  DisplayName.value = originalValues.value.displayName;
-  shadowMode.value = originalValues.value.shadowMode;
-  fullNameSearch.value = originalValues.value.fullNameSearch;
-  currentPassword.value = '';
-  newPassword.value = '';
-  confirmPassword.value = '';
-  updateError.value = null;
-  updateSuccess.value = null;
-  isEditingUsername.value = false;
-  isEditingDisplayName.value = false;
-  showPasswordModal.value = false;
-}
-
-// Update when user data changes
-watch(user, (newUser) => {
-  if (newUser) {
-    username.value = newUser.username || '';
-    DisplayName.value = newUser.display_name || '';
-    shadowMode.value = newUser.shadow_mode || false;
-    fullNameSearch.value = newUser.full_name_search || false;
-
-    originalValues.value = {
-      username: newUser.username || '',
-      displayName: newUser.display_name || '',
-      shadowMode: newUser.shadow_mode || false,
-      fullNameSearch: newUser.full_name_search || false,
-    };
-  }
-}, { deep: true });
-
-async function updateProfile(): Promise<void> {
-  try {
-    isUpdating.value = true;
-    updateError.value = null;
-    updateSuccess.value = null;
-
-    // Handle other profile updates
-    if (hasProfileChanges()) {
-      const userData: any = {};
-
-      if (username.value && username.value !== user.value?.username) {
-        userData.username = username.value;
-      }
-
-      if (DisplayName.value !== user.value?.display_name) {
-        userData.displayName = DisplayName.value;
-      }
-
-      userData.shadowMode = shadowMode.value;
-      userData.fullNameSearch = fullNameSearch.value;
-
-      try {
-        const response = await apiService.updateUser(UserId, userData, token);
-
-        // Ensure we preserve the original token when updating storage
-        const updatedUser = {
-          ...response,
-          token: token // Make sure token is included in the user object
-        };
-
-        // Update both in-memory user reference and storage
-        storageService.storeUser(updatedUser);
-        user.value = updatedUser;
-
-        // Update original values
-        originalValues.value = {
-          username: updatedUser.username || '',
-          displayName: updatedUser.display_name || '',
-          shadowMode: updatedUser.shadow_mode || false,
-          fullNameSearch: updatedUser.full_name_search || false,
-        };
-
-        updateSuccess.value = "Profile updated successfully";
-      } catch (error: any) {
-        updateError.value = error.message || "Failed to update profile";
-        isUpdating.value = false;
-        return;
-      }
-    } else if (!updateSuccess.value) {
-      updateSuccess.value = "No changes to update";
-    }
-
-    isUpdating.value = false;
-    isEditingUsername.value = false;
-    isEditingDisplayName.value = false;
-  } catch (error: any) {
-    updateError.value = error.message || "An unexpected error occurred";
-    isUpdating.value = false;
-  }
-}
-
-async function updatePassword(): Promise<void> {
-  try {
-    if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-      updateError.value = "All password fields are required";
-      return;
-    }
-
-    if (newPassword.value !== confirmPassword.value) {
-      updateError.value = "New passwords don't match";
-      return;
-    }
-
-    isUpdating.value = true;
-    updateError.value = null;
-
-    try {
-      const passwordResponse = await apiService.updatePassword(
-        UserId,
-        currentPassword.value,
-        newPassword.value,
-        token
-      );
-
-      // Update user data and token after password change
-      storageService.storeUser(passwordResponse);
-      user.value = passwordResponse;
-
-      // Clear password fields
-      currentPassword.value = '';
-      newPassword.value = '';
-      confirmPassword.value = '';
-
-      updateSuccess.value = "Password updated successfully";
-      showPasswordModal.value = false;
-    } catch (error: any) {
-      updateError.value = error.message || "Failed to update password. Current password may be incorrect.";
-    } finally {
-      isUpdating.value = false;
-    }
-  } catch (error: any) {
-    updateError.value = error.message || "An unexpected error occurred";
-    isUpdating.value = false;
-  }
-}
-
-// Helper function to check if there are profile changes to update
-function hasProfileChanges(): boolean {
-  return (
-    (username.value && username.value !== originalValues.value.username) ||
-    DisplayName.value !== originalValues.value.displayName ||
-    shadowMode.value !== originalValues.value.shadowMode ||
-    fullNameSearch.value !== originalValues.value.fullNameSearch
-  );
-}
-
-function openPasswordModal() {
-  currentPassword.value = '';
-  newPassword.value = '';
-  confirmPassword.value = '';
-  showPasswordModal.value = true;
-}
-
-function closePasswordModal() {
-  currentPassword.value = '';
-  newPassword.value = '';
-  confirmPassword.value = '';
-  showPasswordModal.value = false;
+// Function to handle navigation between sections
+function navigateTo(section: string) {
+  activeSection.value = section;
 }
 
 function logout() {
@@ -281,94 +57,37 @@ async function deleteUserData() {
 </script>
 
 <template>
-  <div class="w-full bg-background">
-    <!-- Unsaved changes notification -->
-    <div v-if="hasUnsavedChanges"
-      class="fixed bottom-0 left-0 right-0 bg-gray-800 text-white p-4 flex justify-between items-center z-50">
-      <div>Careful — you have unsaved changes!</div>
-      <div class="space-x-3">
-        <Button variant="outline" @click="resetForm">Reset</Button>
-        <Button variant="default" class="bg-green-500 hover:bg-green-600" @click="updateProfile" :disabled="isUpdating">
-          <span v-if="isUpdating">Saving...</span>
-          <span v-else>Save Changes</span>
-        </Button>
-      </div>
-    </div>
-
-    <!-- Password Update Modal -->
-    <div v-if="showPasswordModal"
-      class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-      <div class="bg-gray-800 rounded-md max-w-md w-full relative">
-        <!-- Close button -->
-        <button @click="closePasswordModal" class="absolute top-4 right-4 text-gray-400 hover:text-white"
-          aria-label="Close">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5">
-            <path d="M18 6 6 18"></path>
-            <path d="m6 6 12 12"></path>
-          </svg>
+  <div class="w-full h-full flex">
+    <!-- Settings sidebar -->
+    <div class="w-64 bg-card border-r border-border flex flex-col h-full">
+      <!-- Navigation sections -->
+      <div class="overflow-y-auto flex-grow p-2">
+        <!-- User Settings -->
+        <button 
+          @click="navigateTo('user')" 
+          class="w-full text-left p-2 px-4 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors mb-1"
+          :class="{ 'bg-accent text-accent-foreground': activeSection === 'user' }"
+        >
+          <div class="font-medium">My Account</div>
         </button>
 
-        <div class="p-6">
-          <h2 class="text-xl font-bold text-white text-center">Update your password</h2>
-          <p class="text-gray-400 text-center mb-6">Enter your current password and a new password.</p>
+        <!-- Privacy Settings -->
+        <button 
+          @click="navigateTo('privacy')" 
+          class="w-full text-left p-2 px-4 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors mb-1"
+          :class="{ 'bg-accent text-accent-foreground': activeSection === 'privacy' }"
+        >
+          <div class="font-medium">Privacy Settings</div>
+        </button>
 
-          <!-- Error message -->
-          <div v-if="updateError" class="mb-4 p-3 bg-red-900/30 text-red-200 rounded-md text-sm">
-            {{ updateError }}
-          </div>
-
-          <form @submit.prevent="updatePassword" class="space-y-4">
-            <div>
-              <label for="current-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Current
-                Password</label>
-              <Input id="current-password-modal" v-model="currentPassword" type="password" placeholder=""
-                class="w-full bg-gray-700 border-gray-600 text-white" />
-            </div>
-
-            <div>
-              <label for="new-password-modal" class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
-              <Input id="new-password-modal" v-model="newPassword" type="password" placeholder=""
-                class="w-full bg-gray-700 border-gray-600 text-white" />
-            </div>
-
-            <div>
-              <label for="confirm-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Confirm New
-                Password</label>
-              <Input id="confirm-password-modal" v-model="confirmPassword" type="password" placeholder=""
-                class="w-full bg-gray-700 border-gray-600 text-white" />
-            </div>
-
-            <div class="flex justify-end gap-3 mt-6">
-              <Button variant="ghost" @click="closePasswordModal" class="text-white" type="button">
-                Cancel
-              </Button>
-              <Button variant="default" class="bg-indigo-500 hover:bg-indigo-600" :disabled="isUpdating" type="submit">
-                <span v-if="isUpdating">Updating...</span>
-                <span v-else>Done</span>
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <div class="max-w-3xl mx-auto pb-20">
-      <!-- User Profile Header -->
-      <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">
-        <div class="flex items-center gap-5">
-          <!-- User avatar -->
-          <div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-            :style="{ backgroundColor: avatarBackground }">
-            {{ userInitial }}
-          </div>
-
-          <!-- User info -->
-          <div class="flex-1">
-            <h1 class="text-2xl font-bold text-white">{{ DisplayName || username }}</h1>
-            <p class="text-indigo-200">@{{ username }}</p>
-          </div>
-        </div>
+        <!-- Message Storage Settings -->
+        <button 
+          @click="navigateTo('storage')" 
+          class="w-full text-left p-2 px-4 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+          :class="{ 'bg-accent text-accent-foreground': activeSection === 'storage' }"
+        >
+          <div class="font-medium">Message Storage</div>
+        </button>
       </div>
 
       <!-- Main settings container -->
@@ -482,68 +201,52 @@ async function deleteUserData() {
           </div>
         </div>
 
-        <!-- Encryption Key Management Section -->
+        <!-- Message Storage Settings Section -->
         <div class="p-6 border-b dark:border-gray-700">
-          <h2 class="text-xl font-medium mb-6 text-gray-800 dark:text-gray-200">ENCRYPTION KEYS</h2>
-          <KeyRecovery />
-        </div>
+          <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MESSAGE STORAGE</h2>
 
-        <!-- Data Settings Section -->
-        <div class="p-6 border-b dark:border-gray-700">
-          <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">DATA SETTINGS</h2>
+          <!-- Storage Type Selection -->
+          <div class="space-y-2">
+            <label for="storage-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message Storage
+              Type</label>
+            <select id="storage-type" v-model="storageType"
+              class="w-full rounded-md border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100">
+              <option value="ram">RAM Storage</option>
+              <option value="server">Server Storage</option>
+              <option value="file">File Storage</option>
+            </select>
 
-          <div>
-            <div class="flex justify-between items-center">
-              <div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Delete All Data</div>
-                <div class="text-gray-800 dark:text-gray-200">
-                  Permanently delete all your messages and data. This action cannot be undone.
-                </div>
-              </div>              <Button variant="destructive" size="sm" @click="showDeleteDataConfirm = true">
-                  Delete
-                </Button>
+            <!-- Description based on selection -->
+            <div
+              class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded border border-gray-200 dark:border-gray-600">
+              <p v-if="storageType === 'ram'">
+                RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option
+                but messages are not persistent.
+              </p>
+              <p v-else-if="storageType === 'server'">
+                Server Storage: Messages are stored securely on the server. Provides message history across devices but
+                requires server trust.
+              </p>
+              <p v-else-if="storageType === 'file'">
+                File Storage: Messages are stored locally in encrypted files. Offers persistence without server storage,
+                but only available on current device.
+              </p>
             </div>
           </div>
         </div>
 
         <!-- Logout Button -->
         <div class="p-6">
-          <Button variant="destructive" @click="confirmLogout" class="w-full">
+          <Button variant="destructive" @click="logout" class="w-full">
             Log Out
           </Button>
         </div>
-        
-        <!-- Confirmation Dialogs -->
-        <ConfirmDialog 
-          v-model:show="showLogoutConfirm"
-          title="Confirm Logout"
-          message="Are you sure you want to log out? All local data including messages will be cleared from this device."
-          confirm-label="Logout"
-          @confirm="logout"
-        />
-        
-        <ConfirmDialog 
-          v-model:show="showDeleteDataConfirm"
-          title="Confirm Data Deletion"
-          message="Are you sure you want to delete all your data? This action cannot be undone."
-          confirm-label="Delete All Data"
-          @confirm="deleteUserData"
-        />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.bg-green-500 {
-  background-color: #43B581;
-  /* Discord green */
-}
-
-/* Switch animation */
-.transform {
-  transition: transform 150ms ease-in-out;
-}
 
 /* Input field styling */
 input,
@@ -562,3 +265,4 @@ select {
   margin-top: 0;
 }
 </style>
+
