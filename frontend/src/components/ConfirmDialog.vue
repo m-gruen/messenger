@@ -63,20 +63,20 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-    <div ref="dialogRef" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full overflow-hidden">
+  <div v-if="show" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+    <div ref="dialogRef" class="bg-card rounded-lg shadow-xl max-w-md w-full overflow-hidden border border-border">
       <!-- Header -->
-      <div class="p-5 bg-indigo-600 dark:bg-indigo-800">
-        <h2 class="text-xl font-bold text-white">{{ title }}</h2>
+      <div class="p-5 border-b border-border">
+        <h2 class="text-xl font-bold text-foreground">{{ title }}</h2>
       </div>
       
       <!-- Content -->
       <div class="p-6">
-        <p class="text-gray-700 dark:text-gray-300">{{ message }}</p>
+        <p class="text-muted-foreground">{{ message }}</p>
       </div>
       
       <!-- Footer -->
-      <div class="p-4 bg-gray-100 dark:bg-gray-700 flex justify-end space-x-3">
+      <div class="p-4 border-t border-border flex justify-end space-x-3">
         <Button variant="outline" @click="handleCancel">{{ cancelLabel }}</Button>
         <Button :variant="confirmVariant" @click="handleConfirm">{{ confirmLabel }}</Button>
       </div>

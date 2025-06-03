@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
@@ -16,6 +17,8 @@ const fullNameSearch = ref(user.value?.full_name_search || false);
 const isUpdating = ref(false);
 const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
+const showDeleteMessagesConfirm = ref(false);
+const isDeletingMessages = ref(false);
 
 // Track original values to detect changes
 const originalValues = ref({
@@ -64,11 +67,8 @@ async function updatePrivacySettings(): Promise<void> {
           token: token // Make sure token is included in the user object
         };
 
-        // Check if the user originally used persistent storage (localStorage)
-        const isPersistent = localStorage.getItem('user') !== null;
-
-        // Update both in-memory user reference and persistent storage
-        storageService.storeUser(updatedUser, isPersistent);
+        // Update both in-memory user reference and storage
+        storageService.storeUser(updatedUser);
         user.value = updatedUser;
 
         // Update original values
@@ -99,6 +99,29 @@ function resetForm() {
   fullNameSearch.value = originalValues.value.fullNameSearch;
   updateError.value = null;
   updateSuccess.value = null;
+}
+
+// Function to handle delete messages confirmation
+function confirmDeleteMessages() {
+  showDeleteMessagesConfirm.value = true;
+}
+
+// Function to delete all messages
+async function deleteAllMessages() {
+  try {
+    isDeletingMessages.value = true;
+    updateError.value = null;
+    
+    // Clear all stored messages from localStorage
+    localStorage.removeItem('local_message_storing');
+    
+    // Show success message
+    updateSuccess.value = "All messages have been deleted successfully";
+  } catch (error: any) {
+    updateError.value = error.message || "Failed to delete messages";
+  } finally {
+    isDeletingMessages.value = false;
+  }
 }
 </script>
 
@@ -141,7 +164,7 @@ function resetForm() {
         </div>
 
         <!-- Full Name Search Toggle -->
-        <div class="flex justify-between items-start">
+        <div class="flex justify-between items-start mb-6">
           <div class="flex-1">
             <div class="font-medium text-gray-800 dark:text-gray-200">Enable Full Name Search</div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -156,6 +179,26 @@ function resetForm() {
             <div
               class="absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out"
               :class="{ 'translate-x-4': fullNameSearch }"></div>
+          </div>
+        </div>
+
+        <!-- Delete All Messages -->
+        <div class="mt-8 pt-6 border-t border-border">
+          <div class="flex justify-between items-start">
+            <div class="flex-1">
+              <div class="font-medium">Delete All Data</div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Permanently delete all your locally stored messages. This action cannot be undone.
+              </p>
+            </div>
+            <Button 
+              variant="destructive" 
+              @click="confirmDeleteMessages"
+              :disabled="isDeletingMessages"
+            >
+              <span v-if="isDeletingMessages">Deleting...</span>
+              <span v-else>Delete All Data</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -180,6 +223,16 @@ function resetForm() {
         </Button>
       </div>
     </div>
+
+    <!-- Confirm Dialog for Message Deletion -->
+    <ConfirmDialog 
+      v-model:show="showDeleteMessagesConfirm" 
+      title="Delete All Messages"
+      message="Are you sure you want to delete all your messages? This will permanently remove all locally stored messages and cannot be undone."
+      confirmLabel="Delete All"
+      confirmVariant="destructive"
+      @confirm="deleteAllMessages"
+    />
   </div>
 </template>
 

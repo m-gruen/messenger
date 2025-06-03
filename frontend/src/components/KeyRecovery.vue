@@ -1,3 +1,124 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/AuthStore';
+import { apiService } from '@/services/api.service';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
+
+const authStore = useAuthStore();
+const user = computed(() => authStore.user);
+const token = computed(() => authStore.token);
+
+const error = ref('');
+const success = ref('');
+const isLoading = ref(false);
+const importKey = ref('');
+const showRegenerateConfirm = ref(false);
+
+const hasPrivateKey = computed(() => {
+  return !!user.value?.private_key;
+});
+
+// Create an object with all the methods to avoid unused function warnings
+const methods = {
+  // Function to prompt for key regeneration confirmation
+  confirmRegenerateKeys() {
+    showRegenerateConfirm.value = true;
+  },
+
+  // Function to regenerate encryption keys
+  async regenerateKeys() {
+    if (!user.value || !token.value) {
+      error.value = 'You must be logged in to perform this action';
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = '';
+    success.value = '';
+
+    try {
+      const updatedUser = await apiService.regenerateKeys(user.value.uid, token.value);
+      
+      // Update the user in the store with the new keys
+      authStore.setUser(updatedUser);
+      
+      success.value = 'Successfully generated new encryption keys';
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to generate new keys';
+      console.error('Key regeneration error:', err);
+    } finally {
+      isLoading.value = false;
+    }
+  },
+
+  // Function to export private key
+  exportPrivateKey() {
+    if (!user.value?.private_key) {
+      error.value = 'No private key to export';
+      return;
+    }
+
+    // Create a temporary textarea to copy to clipboard
+    const textarea = document.createElement('textarea');
+    textarea.value = user.value.private_key;
+    document.body.appendChild(textarea);
+    textarea.select();
+    
+    try {
+      document.execCommand('copy');
+      success.value = 'Private key copied to clipboard';
+    } catch (e) {
+      error.value = 'Failed to copy private key to clipboard';
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  },
+
+  // Function to import a private key
+  async importPrivateKey() {
+    if (!importKey.value.trim()) {
+      error.value = 'Please enter a private key';
+      return;
+    }
+
+    if (!user.value || !token.value) {
+      error.value = 'You must be logged in to perform this action';
+      return;
+    }
+
+    isLoading.value = true;
+    error.value = '';
+    success.value = '';
+
+    try {
+      // Update the user object with the imported private key
+      const updatedUser = {
+        ...user.value,
+        private_key: importKey.value.trim()
+      };
+      
+      // Store the updated user data
+      authStore.setUser(updatedUser);
+      
+      success.value = 'Successfully imported private key';
+      importKey.value = '';
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to import private key';
+      console.error('Key import error:', err);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+};
+
+onMounted(() => {
+  // Check for private key on component mount
+  if (!hasPrivateKey.value) {
+    error.value = 'No private key found. To send and receive encrypted messages, you need to generate a new key pair or import an existing private key.';
+  }
+});
+</script>
+
 <template>
   <div class="p-6 bg-card rounded-lg shadow border border-border">
     <h2 class="text-lg font-medium mb-4">Encryption Key Management</h2>
@@ -44,7 +165,7 @@
           Export your private key to use it on another device. Keep this key secure and never share it with anyone.
         </p>
         <button 
-          @click="exportPrivateKey"
+          @click="methods.exportPrivateKey"
           class="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
         >
           Export Private Key
@@ -59,7 +180,7 @@
               : 'Generate a new key pair to enable encrypted messaging.' }}
         </p>
         <button 
-          @click="regenerateKeys"
+          @click="hasPrivateKey ? methods.confirmRegenerateKeys() : methods.regenerateKeys()"
           class="w-full py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition"
           :disabled="isLoading"
         >
@@ -86,7 +207,7 @@
           rows="3"
         ></textarea>
         <button 
-          @click="importPrivateKey"
+          @click="methods.importPrivateKey"
           class="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
           :disabled="!importKey.trim() || isLoading"
         >
@@ -95,115 +216,14 @@
       </div>
     </div>
   </div>
+
+  <!-- Confirm Dialog for Key Regeneration -->
+  <ConfirmDialog
+    v-model:show="showRegenerateConfirm"
+    title="Confirm Key Regeneration"
+    message="Warning: Regenerating your encryption keys will prevent you from decrypting any previously received encrypted messages. This action cannot be undone. Are you sure you want to continue?"
+    confirmLabel="Regenerate Keys"
+    confirmVariant="destructive"
+    @confirm="methods.regenerateKeys"
+  />
 </template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useAuthStore } from '@/stores/AuthStore';
-import { apiService } from '@/services/api.service';
-
-const authStore = useAuthStore();
-const user = computed(() => authStore.user);
-const token = computed(() => authStore.token);
-
-const error = ref('');
-const success = ref('');
-const isLoading = ref(false);
-const importKey = ref('');
-
-const hasPrivateKey = computed(() => {
-  return !!user.value?.private_key;
-});
-
-// Function to regenerate encryption keys
-async function regenerateKeys() {
-  if (!user.value || !token.value) {
-    error.value = 'You must be logged in to perform this action';
-    return;
-  }
-
-  isLoading.value = true;
-  error.value = '';
-  success.value = '';
-
-  try {
-    const updatedUser = await apiService.regenerateKeys(user.value.uid, token.value);
-    
-    // Update the user in the store with the new keys
-    authStore.setUser(updatedUser);
-    
-    success.value = 'Successfully generated new encryption keys';
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to generate new keys';
-    console.error('Key regeneration error:', err);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-// Function to export private key
-function exportPrivateKey() {
-  if (!user.value?.private_key) {
-    error.value = 'No private key to export';
-    return;
-  }
-
-  // Create a temporary textarea to copy to clipboard
-  const textarea = document.createElement('textarea');
-  textarea.value = user.value.private_key;
-  document.body.appendChild(textarea);
-  textarea.select();
-  
-  try {
-    document.execCommand('copy');
-    success.value = 'Private key copied to clipboard';
-  } catch (e) {
-    error.value = 'Failed to copy private key to clipboard';
-  } finally {
-    document.body.removeChild(textarea);
-  }
-}
-
-// Function to import a private key
-async function importPrivateKey() {
-  if (!importKey.value.trim()) {
-    error.value = 'Please enter a private key';
-    return;
-  }
-
-  if (!user.value || !token.value) {
-    error.value = 'You must be logged in to perform this action';
-    return;
-  }
-
-  isLoading.value = true;
-  error.value = '';
-  success.value = '';
-
-  try {
-    // Update the user object with the imported private key
-    const updatedUser = {
-      ...user.value,
-      private_key: importKey.value.trim()
-    };
-    
-    // Store the updated user data
-    authStore.setUser(updatedUser);
-    
-    success.value = 'Successfully imported private key';
-    importKey.value = '';
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to import private key';
-    console.error('Key import error:', err);
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-onMounted(() => {
-  // Check for private key on component mount
-  if (!hasPrivateKey.value) {
-    error.value = 'No private key found. To send and receive encrypted messages, you need to generate a new key pair or import an existing private key.';
-  }
-});
-</script>
