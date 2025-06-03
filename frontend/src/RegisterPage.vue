@@ -43,17 +43,7 @@
           />
         </div>
         
-        <div class="flex items-center">
-          <input
-            id="remember-me"
-            v-model="rememberMe"
-            type="checkbox"
-            class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-          />
-          <label for="remember-me" class="ml-2 block text-sm text-muted-foreground">
-            Remember me
-          </label>
-        </div>
+
         
         <div v-if="error" class="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
           {{ error }}
@@ -96,7 +86,6 @@ const password = ref('');
 const confirmPassword = ref('');
 const error = ref('');
 const isLoading = ref(false);
-const rememberMe = ref(false);
 
 async function handleRegister() {
   error.value = '';
@@ -115,8 +104,8 @@ async function handleRegister() {
   try {
     const user = await apiService.register(username.value, password.value);
     
-    authStore.setToken(user.token, rememberMe.value);
-    authStore.setUser(user, rememberMe.value);
+    authStore.setToken(user.token);
+    authStore.setUser(user);
 
     // Redirect to home page
     router.push('/');

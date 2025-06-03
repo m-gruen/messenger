@@ -307,7 +307,7 @@ export class ApiService {
         const client: AuthenticatedUser | null = storageService.getUser();
 
         if (!client) {
-            throw new Error('User not found in sessionStorage');
+            throw new Error('User not found in storage');
         }
 
         return await Promise.all(
@@ -343,7 +343,7 @@ export class ApiService {
         const sender: AuthenticatedUser | null = storageService.getUser();
 
         if (!sender) {
-            throw new Error('User not found in sessionStorage');
+            throw new Error('User not found in storage');
         }
 
         const { encryptedContentBase64, nonceBase64 } = await encryptionService.encryptMessage(sender, receiver, content);

@@ -145,11 +145,8 @@ async function updateProfile(): Promise<void> {
           token: token // Make sure token is included in the user object
         };
 
-        // Check if the user originally used persistent storage (localStorage)
-        const isPersistent = localStorage.getItem('user') !== null;
-
-        // Update both in-memory user reference and persistent storage
-        storageService.storeUser(updatedUser, isPersistent);
+        // Update both in-memory user reference and storage
+        storageService.storeUser(updatedUser);
         user.value = updatedUser;
 
         // Update original values

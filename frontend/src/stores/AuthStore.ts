@@ -16,14 +16,14 @@ export const useAuthStore = defineStore('auth', () => {
 
     const isAuthenticated = computed(() => !!token.value);
 
-    function setToken(newToken: string, remember: boolean = false) {
+    function setToken(newToken: string) {
         token.value = newToken;
-        storageService.storeToken(newToken, remember);
+        storageService.storeToken(newToken);
     }
 
-    function setUser(newUser: AuthenticatedUser, remember: boolean = false) {
+    function setUser(newUser: AuthenticatedUser) {
         user.value = newUser;
-        storageService.storeUser(newUser, remember);
+        storageService.storeUser(newUser);
     }
 
     function logout() {
