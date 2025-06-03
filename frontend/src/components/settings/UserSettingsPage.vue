@@ -1,0 +1,410 @@
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { storageService } from '@/services/storage.service';
+import { apiService } from '@/services/api.service';
+
+const user = ref(storageService.getUser());
+const token = storageService.getToken()!;
+const UserId = storageService.getUser()!.uid;
+
+// Form fields
+const username = ref(user.value?.username || '');
+const DisplayName = ref(user.value?.display_name || '');
+const currentPassword = ref('');
+const newPassword = ref('');
+const confirmPassword = ref('');
+
+// UI state
+const isUpdating = ref(false);
+const updateError = ref<string | null>(null);
+const updateSuccess = ref<string | null>(null);
+const isEditingUsername = ref(false);
+const isEditingDisplayName = ref(false);
+const showPasswordModal = ref(false);
+
+// Track original values to detect changes
+const originalValues = ref({
+    username: user.value?.username || '',
+    displayName: user.value?.display_name || '',
+});
+
+// Calculate if there are unsaved changes
+const hasUnsavedChanges = computed(() => {
+    return username.value !== originalValues.value.username ||
+        DisplayName.value !== originalValues.value.displayName;
+});
+
+// Get the profile initial (first letter of username or display name)
+const userInitial = computed(() => {
+    if (DisplayName.value && DisplayName.value.length > 0) {
+        return DisplayName.value[0].toUpperCase();
+    }
+    if (username.value && username.value.length > 0) {
+        return username.value[0].toUpperCase();
+    }
+    return '?';
+});
+
+// Generate a background color based on username for avatar
+const avatarBackground = computed(() => {
+    const colors = [
+        '#7289DA', // Discord blue
+        '#43B581', // Discord green
+        '#FAA61A', // Discord yellow
+        '#F04747', // Discord red
+        '#593695', // Discord purple
+    ];
+
+    if (!username.value) return colors[0];
+
+    // Simple hash function to get consistent color for a username
+    let hash = 0;
+    for (let i = 0; i < username.value.length; i++) {
+        hash = username.value.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    return colors[Math.abs(hash) % colors.length];
+});
+
+function resetForm() {
+    username.value = originalValues.value.username;
+    DisplayName.value = originalValues.value.displayName;
+    currentPassword.value = '';
+    newPassword.value = '';
+    confirmPassword.value = '';
+    updateError.value = null;
+    updateSuccess.value = null;
+    isEditingUsername.value = false;
+    isEditingDisplayName.value = false;
+    showPasswordModal.value = false;
+}
+
+// Update when user data changes
+watch(user, (newUser) => {
+    if (newUser) {
+        username.value = newUser.username || '';
+        DisplayName.value = newUser.display_name || '';
+
+        originalValues.value = {
+            username: newUser.username || '',
+            displayName: newUser.display_name || '',
+        };
+    }
+}, { deep: true });
+
+async function updateProfile(): Promise<void> {
+    try {
+        isUpdating.value = true;
+        updateError.value = null;
+        updateSuccess.value = null;
+
+        // Handle other profile updates
+        if (hasProfileChanges()) {
+            const userData: any = {};
+
+            if (username.value && username.value !== user.value?.username) {
+                userData.username = username.value;
+            }
+
+            if (DisplayName.value !== user.value?.display_name) {
+                userData.displayName = DisplayName.value;
+            }
+
+            try {
+                const response = await apiService.updateUser(UserId, userData, token);
+
+                // Ensure we preserve the original token when updating storage
+                const updatedUser = {
+                    ...response,
+                    token: token // Make sure token is included in the user object
+                };
+
+                // Check if the user originally used persistent storage (localStorage)
+                const isPersistent = localStorage.getItem('user') !== null;
+
+                // Update both in-memory user reference and persistent storage
+                storageService.storeUser(updatedUser, isPersistent);
+                user.value = updatedUser;
+
+                // Update original values
+                originalValues.value = {
+                    username: updatedUser.username || '',
+                    displayName: updatedUser.display_name || '',
+                };
+
+                updateSuccess.value = "Profile updated successfully";
+            } catch (error: any) {
+                updateError.value = error.message || "Failed to update profile";
+                isUpdating.value = false;
+                return;
+            }
+        } else if (!updateSuccess.value) {
+            updateSuccess.value = "No changes to update";
+        }
+
+        isUpdating.value = false;
+        isEditingUsername.value = false;
+        isEditingDisplayName.value = false;
+    } catch (error: any) {
+        updateError.value = error.message || "An unexpected error occurred";
+        isUpdating.value = false;
+    }
+}
+
+async function updatePassword(): Promise<void> {
+    try {
+        if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
+            updateError.value = "All password fields are required";
+            return;
+        }
+
+        if (newPassword.value !== confirmPassword.value) {
+            updateError.value = "New passwords don't match";
+            return;
+        }
+
+        isUpdating.value = true;
+        updateError.value = null;
+
+        try {
+            const passwordResponse = await apiService.updatePassword(
+                UserId,
+                currentPassword.value,
+                newPassword.value,
+                token
+            );
+
+            // Update user data and token after password change
+            storageService.storeUser(passwordResponse);
+            user.value = passwordResponse;
+
+            // Clear password fields
+            currentPassword.value = '';
+            newPassword.value = '';
+            confirmPassword.value = '';
+
+            updateSuccess.value = "Password updated successfully";
+            showPasswordModal.value = false;
+        } catch (error: any) {
+            updateError.value = error.message || "Failed to update password. Current password may be incorrect.";
+        } finally {
+            isUpdating.value = false;
+        }
+    } catch (error: any) {
+        updateError.value = error.message || "An unexpected error occurred";
+        isUpdating.value = false;
+    }
+}
+
+// Helper function to check if there are profile changes to update
+function hasProfileChanges(): boolean {
+    return (
+        (username.value && username.value !== originalValues.value.username) ||
+        DisplayName.value !== originalValues.value.displayName
+    );
+}
+
+function openPasswordModal() {
+    currentPassword.value = '';
+    newPassword.value = '';
+    confirmPassword.value = '';
+    showPasswordModal.value = true;
+}
+
+function closePasswordModal() {
+    currentPassword.value = '';
+    newPassword.value = '';
+    confirmPassword.value = '';
+    showPasswordModal.value = false;
+}
+</script>
+
+<template>
+    <div>
+        <!-- Password Update Modal -->
+        <div v-if="showPasswordModal"
+            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 rounded-md max-w-md w-full relative">
+                <!-- Close button -->
+                <button @click="closePasswordModal" class="absolute top-4 right-4 text-gray-400 hover:text-white"
+                    aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="h-5 w-5">
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-center">Update your password</h2>
+                    <p class="text-muted-foreground text-center mb-6">Enter your current password and a new password.
+                    </p>
+
+                    <!-- Error message -->
+                    <div v-if="updateError" class="mb-4 p-3 bg-red-900/30 text-red-200 rounded-md text-sm">
+                        {{ updateError }}
+                    </div>
+
+                    <form @submit.prevent="updatePassword" class="space-y-4">
+                        <div>
+                            <label for="current-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Current
+                                Password</label>
+                            <Input id="current-password-modal" v-model="currentPassword" type="password" placeholder=""
+                                class="w-full bg-gray-700 border-gray-600 text-white" />
+                        </div>
+
+                        <div>
+                            <label for="new-password-modal" class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
+                            <Input id="new-password-modal" v-model="newPassword" type="password" placeholder=""
+                                class="w-full bg-gray-700 border-gray-600 text-white" />
+                        </div>
+
+                        <div>
+                            <label for="confirm-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Confirm New
+                                Password</label>
+                            <Input id="confirm-password-modal" v-model="confirmPassword" type="password" placeholder=""
+                                class="w-full bg-gray-700 border-gray-600 text-white" />
+                        </div>
+
+                        <div class="flex justify-end gap-3 mt-6">
+                            <Button variant="outline" @click="closePasswordModal" type="button">
+                                Cancel
+                            </Button>
+                            <Button variant="default" :disabled="isUpdating" type="submit">
+                                <span v-if="isUpdating">Updating...</span>
+                                <span v-else>Done</span>
+                            </Button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="bg-card rounded-lg shadow-md">
+            <!-- Error/Success Messages -->
+            <div v-if="updateError" class="p-4 bg-destructive/10 text-destructive border-l-4 border-destructive">
+                {{ updateError }}
+            </div>
+            <div v-if="updateSuccess"
+                class="p-4 bg-green-100 dark:bg-green-900/10 text-green-800 dark:text-green-400 border-l-4 border-green-500">
+                {{ updateSuccess }}
+            </div>
+
+            <!-- User Profile Header -->
+            <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">
+                <div class="flex items-center gap-5">
+                    <!-- User avatar -->
+                    <div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
+                        :style="{ backgroundColor: avatarBackground }">
+                        {{ userInitial }}
+                    </div>
+
+                    <!-- User info -->
+                    <div class="flex-1">
+                        <h1 class="text-2xl font-bold text-white">{{ DisplayName || username }}</h1>
+                        <p class="text-indigo-200">@{{ username }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Account Section -->
+            <div class="p-6 border-b dark:border-gray-700">
+                <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MY ACCOUNT</h2>
+
+                <div class="space-y-6">
+                    <!-- Username -->
+                    <div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">Username</div>
+                                <div class="text-gray-800 dark:text-gray-200">{{ username }}</div>
+                            </div>
+                            <Button variant="ghost" size="sm" @click="isEditingUsername = !isEditingUsername">
+                                Edit
+                            </Button>
+                        </div>
+
+                        <!-- Inline username edit -->
+                        <div v-if="isEditingUsername" class="mt-3">
+                            <Input v-model="username" placeholder="Username" class="w-full border-2
+                            border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
+                        </div>
+                    </div>
+
+                    <!-- Display Name -->
+                    <div>
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">Display Name</div>
+                                <div class="text-gray-800 dark:text-gray-200">{{ DisplayName || "Not set" }}</div>
+                            </div>
+                            <Button variant="ghost" size="sm" @click="isEditingDisplayName = !isEditingDisplayName">
+                                Edit
+                            </Button>
+                        </div>
+
+                        <!-- Inline display name edit -->
+                        <div v-if="isEditingDisplayName" class="mt-3">
+                            <Input v-model="DisplayName" placeholder="Display Name" class="w-full border-2
+                            border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
+                        </div>
+                    </div>
+
+                    <!-- Password -->
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">Password</div>
+                            <div class="text-gray-800 dark:text-gray-200">••••••••••••</div>
+                        </div>
+                        <Button variant="ghost" size="sm" @click="openPasswordModal">
+                            Change Password
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save changes button -->
+            <div class="p-6 border-t border-border">
+                <Button variant="default" @click="updateProfile" :disabled="isUpdating || !hasUnsavedChanges">
+                    <span v-if="isUpdating">Saving...</span>
+                    <span v-else>Save Changes</span>
+                </Button>
+                <Button v-if="hasUnsavedChanges" variant="ghost" @click="resetForm" class="ml-2">
+                    Reset
+                </Button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.bg-green-500 {
+  background-color: #43B581;
+  /* Discord green */
+}
+
+/* Switch animation */
+.transform {
+  transition: transform 150ms ease-in-out;
+}
+
+/* Input field styling */
+input,
+select {
+  border-width: 2px !important;
+}
+
+.dark input,
+.dark select {
+  color: white !important;
+  background-color: #2D3748 !important;
+}
+
+/* Remove extra margins to prevent unexpected spacing */
+.max-w-3xl {
+  margin-top: 0;
+}
+</style>
