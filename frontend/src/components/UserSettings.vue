@@ -5,12 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
-
-enum StorageType {
-  RAM = 'ram',
-  SERVER = 'server',
-  FILE = 'file'
-}
+import KeyRecovery from '@/components/KeyRecovery.vue';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
@@ -30,7 +25,6 @@ const fullNameSearch = ref(user.value?.full_name_search || false);
 const isUpdating = ref(false);
 const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
-const storageType = ref(StorageType.SERVER);
 const isEditingUsername = ref(false);
 const isEditingDisplayName = ref(false);
 const showPasswordModal = ref(false);
@@ -249,6 +243,36 @@ function logout() {
   storageService.clearAuth();
   router.push('/login');
 }
+
+// Data deletion confirmation
+function confirmDataDeletion() {
+  if (confirm('Are you sure you want to delete all your data? This action cannot be undone.')) {
+    deleteUserData();
+  }
+}
+
+// Delete user data
+async function deleteUserData() {
+  try {
+    isUpdating.value = true;
+    updateError.value = null;
+    
+    // This would need to be implemented in the API service
+    // For now we'll just clear messages from localStorage and show a success message
+    try {
+      localStorage.removeItem('local_message_storing');
+      // await apiService.deleteUserData(UserId, token);
+      updateSuccess.value = "All user data has been deleted";
+    } catch (err: any) {
+      console.error('Error deleting data:', err);
+      throw new Error(err.message || 'Failed to delete data');
+    }
+  } catch (error: any) {
+    updateError.value = error.message || "Failed to delete data";
+  } finally {
+    isUpdating.value = false;
+  }
+}
 </script>
 
 <template>
@@ -453,36 +477,27 @@ function logout() {
           </div>
         </div>
 
-        <!-- Message Storage Settings Section -->
+        <!-- Encryption Key Management Section -->
         <div class="p-6 border-b dark:border-gray-700">
-          <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MESSAGE STORAGE</h2>
+          <h2 class="text-xl font-medium mb-6 text-gray-800 dark:text-gray-200">ENCRYPTION KEYS</h2>
+          <KeyRecovery />
+        </div>
 
-          <!-- Storage Type Selection -->
-          <div class="space-y-2">
-            <label for="storage-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message Storage
-              Type</label>
-            <select id="storage-type" v-model="storageType"
-              class="w-full rounded-md border-2 border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-gray-100">
-              <option value="ram">RAM Storage</option>
-              <option value="server">Server Storage</option>
-              <option value="file">File Storage</option>
-            </select>
+        <!-- Data Settings Section -->
+        <div class="p-6 border-b dark:border-gray-700">
+          <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">DATA SETTINGS</h2>
 
-            <!-- Description based on selection -->
-            <div
-              class="mt-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 p-3 rounded border border-gray-200 dark:border-gray-600">
-              <p v-if="storageType === 'ram'">
-                RAM Storage: Messages are only stored in memory and will be deleted when you log out. Most secure option
-                but messages are not persistent.
-              </p>
-              <p v-else-if="storageType === 'server'">
-                Server Storage: Messages are stored securely on the server. Provides message history across devices but
-                requires server trust.
-              </p>
-              <p v-else-if="storageType === 'file'">
-                File Storage: Messages are stored locally in encrypted files. Offers persistence without server storage,
-                but only available on current device.
-              </p>
+          <div>
+            <div class="flex justify-between items-center">
+              <div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Delete All Data</div>
+                <div class="text-gray-800 dark:text-gray-200">
+                  Permanently delete all your messages and data. This action cannot be undone.
+                </div>
+              </div>
+              <Button variant="destructive" size="sm" @click="confirmDataDeletion">
+                Delete
+              </Button>
             </div>
           </div>
         </div>

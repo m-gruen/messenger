@@ -58,7 +58,6 @@ export class UserUtils extends Utils {
     public async createUser(
         username: string,
         password: string,
-        privateKey: string,
         publicKey: string,
         displayName?: string,
         shadowMode: boolean | string = false,
@@ -121,10 +120,9 @@ export class UserUtils extends Utils {
                 display_name,
                 shadow_mode,
                 full_name_search,
-                private_key,
                 public_key
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7) 
+            VALUES ($1, $2, $3, $4, $5, $6) 
             RETURNING
                 uid,
                 username,
@@ -133,7 +131,6 @@ export class UserUtils extends Utils {
                 is_deleted,
                 shadow_mode,
                 full_name_search,
-                private_key,
                 public_key
             `,
                 [
@@ -142,7 +139,6 @@ export class UserUtils extends Utils {
                     displayName || null,
                     shadowModeValue,
                     fullNameSearchValue,
-                    privateKey,
                     publicKey
                 ]
             );
@@ -167,7 +163,6 @@ export class UserUtils extends Utils {
                 is_deleted: result.rows[0].is_deleted,
                 shadow_mode: result.rows[0].shadow_mode,
                 full_name_search: result.rows[0].full_name_search,
-                private_key: result.rows[0].private_key,
                 public_key: result.rows[0].public_key,
                 token: token
             };
@@ -285,7 +280,6 @@ export class UserUtils extends Utils {
                     is_deleted,
                     shadow_mode,
                     full_name_search,
-                    private_key,
                     public_key
                 FROM account 
                 WHERE username = $1`,
@@ -322,7 +316,6 @@ export class UserUtils extends Utils {
                 is_deleted: user.is_deleted,
                 shadow_mode: user.shadow_mode,
                 full_name_search: user.full_name_search,
-                private_key: user.private_key,
                 public_key: user.public_key,
                 token: token
             };
@@ -546,7 +539,6 @@ export class UserUtils extends Utils {
                 is_deleted,
                 shadow_mode,
                 full_name_search,
-                private_key,
                 public_key
             `;
             updateParams.push(uid);
@@ -575,7 +567,6 @@ export class UserUtils extends Utils {
                 is_deleted: user.is_deleted,
                 shadow_mode: user.shadow_mode,
                 full_name_search: user.full_name_search,
-                private_key: user.private_key,
                 public_key: user.public_key
             };
 
@@ -626,7 +617,6 @@ export class UserUtils extends Utils {
                     is_deleted,
                     shadow_mode,
                     full_name_search,
-                    private_key,
                     public_key
                 FROM account WHERE uid = $1 AND is_deleted = FALSE`,
                 [uid]
@@ -656,7 +646,7 @@ export class UserUtils extends Utils {
 
             const updateResult = await this.dbSession.query(
                 `UPDATE account SET password_hash = $2 WHERE uid = $1 
-                RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search`,
+                RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search, public_key`,
                 [uid, hashedNewPassword]
             );
 
@@ -681,7 +671,6 @@ export class UserUtils extends Utils {
                 is_deleted: updatedUser.is_deleted,
                 shadow_mode: updatedUser.shadow_mode,
                 full_name_search: updatedUser.full_name_search,
-                private_key: updatedUser.private_key,
                 public_key: updatedUser.public_key,
                 token: token
             };
@@ -744,6 +733,97 @@ export class UserUtils extends Utils {
             return this.createErrorResponse(
                 StatusCodes.INTERNAL_SERVER_ERROR,
                 'Failed to search for users'
+            );
+        }
+    }
+
+    /**
+     * Updates a user's public key
+     * @param uid The user ID to update
+     * @param publicKey The new public key
+     * @returns A UserResponse object containing statusCode, data, and optional error message
+     */
+    public async updatePublicKey(uid: number, publicKey: string): Promise<UserResponse> {
+        if (!this.isValidUserId(uid)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid user ID'
+            );
+        }
+
+        if (!this.isValidString(publicKey)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Valid public key is required'
+            );
+        }
+
+        try {
+            const userQuery = await this.dbSession.query(
+                `SELECT uid, is_deleted FROM account WHERE uid = $1`,
+                [uid]
+            );
+
+            if (userQuery.rowCount === 0) {
+                return this.createErrorResponse(
+                    StatusCodes.NOT_FOUND,
+                    'User not found'
+                );
+            }
+
+            if (userQuery.rows[0].is_deleted) {
+                return this.createErrorResponse(
+                    StatusCodes.FORBIDDEN,
+                    'Cannot update deleted user'
+                );
+            }
+
+            const result = await this.dbSession.query(`
+                UPDATE account 
+                SET public_key = $1
+                WHERE uid = $2
+                RETURNING
+                    uid,
+                    username,
+                    created_at,
+                    display_name,
+                    is_deleted,
+                    shadow_mode,
+                    full_name_search,
+                    public_key
+            `, [publicKey, uid]);
+
+            if (result.rowCount === 0) {
+                return this.createErrorResponse(
+                    StatusCodes.INTERNAL_SERVER_ERROR,
+                    'Failed to update public key'
+                );
+            }
+
+            const user = result.rows[0];
+            const token = JwtUtils.generateToken({
+                uid: user.uid,
+                username: user.username
+            });
+
+            const userData: AuthenticatedUser = {
+                uid: user.uid,
+                username: user.username,
+                created_at: user.created_at,
+                token: token,
+                display_name: user.display_name,
+                is_deleted: user.is_deleted,
+                shadow_mode: user.shadow_mode,
+                full_name_search: user.full_name_search,
+                public_key: user.public_key
+            };
+
+            return this.createSuccessResponse(userData);
+        } catch (error) {
+            console.error('Error updating public key:', error);
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'An unexpected error occurred while updating the public key.'
             );
         }
     }

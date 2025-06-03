@@ -128,6 +128,16 @@ export class StorageService {
      * @param user User data to store
      */
     public storeUser(user: AuthenticatedUser): void {
+        // If private_key is not provided (e.g. during login), try to retrieve from localStorage
+        if (!user.private_key) {
+            const storedUser = this.getUser();
+            if (storedUser && storedUser.private_key) {
+                user.private_key = storedUser.private_key;
+            } else {
+                console.error('Warning: No private key found for user. End-to-end encryption will not work.');
+            }
+        }
+        
         localStorage.setItem('user', JSON.stringify(user));
     }
 

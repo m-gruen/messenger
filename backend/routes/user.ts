@@ -7,7 +7,7 @@ import { AuthenticatedRequest, authenticateToken } from '../middleware/auth-midd
 export const userRouter = Router();
 
 userRouter.post('/', async (req: Request, res: Response) => {
-    const { username, password, displayName, shadowMode, fullNameSearch, privateKey, publicKey } = req.body;
+    const { username, password, displayName, shadowMode, fullNameSearch, publicKey } = req.body;
 
     let dbSession = await DbSession.create(false);
     try {
@@ -16,7 +16,6 @@ userRouter.post('/', async (req: Request, res: Response) => {
         const response: UserResponse = await userUtils.createUser(
             username, 
             password,
-            privateKey,
             publicKey,
             displayName,
             shadowMode,
@@ -227,6 +226,37 @@ userRouter.put('/:uid/password', authenticateToken, async (req: AuthenticatedReq
         await dbSession.complete(false);
         res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
             error: "An unexpected error occurred while updating password"
+        });
+    }
+});
+
+userRouter.put('/:uid/keys', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const uid = parseInt(req.params.uid);
+    const { publicKey } = req.body;
+
+    if (uid !== req.user?.uid) {
+        res.status(StatusCodes.FORBIDDEN).json({
+            error: 'You can only update your own keys'
+        });
+        return;
+    }
+
+    let dbSession = await DbSession.create(false);
+    try {
+        const userUtils = new UserUtils(dbSession);
+
+        const response: UserResponse = await userUtils.updatePublicKey(uid, publicKey);
+
+        await dbSession.complete(response.statusCode === StatusCodes.OK);
+        
+        res.status(response.statusCode).json(
+            response.data !== null ? response.data : { error: response.error }
+        );
+    } catch (error) {
+        console.error(error);
+        await dbSession.complete(false);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: "An unexpected error occurred while processing your request"
         });
     }
 });

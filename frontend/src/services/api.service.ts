@@ -73,6 +73,15 @@ export class ApiService {
             })
         });
 
+        // Look for a stored private key for this user
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (storedUser && storedUser.uid === data.uid && storedUser.private_key) {
+            // If we have a stored private key for this user, add it to the response
+            data.private_key = storedUser.private_key;
+        } else {
+            console.warn('No private key found for user. You may need to reset your keys.');
+        }
+
         return data;
     }
 
@@ -89,18 +98,30 @@ export class ApiService {
         const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
         const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
 
+        // Store private key locally before sending the request
+        localStorage.setItem('temp_private_key', privateKey);
+
         const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user`, {
             method: 'POST',
             body: JSON.stringify({
                 username,
                 password,
                 displayName,
-                publicKey,
-                privateKey
+                publicKey
+                // privateKey is not sent to the server
             })
         });
 
-        return data;
+        // Add private key to the user object after successful registration
+        const userWithPrivateKey: AuthenticatedUser = {
+            ...data,
+            private_key: privateKey
+        };
+
+        // Remove the temporary storage
+        localStorage.removeItem('temp_private_key');
+
+        return userWithPrivateKey;
     }
 
     /**
@@ -310,6 +331,10 @@ export class ApiService {
             throw new Error('User not found in storage');
         }
 
+        if (!client.private_key) {
+            throw new Error('No private key found. Unable to decrypt messages.');
+        }
+
         return await Promise.all(
             data.map(async (message: any) => {
                 const decryptedContent = await encryptionService.decryptMessage(
@@ -346,6 +371,10 @@ export class ApiService {
             throw new Error('User not found in storage');
         }
 
+        if (!sender.private_key) {
+            throw new Error('No private key found. Unable to encrypt messages.');
+        }
+
         const { encryptedContentBase64, nonceBase64 } = await encryptionService.encryptMessage(sender, receiver, content);
 
         const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
@@ -360,6 +389,37 @@ export class ApiService {
             ...data,
             timestamp: DateFormatService.createDateWithTimezone(data.timestamp)
         };
+    }
+
+    /**
+     * Generate new encryption keys and update user's public key on the server
+     * @param uid User ID
+     * @param token JWT token
+     * @returns Updated user data
+     */
+    public async regenerateKeys(uid: number, token: string): Promise<AuthenticatedUser> {
+        await sodium.ready;
+        
+        // Generate new keypair
+        const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
+        const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
+        const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
+        
+        // Update the public key on the server
+        const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user/${uid}/keys`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                publicKey
+            })
+        }, token);
+        
+        // Add the private key to the response for local storage
+        const updatedUser: AuthenticatedUser = {
+            ...data,
+            private_key: privateKey
+        };
+        
+        return updatedUser;
     }
 }
 

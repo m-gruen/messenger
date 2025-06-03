@@ -1,0 +1,209 @@
+<template>
+  <div class="p-6 bg-card rounded-lg shadow border border-border">
+    <h2 class="text-lg font-medium mb-4">Encryption Key Management</h2>
+    
+    <div v-if="error" class="mb-4 p-3 bg-destructive/10 text-destructive rounded-md">
+      {{ error }}
+    </div>
+
+    <div v-if="success" class="mb-4 p-3 bg-green-600/10 text-green-600 rounded-md">
+      {{ success }}
+    </div>
+
+    <div class="space-y-6">
+      <div>
+        <h3 class="font-medium mb-2">Private Key Status</h3>
+        <div class="p-3 rounded-md" :class="hasPrivateKey ? 'bg-green-600/10' : 'bg-amber-600/10'">
+          <p v-if="hasPrivateKey" class="text-green-600">
+            <span class="inline-flex items-center">
+              <svg class="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              Private key found
+            </span>
+          </p>
+          <p v-else class="text-amber-600">
+            <span class="inline-flex items-center">
+              <svg class="mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              No private key found
+            </span>
+          </p>
+          <p class="text-sm mt-2">
+            {{ hasPrivateKey 
+              ? 'Your private key is securely stored in your browser. You can send and receive encrypted messages.' 
+              : 'You need to generate a new key pair to send and receive encrypted messages.' }}
+          </p>
+        </div>
+      </div>
+
+      <div v-if="hasPrivateKey" class="space-y-3">
+        <h3 class="font-medium mb-2">Export Private Key</h3>
+        <p class="text-sm text-muted-foreground">
+          Export your private key to use it on another device. Keep this key secure and never share it with anyone.
+        </p>
+        <button 
+          @click="exportPrivateKey"
+          class="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+        >
+          Export Private Key
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="font-medium mb-2">{{ hasPrivateKey ? 'Regenerate' : 'Generate' }} Key Pair</h3>
+        <p class="text-sm text-muted-foreground">
+          {{ hasPrivateKey 
+              ? 'Warning: Regenerating your key pair will prevent you from decrypting any previously received messages.' 
+              : 'Generate a new key pair to enable encrypted messaging.' }}
+        </p>
+        <button 
+          @click="regenerateKeys"
+          class="w-full py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition"
+          :disabled="isLoading"
+        >
+          <span v-if="isLoading" class="flex items-center justify-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+          </span>
+          <span v-else>{{ hasPrivateKey ? 'Regenerate Key Pair' : 'Generate New Key Pair' }}</span>
+        </button>
+      </div>
+
+      <div v-if="!hasPrivateKey" class="space-y-3">
+        <h3 class="font-medium mb-2">Import Private Key</h3>
+        <p class="text-sm text-muted-foreground">
+          If you have a backup of your private key, you can import it here.
+        </p>
+        <textarea 
+          v-model="importKey" 
+          placeholder="Paste your private key here"
+          class="w-full p-3 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+          rows="3"
+        ></textarea>
+        <button 
+          @click="importPrivateKey"
+          class="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+          :disabled="!importKey.trim() || isLoading"
+        >
+          Import Key
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/AuthStore';
+import { apiService } from '@/services/api.service';
+
+const authStore = useAuthStore();
+const user = computed(() => authStore.user);
+const token = computed(() => authStore.token);
+
+const error = ref('');
+const success = ref('');
+const isLoading = ref(false);
+const importKey = ref('');
+
+const hasPrivateKey = computed(() => {
+  return !!user.value?.private_key;
+});
+
+// Function to regenerate encryption keys
+async function regenerateKeys() {
+  if (!user.value || !token.value) {
+    error.value = 'You must be logged in to perform this action';
+    return;
+  }
+
+  isLoading.value = true;
+  error.value = '';
+  success.value = '';
+
+  try {
+    const updatedUser = await apiService.regenerateKeys(user.value.uid, token.value);
+    
+    // Update the user in the store with the new keys
+    authStore.setUser(updatedUser);
+    
+    success.value = 'Successfully generated new encryption keys';
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to generate new keys';
+    console.error('Key regeneration error:', err);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+// Function to export private key
+function exportPrivateKey() {
+  if (!user.value?.private_key) {
+    error.value = 'No private key to export';
+    return;
+  }
+
+  // Create a temporary textarea to copy to clipboard
+  const textarea = document.createElement('textarea');
+  textarea.value = user.value.private_key;
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    success.value = 'Private key copied to clipboard';
+  } catch (e) {
+    error.value = 'Failed to copy private key to clipboard';
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+// Function to import a private key
+async function importPrivateKey() {
+  if (!importKey.value.trim()) {
+    error.value = 'Please enter a private key';
+    return;
+  }
+
+  if (!user.value || !token.value) {
+    error.value = 'You must be logged in to perform this action';
+    return;
+  }
+
+  isLoading.value = true;
+  error.value = '';
+  success.value = '';
+
+  try {
+    // Update the user object with the imported private key
+    const updatedUser = {
+      ...user.value,
+      private_key: importKey.value.trim()
+    };
+    
+    // Store the updated user data
+    authStore.setUser(updatedUser);
+    
+    success.value = 'Successfully imported private key';
+    importKey.value = '';
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to import private key';
+    console.error('Key import error:', err);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  // Check for private key on component mount
+  if (!hasPrivateKey.value) {
+    error.value = 'No private key found. To send and receive encrypted messages, you need to generate a new key pair or import an existing private key.';
+  }
+});
+</script>

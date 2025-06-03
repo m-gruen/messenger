@@ -2,7 +2,7 @@ import sodium from 'libsodium-wrappers';
 
 export interface IKeyPair {
     public_key: string;
-    private_key: string;
+    private_key?: string;
 }
 
 export interface IPublicKey {
@@ -28,6 +28,10 @@ export class EncryptionService {
 
     private async getSharedKeyClient(client: IKeyPair, server: IPublicKey): Promise<sodium.CryptoKX> {
         await sodium.ready;
+        
+        if (!client.private_key) {
+            throw new Error('Private key not available for client');
+        }
 
         return sodium.crypto_kx_client_session_keys(
             EncryptionService.from_base64(client.public_key),
@@ -39,6 +43,10 @@ export class EncryptionService {
     private async getSharedKeyServer(client: IPublicKey, server: IKeyPair): Promise<sodium.CryptoKX> {
         await sodium.ready;
 
+        if (!server.private_key) {
+            throw new Error('Private key not available for server');
+        }
+
         return sodium.crypto_kx_server_session_keys(
             EncryptionService.from_base64(server.public_key),
             EncryptionService.from_base64(server.private_key),
@@ -48,6 +56,10 @@ export class EncryptionService {
 
     public async encryptMessage(sender: IKeyPair, receiver: IPublicKey, content: string): Promise<IEncryptedMessage> {
         await sodium.ready;
+
+        if (!sender.private_key) {
+            throw new Error('Cannot encrypt message: Private key not found in sender data');
+        }
 
         const sharedKey = await this.getSharedKeyClient(sender, receiver);
 
@@ -71,6 +83,10 @@ export class EncryptionService {
         isSender: boolean
     ): Promise<string> {
         await sodium.ready;
+
+        if (!server.private_key) {
+            throw new Error('Cannot decrypt message: Private key not found in user data');
+        }
 
         const sharedKey = isSender
             ? await this.getSharedKeyClient(server, client)
