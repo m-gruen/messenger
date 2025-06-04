@@ -41,7 +41,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['back', 'toggle-details', 'send-message', 'clear-send-error'])
+const emit = defineEmits(['back', 'toggle-details', 'send-message', 'clear-send-error', 'load-more-messages'])
 
 // Automatically dismiss send error after 5 seconds
 watch(() => props.sendError, (error) => {
@@ -74,8 +74,14 @@ watch(() => props.sendError, (error) => {
     </div>
 
     <!-- Message List -->
-    <MessageList :messages="messages" :current-user-id="currentUserId" :is-loading="isLoadingMessages"
-      :error="messagesError" :contact-username="contact.username" />
+    <MessageList 
+      :messages="messages" 
+      :current-user-id="currentUserId" 
+      :is-loading="isLoadingMessages"
+      :error="messagesError" 
+      :contact-username="contact.username" 
+      @load-more-messages="emit('load-more-messages')"
+    />
 
     <!-- Message Input -->
     <MessageInput @send="content => emit('send-message', content)" />

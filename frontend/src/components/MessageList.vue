@@ -27,6 +27,9 @@ const props = defineProps({
   }
 })
 
+// Add emits for loading more messages
+const emit = defineEmits(['load-more-messages']);
+
 // Scroll tracking refs
 const messageListRef = ref<HTMLElement | null>(null);
 const isViewingOlderMessages = ref(false);
@@ -35,13 +38,30 @@ const scrollThreshold = 3000;
 // Add a new ref for smooth transitions
 const notificationOpacity = ref(0);
 
+// Track if we're at the top of the message list
+const isLoadingMore = ref(false);
+const loadMoreThreshold = 100; // px from top to trigger loading more
+
 // Enhanced scroll handler to create smooth transitions
 const handleScroll = () => {
   if (!messageListRef.value) return;
 
   const { scrollTop, scrollHeight, clientHeight } = messageListRef.value;
   const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+  const distanceFromTop = scrollTop;
 
+  // Check if we're at the top and should load more messages
+  if (distanceFromTop < loadMoreThreshold && !isLoadingMore.value && !props.isLoading) {
+    isLoadingMore.value = true;
+    emit('load-more-messages');
+    
+    // Reset after a reasonable timeout in case the load operation fails
+    setTimeout(() => {
+      isLoadingMore.value = false;
+    }, 3000);
+  }
+
+  // Check if we're viewing older messages
   if (distanceFromBottom > scrollThreshold) {
     // If we're beyond the threshold, start showing the notification
     isViewingOlderMessages.value = true;
@@ -49,9 +69,8 @@ const handleScroll = () => {
     const extraScroll = distanceFromBottom - scrollThreshold;
     notificationOpacity.value = Math.min(1, extraScroll / 100);
   } else {
-    // We're within threshold, immediately hide notification
-    notificationOpacity.value = 0;
     isViewingOlderMessages.value = false;
+    notificationOpacity.value = 0;
   }
 };
 

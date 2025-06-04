@@ -483,6 +483,20 @@ export class ApiService {
         
         return updatedUser;
     }
+
+    /**
+     * Mark messages as received and delete them from the server
+     * @param userId User ID of the receiver
+     * @param messageIds Array of message IDs to mark as received
+     * @param token JWT token
+     * @returns Result of the operation
+     */
+    public async markMessagesAsReceived(userId: number, messageIds: number[], token: string): Promise<{deleted: number}> {
+        return this.fetchApi<{deleted: number}>(`${this.baseUrl}/message/${userId}/received`, {
+            method: 'DELETE',
+            body: JSON.stringify({ messageIds })
+        }, token);
+    }
 }
 
 export const apiService = new ApiService();

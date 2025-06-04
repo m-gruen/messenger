@@ -83,11 +83,71 @@ watch(() => props.contact, (newContact) => {
   }
 })
 
+// Pagination variables for message loading
+const currentPage = ref(0)
+const messagesPerPage = ref(50)
+const totalPages = ref(0)
+const isLoadingMoreMessages = ref(false)
+
+// Method to load more messages when scrolling up
+const loadMoreMessages = async () => {
+  const totalPages = messageStore.totalMessagePages;
+  const currentPage = messageStore.currentMessagePage;
+  
+  if (currentPage >= totalPages - 1 || isLoadingMoreMessages.value) {
+    return;
+  }
+  
+  isLoadingMoreMessages.value = true;
+  
+  try {
+    // Load the next page of messages
+    await messageStore.loadPaginatedMessages(
+      props.contact.contactUserId, 
+      currentPage + 1, 
+      messagesPerPage.value
+    );
+  } catch (error) {
+    console.error('Error loading more messages:', error);
+  } finally {
+    isLoadingMoreMessages.value = false;
+  }
+};
+
+// Reset pagination when contact changes
+watch(() => props.contact.contactUserId, () => {
+  currentPage.value = 0;
+  totalPages.value = 0;
+});
+
+// Method to initialize pagination data
+const initMessagePagination = () => {
+  const userId = storageService.getUser()?.uid;
+  if (!userId) return;
+  
+  const paginationInfo = storageService.getMessagesForContactPaginated(
+    userId,
+    props.contact.contactUserId,
+    0,
+    messagesPerPage.value
+  );
+  
+  messageStore.setTotalMessagePages(paginationInfo.totalPages);
+};
+
+// Initialize pagination at mount time
+onMounted(() => {
+  if (props.contact && props.contact.contactUserId) {
+    initMessagePagination();
+  }
+});
+
 function loadMessages() {
   if (props.contact && props.contact.contactUserId) {
-    messageStore.clearMessages()
-    messageStore.fetchMessages(props.contact.contactUserId)
-    messageStore.storeMessagesOnDevice(storageService.getUser()!.uid);
+    messageStore.clearMessages();
+    // Use paginated loading instead of fetchMessages
+    messageStore.loadPaginatedMessages(props.contact.contactUserId, 0, messagesPerPage.value);
+    initMessagePagination();
   }
 }
 
@@ -185,9 +245,12 @@ function toggleContactDetails() {
 
 function goBack() {
   showChat.value = false
-  messageStore.storeMessagesOnDevice(storageService.getUser()!.uid);
+  // Optimize message storage when closing the chat
+  const userId = storageService.getUser()?.uid;
+  if (userId) {
+    messageStore.optimizeMessageStorage(userId, props.contact.contactUserId);
+  }
   emit('close')
-  
 }
 
 // Helper function to check if contact is blocked
@@ -202,7 +265,7 @@ function isContactBlocked(): boolean {
     <ChatInterface 
       :contact="contact"
       :messages="messageStore.messages"
-      :is-loading-messages="messageStore.isLoading"
+      :is-loading-messages="messageStore.isLoading || isLoadingMoreMessages"
       :messages-error="messageStore.error"
       :send-error="messageStore.sendError"
       :current-user-id="messageStore.currentUserId"
@@ -212,6 +275,7 @@ function isContactBlocked(): boolean {
       @toggle-details="toggleContactDetails"
       @send-message="sendMessage"
       @clear-send-error="messageStore.clearSendError"
+      @load-more-messages="loadMoreMessages"
     />
 
     <!-- Contact Details (positioned adjacent to chat instead of on top) -->

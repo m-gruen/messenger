@@ -6,11 +6,13 @@ import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
 import { useRouter } from 'vue-router';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useMessageStore } from '@/stores/MessageStore';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
+const messageStore = useMessageStore();
 
 // Form fields
 const username = ref(user.value?.username || '');
@@ -28,6 +30,9 @@ const isEditingUsername = ref(false);
 const isEditingDisplayName = ref(false);
 const showPasswordModal = ref(false);
 const showDeleteConfirmation = ref(false);
+const showClearMessagesConfirmation = ref(false);
+const isDownloadingMessages = ref(false);
+const isDeletingMessages = ref(false);
 
 // Track original values to detect changes
 const originalValues = ref({
@@ -213,8 +218,11 @@ async function deleteUserAccount(): Promise<void> {
             
             // Use setTimeout to allow the user to see the success message
             setTimeout(() => {
+                // Delete all local messages
+                messageStore.deleteAllMessages();
+                
                 // Clear authentication data
-                storageService.clearAuth();
+                storageService.clearAllUserData();
                 
                 // Redirect to login page
                 router.push({ name: 'login' });
@@ -255,8 +263,125 @@ function openDeleteConfirmation() {
     showDeleteConfirmation.value = true;
 }
 
-// The closeDeleteConfirmation function is no longer needed since we're using v-model:show
-// which automatically handles closing the dialog
+function openClearMessagesConfirmation() {
+    showClearMessagesConfirmation.value = true;
+}
+
+// Message storage management
+// Backup all messages to a JSON file
+async function backupMessages() {
+    if (isDownloadingMessages.value) return;
+    
+    isDownloadingMessages.value = true;
+    updateError.value = null;
+
+    try {
+        // First make sure we have all messages from the server
+        await messageStore.storeAllContactMessages(UserId);
+        
+        // Create a backup object with metadata
+        const backup = {
+            version: 1,
+            userId: UserId,
+            timestamp: new Date().toISOString(),
+            data: {} as Record<string, any>
+        };
+        
+        // Find all message storage keys in localStorage
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('messages_')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key) || '{}');
+                    backup.data[key] = data;
+                } catch (e) {
+                    console.error(`Failed to parse data for key ${key}`, e);
+                }
+            }
+        }
+        
+        // Create a downloadable file
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `messenger_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+        updateSuccess.value = "Messages backed up successfully";
+    } catch (error: any) {
+        updateError.value = error.message || "Failed to backup messages";
+    } finally {
+        isDownloadingMessages.value = false;
+    }
+}
+
+// Restore messages from a backup file
+async function restoreMessages(event: Event) {
+    if (isDownloadingMessages.value) return;
+    
+    const fileInput = event.target as HTMLInputElement;
+    if (!fileInput.files || fileInput.files.length === 0) {
+        return;
+    }
+    
+    isDownloadingMessages.value = true;
+    updateError.value = null;
+    
+    try {
+        const file = fileInput.files[0];
+        const text = await file.text();
+        const backup = JSON.parse(text);
+        
+        // Validate backup format
+        if (!backup.version || !backup.data) {
+            throw new Error("Invalid backup file format");
+        }
+        
+        // Restore data to localStorage
+        let restoredCount = 0;
+        for (const [key, value] of Object.entries(backup.data)) {
+            localStorage.setItem(key, JSON.stringify(value));
+            restoredCount++;
+        }
+        
+        updateSuccess.value = `Successfully restored backup with ${restoredCount} conversation(s)`;
+        
+        // Reset the file input
+        fileInput.value = '';
+    } catch (error: any) {
+        updateError.value = error.message || "Failed to restore backup";
+    } finally {
+        isDownloadingMessages.value = false;
+    }
+}
+
+// Clear all locally stored messages
+async function clearLocalMessages() {
+    if (isDeletingMessages.value) return;
+    
+    isDeletingMessages.value = true;
+    updateError.value = null;
+    showClearMessagesConfirmation.value = false;
+
+    try {
+        // Use our deleteAllMessages method from the MessageStore
+        messageStore.deleteAllMessages();
+        
+        updateSuccess.value = "All local messages deleted successfully";
+    } catch (error: any) {
+        updateError.value = error.message || "Failed to delete messages";
+    } finally {
+        isDeletingMessages.value = false;
+    }
+}
 </script>
 
 <template>
@@ -329,6 +454,16 @@ function openDeleteConfirmation() {
             confirmLabel="Delete Account"
             confirmVariant="destructive"
             @confirm="deleteUserAccount"
+        />
+        
+        <!-- Clear Messages Confirmation Dialog -->
+        <ConfirmDialog
+            v-model:show="showClearMessagesConfirmation"
+            title="Clear Messages"
+            message="Are you sure you want to delete all locally stored messages? This action cannot be undone."
+            confirmLabel="Delete Messages"
+            confirmVariant="destructive"
+            @confirm="clearLocalMessages"
         />
 
         <!-- Main content -->
@@ -431,6 +566,81 @@ function openDeleteConfirmation() {
                             <span v-if="isDeleting">Deleting...</span>
                             <span v-else>Delete Account</span>
                         </Button>
+                    </div>
+                </div>
+
+                <!-- Message Storage Management Section -->
+                <div class="mt-8 pt-6 border-t border-border">
+                    <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MESSAGE STORAGE</h2>
+                    
+                    <div class="space-y-6">
+                        <!-- Message Storage Info -->
+                        <div class="bg-blue-50 dark:bg-blue-900/20 p-3 text-sm rounded-md text-blue-800 dark:text-blue-300">
+                            <p class="mb-1 font-medium">End-to-End Encrypted Messages</p>
+                            <p>Messages are encrypted end-to-end and stored on your device. Messages are only kept on the server until they are delivered to your contact.</p>
+                        </div>
+
+                        <!-- Message Backup Button -->
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-800 dark:text-gray-200">Backup Messages</div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Export all your messages as a backup file that you can restore later.
+                                </p>
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                @click="backupMessages" 
+                                :disabled="isDownloadingMessages"
+                            >
+                                <span v-if="isDownloadingMessages">Backing up...</span>
+                                <span v-else>Backup</span>
+                            </Button>
+                        </div>
+
+                        <!-- Restore Messages Button -->
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-800 dark:text-gray-200">Restore Messages</div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Import messages from a previous backup.
+                                </p>
+                            </div>
+                            <label class="cursor-pointer">
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    class="hidden"
+                                    @change="restoreMessages"
+                                    :disabled="isDownloadingMessages"
+                                />
+                                <Button 
+                                    variant="outline" 
+                                    type="button"
+                                    :disabled="isDownloadingMessages"
+                                >
+                                    Restore
+                                </Button>
+                            </label>
+                        </div>
+
+                        <!-- Delete All Messages -->
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-800 dark:text-gray-200">Delete Message History</div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Permanently delete all message history from this device. This cannot be undone.
+                                </p>
+                            </div>
+                            <Button 
+                                variant="destructive" 
+                                @click="openClearMessagesConfirmation" 
+                                :disabled="isDeletingMessages"
+                            >
+                                <span v-if="isDeletingMessages">Deleting...</span>
+                                <span v-else>Delete All</span>
+                            </Button>
+                        </div>
                     </div>
                 </div>
             </div>
