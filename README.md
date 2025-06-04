@@ -40,7 +40,7 @@ The application is built using a client-server architecture:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/self-hosted-e2e-messenger.git
+   git clone https://github.com/2425-3AHIF-WMC/self-hosted-e2e-messenger.git
    cd self-hosted-e2e-messenger
    ```
 
@@ -58,7 +58,7 @@ The application is built using a client-server architecture:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/self-hosted-e2e-messenger.git
+   git clone https://github.com/2425-3AHIF-WMC/self-hosted-e2e-messenger.git
    cd self-hosted-e2e-messenger
    ```
 
@@ -115,4 +115,4 @@ The application is built using a client-server architecture:
 
 ## Security Considerations
 
-- The JWT secret should be a long, random string
+- The JWT secret should be a long, random string to ensure security. You could use this website to generate a secure key: [jwtsecret.com](https://jwtsecret.com/generate).
