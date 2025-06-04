@@ -413,6 +413,26 @@ function openDeleteConfirmation() {
                         </Button>
                     </div>
                 </div>
+                
+                <!-- Delete account section -->
+                <div class="mt-6">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800 dark:text-gray-200">Delete Account</div>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Permanently delete your account. This action cannot be undone.
+                            </p>
+                        </div>
+                        <Button 
+                            variant="destructive" 
+                            @click="openDeleteConfirmation" 
+                            :disabled="isDeleting"
+                        >
+                            <span v-if="isDeleting">Deleting...</span>
+                            <span v-else>Delete Account</span>
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             <!-- Save changes button -->
@@ -423,18 +443,6 @@ function openDeleteConfirmation() {
                 </Button>
                 <Button v-if="hasUnsavedChanges" variant="ghost" @click="resetForm" class="ml-2">
                     Reset
-                </Button>
-            </div>
-
-            <!-- Delete account section -->
-            <div class="p-6 border-t border-border">
-                <h2 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Delete Account</h2>
-                <p class="text-sm text-muted-foreground mb-4">
-                    Once you delete your account, there is no going back. Please be certain.
-                </p>
-                <Button variant="destructive" @click="openDeleteConfirmation" :disabled="isDeleting">
-                    <span v-if="isDeleting">Deleting...</span>
-                    <span v-else>Delete Account</span>
                 </Button>
             </div>
         </div>
