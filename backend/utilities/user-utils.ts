@@ -365,7 +365,8 @@ export class UserUtils extends Utils {
                 password_hash = $3,
                 created_at = TO_TIMESTAMP(0),
                 shadow_mode = FALSE,
-                full_name_search = FALSE
+                full_name_search = FALSE,
+                public_key = NULL
             WHERE uid = $1`,
                 [uid, deletedUsername, impossibleHash]
             );

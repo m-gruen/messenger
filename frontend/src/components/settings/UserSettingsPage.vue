@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
+import { useRouter } from 'vue-router';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
+const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
@@ -18,11 +21,13 @@ const confirmPassword = ref('');
 
 // UI state
 const isUpdating = ref(false);
+const isDeleting = ref(false);
 const updateError = ref<string | null>(null);
 const updateSuccess = ref<string | null>(null);
 const isEditingUsername = ref(false);
 const isEditingDisplayName = ref(false);
 const showPasswordModal = ref(false);
+const showDeleteConfirmation = ref(false);
 
 // Track original values to detect changes
 const originalValues = ref({
@@ -50,11 +55,11 @@ const userInitial = computed(() => {
 // Generate a background color based on username for avatar
 const avatarBackground = computed(() => {
     const colors = [
-        '#7289DA', // Discord blue
-        '#43B581', // Discord green
-        '#FAA61A', // Discord yellow
-        '#F04747', // Discord red
-        '#593695', // Discord purple
+        '#7289DA', // blue
+        '#43B581', // green
+        '#FAA61A', // yellow
+        '#F04747', // red
+        '#593695', // purple
     ];
 
     if (!username.value) return colors[0];
@@ -195,6 +200,35 @@ async function updatePassword(): Promise<void> {
     }
 }
 
+async function deleteUserAccount(): Promise<void> {
+    try {
+        isDeleting.value = true;
+        updateError.value = null;
+        showDeleteConfirmation.value = false;
+
+        try {
+            await apiService.deleteUser(UserId, token);
+            
+            updateSuccess.value = "Account deleted successfully. Redirecting...";
+            
+            // Use setTimeout to allow the user to see the success message
+            setTimeout(() => {
+                // Clear authentication data
+                storageService.clearAuth();
+                
+                // Redirect to login page
+                router.push({ name: 'login' });
+            }, 1500);
+        } catch (error: any) {
+            updateError.value = error.message || "Failed to delete account";
+            isDeleting.value = false;
+        }
+    } catch (error: any) {
+        updateError.value = error.message || "An unexpected error occurred";
+        isDeleting.value = false;
+    }
+}
+
 // Helper function to check if there are profile changes to update
 function hasProfileChanges(): boolean {
     return (
@@ -216,6 +250,13 @@ function closePasswordModal() {
     confirmPassword.value = '';
     showPasswordModal.value = false;
 }
+
+function openDeleteConfirmation() {
+    showDeleteConfirmation.value = true;
+}
+
+// The closeDeleteConfirmation function is no longer needed since we're using v-model:show
+// which automatically handles closing the dialog
 </script>
 
 <template>
@@ -223,9 +264,9 @@ function closePasswordModal() {
         <!-- Password Update Modal -->
         <div v-if="showPasswordModal"
             class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div class="bg-gray-800 rounded-md max-w-md w-full relative">
+            <div class="bg-card rounded-lg max-w-md w-full relative border border-border shadow-xl">
                 <!-- Close button -->
-                <button @click="closePasswordModal" class="absolute top-4 right-4 text-gray-400 hover:text-white"
+                <button @click="closePasswordModal" class="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
                     aria-label="Close">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -234,35 +275,36 @@ function closePasswordModal() {
                         <path d="m6 6 12 12"></path>
                     </svg>
                 </button>
+                
                 <div class="p-6">
                     <h2 class="text-xl font-bold text-center">Update your password</h2>
                     <p class="text-muted-foreground text-center mb-6">Enter your current password and a new password.
                     </p>
 
                     <!-- Error message -->
-                    <div v-if="updateError" class="mb-4 p-3 bg-red-900/30 text-red-200 rounded-md text-sm">
+                    <div v-if="updateError" class="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm border-l-4 border-destructive">
                         {{ updateError }}
                     </div>
 
                     <form @submit.prevent="updatePassword" class="space-y-4">
                         <div>
-                            <label for="current-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Current
+                            <label for="current-password-modal" class="block text-sm font-medium mb-1">Current
                                 Password</label>
                             <Input id="current-password-modal" v-model="currentPassword" type="password" placeholder=""
-                                class="w-full bg-gray-700 border-gray-600 text-white" />
+                                class="w-full" />
                         </div>
 
                         <div>
-                            <label for="new-password-modal" class="block text-sm font-medium text-gray-300 mb-1">New Password</label>
+                            <label for="new-password-modal" class="block text-sm font-medium mb-1">New Password</label>
                             <Input id="new-password-modal" v-model="newPassword" type="password" placeholder=""
-                                class="w-full bg-gray-700 border-gray-600 text-white" />
+                                class="w-full" />
                         </div>
 
                         <div>
-                            <label for="confirm-password-modal" class="block text-sm font-medium text-gray-300 mb-1">Confirm New
+                            <label for="confirm-password-modal" class="block text-sm font-medium mb-1">Confirm New
                                 Password</label>
                             <Input id="confirm-password-modal" v-model="confirmPassword" type="password" placeholder=""
-                                class="w-full bg-gray-700 border-gray-600 text-white" />
+                                class="w-full" />
                         </div>
 
                         <div class="flex justify-end gap-3 mt-6">
@@ -271,13 +313,23 @@ function closePasswordModal() {
                             </Button>
                             <Button variant="default" :disabled="isUpdating" type="submit">
                                 <span v-if="isUpdating">Updating...</span>
-                                <span v-else>Done</span>
+                                <span v-else>Update Password</span>
                             </Button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
+
+        <!-- Delete Confirmation Dialog -->
+        <ConfirmDialog
+            v-model:show="showDeleteConfirmation"
+            title="Delete Account"
+            message="Are you sure you want to delete your account? This action cannot be undone."
+            confirmLabel="Delete Account"
+            confirmVariant="destructive"
+            @confirm="deleteUserAccount"
+        />
 
         <!-- Main content -->
         <div class="bg-card rounded-lg shadow-md">
@@ -371,6 +423,18 @@ function closePasswordModal() {
                 </Button>
                 <Button v-if="hasUnsavedChanges" variant="ghost" @click="resetForm" class="ml-2">
                     Reset
+                </Button>
+            </div>
+
+            <!-- Delete account section -->
+            <div class="p-6 border-t border-border">
+                <h2 class="text-lg font-medium mb-4 text-gray-800 dark:text-gray-200">Delete Account</h2>
+                <p class="text-sm text-muted-foreground mb-4">
+                    Once you delete your account, there is no going back. Please be certain.
+                </p>
+                <Button variant="destructive" @click="openDeleteConfirmation" :disabled="isDeleting">
+                    <span v-if="isDeleting">Deleting...</span>
+                    <span v-else>Delete Account</span>
                 </Button>
             </div>
         </div>
