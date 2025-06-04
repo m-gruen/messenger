@@ -413,9 +413,240 @@ ul.byline {
 ul.byline li + li {
   margin-top: 0.25em;
 }
-</style><link rel="stylesheet" href="./font-awesome.css"></head><body><div class="reveal"><div class="slides"><section class="title" data-state="title" data-transition="zoom" data-transition-speed="fast"><h1>E2E Encrypted Messenger</h1></section><section><section id="_project_overview"><h2>Project Overview</h2></section><section id="_what_is_the_e2e_encrypted_messenger"><h2>What is the E2E Encrypted Messenger?</h2><div class="slide-content"><div class="paragraph"><p>A self-hosted messenger with end-to-end encryption that prioritizes privacy and security. The application offers:</p></div></div></section><section id="_features_of_e2e_encrypted_messenger"><h2>Features of E2E Encrypted Messenger</h2><div class="slide-content"><div class="ulist"><ul><li><p><strong>Complete end-to-end encryption</strong> of all message contents</p></li><li><p><strong>Self-hosting capability</strong> for full control over your data</p></li><li><p><strong>Modern web interface</strong> with responsive design</p></li><li><p><strong>Contact management system</strong> with friend requests</p></li><li><p><strong>Local message storage</strong> for offline access</p></li></ul></div></div></section></section>
+</style><link rel="stylesheet" href="./font-awesome.css"><style>
+pre.rouge table td { padding: 5px; }
+pre.rouge table pre { margin: 0; }
+pre.rouge, pre.rouge .w {
+  color: #24292f;
+  background-color: #f6f8fa;
+}
+pre.rouge .k, pre.rouge .kd, pre.rouge .kn, pre.rouge .kp, pre.rouge .kr, pre.rouge .kt, pre.rouge .kv {
+  color: #cf222e;
+}
+pre.rouge .gr {
+  color: #f6f8fa;
+}
+pre.rouge .gd {
+  color: #82071e;
+  background-color: #ffebe9;
+}
+pre.rouge .nb {
+  color: #953800;
+}
+pre.rouge .nc {
+  color: #953800;
+}
+pre.rouge .no {
+  color: #953800;
+}
+pre.rouge .nn {
+  color: #953800;
+}
+pre.rouge .sr {
+  color: #116329;
+}
+pre.rouge .na {
+  color: #116329;
+}
+pre.rouge .nt {
+  color: #116329;
+}
+pre.rouge .gi {
+  color: #116329;
+  background-color: #dafbe1;
+}
+pre.rouge .kc {
+  color: #0550ae;
+}
+pre.rouge .l, pre.rouge .ld, pre.rouge .m, pre.rouge .mb, pre.rouge .mf, pre.rouge .mh, pre.rouge .mi, pre.rouge .il, pre.rouge .mo, pre.rouge .mx {
+  color: #0550ae;
+}
+pre.rouge .sb {
+  color: #0550ae;
+}
+pre.rouge .bp {
+  color: #0550ae;
+}
+pre.rouge .ne {
+  color: #0550ae;
+}
+pre.rouge .nl {
+  color: #0550ae;
+}
+pre.rouge .py {
+  color: #0550ae;
+}
+pre.rouge .nv, pre.rouge .vc, pre.rouge .vg, pre.rouge .vi, pre.rouge .vm {
+  color: #0550ae;
+}
+pre.rouge .o, pre.rouge .ow {
+  color: #0550ae;
+}
+pre.rouge .gh {
+  color: #0550ae;
+  font-weight: bold;
+}
+pre.rouge .gu {
+  color: #0550ae;
+  font-weight: bold;
+}
+pre.rouge .s, pre.rouge .sa, pre.rouge .sc, pre.rouge .dl, pre.rouge .sd, pre.rouge .s2, pre.rouge .se, pre.rouge .sh, pre.rouge .sx, pre.rouge .s1, pre.rouge .ss {
+  color: #0a3069;
+}
+pre.rouge .nd {
+  color: #8250df;
+}
+pre.rouge .nf, pre.rouge .fm {
+  color: #8250df;
+}
+pre.rouge .err {
+  color: #f6f8fa;
+  background-color: #82071e;
+}
+pre.rouge .c, pre.rouge .ch, pre.rouge .cd, pre.rouge .cm, pre.rouge .cp, pre.rouge .cpf, pre.rouge .c1, pre.rouge .cs {
+  color: #6e7781;
+}
+pre.rouge .gl {
+  color: #6e7781;
+}
+pre.rouge .gt {
+  color: #6e7781;
+}
+pre.rouge .ni {
+  color: #24292f;
+}
+pre.rouge .si {
+  color: #24292f;
+}
+pre.rouge .ge {
+  color: #24292f;
+  font-style: italic;
+}
+pre.rouge .gs {
+  color: #24292f;
+  font-weight: bold;
+}
+</style></head><body><div class="reveal"><div class="slides"><section class="title" data-state="title" data-transition="zoom" data-transition-speed="fast"><h1>E2E Encrypted Messenger</h1></section><section><section id="_project_overview"><h2>Project Overview</h2></section><section id="_what_is_the_e2e_encrypted_messenger"><h2>What is the E2E Encrypted Messenger?</h2><div class="slide-content"><div class="paragraph"><p>A self-hosted messenger with end-to-end encryption that prioritizes privacy and security. The application offers:</p></div></div></section><section id="_features_of_e2e_encrypted_messenger"><h2>Features of E2E Encrypted Messenger</h2><div class="slide-content"><div class="ulist"><ul><li><p><strong>Complete end-to-end encryption</strong> of all message contents</p></li><li><p><strong>Self-hosting capability</strong> for full control over your data</p></li><li><p><strong>Modern web interface</strong> with responsive design</p></li><li><p><strong>Contact management system</strong> with friend requests</p></li><li><p><strong>Local message storage</strong> for offline access</p></li></ul></div></div></section></section>
 <section><section id="_technology_stack"><h2>Technology Stack</h2></section><section id="_frontend"><h2>Frontend</h2><div class="slide-content"><div class="ulist"><ul><li><p>Vue.js 3 with Composition API</p></li><li><p>TypeScript for type-safe development</p></li><li><p>Tailwind CSS for modern UI design</p></li><li><p>Vite as build tool and development server</p></li><li><p>WebSocket for real-time message transmission</p></li><li><p>libsodium for client-side cryptography</p></li></ul></div></div></section><section id="_backend"><h2>Backend</h2><div class="slide-content"><div class="ulist"><ul><li><p>Node.js with Express</p></li><li><p>TypeScript for type-safe API development</p></li><li><p>PostgreSQL for data storage</p></li><li><p>JWT for authentication</p></li><li><p>Docker for easy deployment and containerization</p></li></ul></div></div></section><section id="_architecture"><h2>Architecture</h2><div class="slide-content"><div class="paragraph"><p>The application follows a client-server architecture:</p></div>
 <div class="ulist"><ul><li><p><strong>Client (Frontend)</strong>: Encrypts messages before sending and decrypts received messages locally</p></li><li><p><strong>Server (Backend)</strong>: Stores only encrypted messages and forwards them to the correct recipients</p></li><li><p><strong>Database</strong>: Stores user accounts, contacts, and encrypted messages</p></li></ul></div></div></section><section id="_security_concept"><h2>Security Concept</h2><div class="slide-content"><div class="ulist"><ul><li><p><strong>Key exchange</strong>: Asymmetric encryption for secure key exchange</p></li><li><p><strong>Message encryption</strong>: Symmetric encryption for message contents</p></li><li><p><strong>Zero-knowledge</strong>: The server has no access to unencrypted message contents</p></li><li><p><strong>Local key storage</strong>: Private keys never leave the user&#8217;s device</p></li></ul></div></div></section></section>
+<section><section id="_code_highlights"><h2>Code Highlights</h2><div class="slide-content"><div class="paragraph"><p>Here are some key code samples that demonstrate the core functionality of our application:</p></div></div></section><section id="_end_to_end_encryption_implementation"><h2>End-to-End Encryption Implementation</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="rouge highlight"><code data-lang="typescript"><span class="c1">// From encryption.service.ts - Shows how messages are encrypted before sending</span>
+<span class="k">public</span> <span class="k">async</span> <span class="nf">encryptMessage</span><span class="p">(</span>
+    <span class="nx">sender</span><span class="p">:</span> <span class="nx">AuthenticatedUser</span><span class="p">,</span>
+    <span class="nx">receiver</span><span class="p">:</span> <span class="nx">User</span><span class="p">,</span>
+    <span class="nx">content</span><span class="p">:</span> <span class="kr">string</span>
+<span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">IEncryptedMessage</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="k">await</span> <span class="nx">sodium</span><span class="p">.</span><span class="nx">ready</span><span class="p">;</span>
+
+    <span class="c1">// Generate a shared secret using sender's private key and receiver's public key</span>
+    <span class="kd">const</span> <span class="nx">senderSecretKey</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">from_base64</span><span class="p">(</span><span class="nx">sender</span><span class="p">.</span><span class="nx">private_key</span><span class="p">,</span> <span class="nx">sodium</span><span class="p">.</span><span class="nx">base64_variants</span><span class="p">.</span><span class="nx">ORIGINAL</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">receiverPublicKey</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">from_base64</span><span class="p">(</span><span class="nx">receiver</span><span class="p">.</span><span class="nx">public_key</span><span class="p">,</span> <span class="nx">sodium</span><span class="p">.</span><span class="nx">base64_variants</span><span class="p">.</span><span class="nx">ORIGINAL</span><span class="p">);</span>
+
+    <span class="kd">const</span> <span class="nx">sharedSecret</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">crypto_box_beforenm</span><span class="p">(</span><span class="nx">receiverPublicKey</span><span class="p">,</span> <span class="nx">senderSecretKey</span><span class="p">);</span>
+
+    <span class="c1">// Generate a random nonce</span>
+    <span class="kd">const</span> <span class="nx">nonce</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">randombytes_buf</span><span class="p">(</span><span class="nx">sodium</span><span class="p">.</span><span class="nx">crypto_secretbox_NONCEBYTES</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">nonceBase64</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">to_base64</span><span class="p">(</span><span class="nx">nonce</span><span class="p">,</span> <span class="nx">sodium</span><span class="p">.</span><span class="nx">base64_variants</span><span class="p">.</span><span class="nx">ORIGINAL</span><span class="p">);</span>
+
+    <span class="c1">// Encrypt the message using the shared secret and nonce</span>
+    <span class="kd">const</span> <span class="nx">messageBytes</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">from_string</span><span class="p">(</span><span class="nx">content</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">encryptedMessage</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">crypto_secretbox_easy</span><span class="p">(</span><span class="nx">messageBytes</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">,</span> <span class="nx">sharedSecret</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">encryptedContentBase64</span> <span class="o">=</span> <span class="nx">sodium</span><span class="p">.</span><span class="nf">to_base64</span><span class="p">(</span><span class="nx">encryptedMessage</span><span class="p">,</span> <span class="nx">sodium</span><span class="p">.</span><span class="nx">base64_variants</span><span class="p">.</span><span class="nx">ORIGINAL</span><span class="p">);</span>
+
+    <span class="k">return</span> <span class="p">{</span> <span class="nx">encryptedContentBase64</span><span class="p">,</span> <span class="nx">nonceBase64</span> <span class="p">};</span>
+<span class="p">}</span></code></pre></div></div></div></section><section id="_message_handling_without_access_to_content"><h2>Message Handling Without Access to Content</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="rouge highlight"><code data-lang="typescript"><span class="c1">// From message-utils.ts - Shows how the server handles encrypted messages</span>
+<span class="k">async</span> <span class="nf">sendMessage</span><span class="p">(</span><span class="nx">sender_uid</span><span class="p">:</span> <span class="kr">number</span><span class="p">,</span> <span class="nx">receiver_uid</span><span class="p">:</span> <span class="kr">number</span><span class="p">,</span> <span class="nx">content</span><span class="p">:</span> <span class="kr">string</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">:</span> <span class="kr">string</span><span class="p">):</span> <span class="nb">Promise</span><span class="o">&lt;</span><span class="nx">BaseResponse</span><span class="o">&lt;</span><span class="nx">IMessage</span><span class="o">&gt;&gt;</span> <span class="p">{</span>
+    <span class="c1">// Perform validations (user exists, are contacts, not blocked, etc.)</span>
+
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="k">await</span> <span class="k">this</span><span class="p">.</span><span class="nx">dbSession</span><span class="p">.</span><span class="nf">query</span><span class="p">(</span><span class="s2">`
+        INSERT INTO message (sender_uid, receiver_uid, content, nonce)
+        VALUES ($1, $2, $3, $4)
+        RETURNING mid, sender_uid, receiver_uid, content, nonce, timestamp`</span><span class="p">,</span>
+            <span class="p">[</span><span class="nx">sender_uid</span><span class="p">,</span> <span class="nx">receiver_uid</span><span class="p">,</span> <span class="nx">content</span><span class="p">,</span> <span class="nx">nonce</span><span class="p">]</span>
+        <span class="p">);</span>
+
+        <span class="c1">// The server only stores and forwards the encrypted content</span>
+        <span class="c1">// It never has access to the plaintext message</span>
+        <span class="kd">const</span> <span class="na">message</span><span class="p">:</span> <span class="nx">IMessage</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="na">mid</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">mid</span><span class="p">,</span>
+            <span class="na">sender_uid</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">sender_uid</span><span class="p">,</span>
+            <span class="na">receiver_uid</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">receiver_uid</span><span class="p">,</span>
+            <span class="na">content</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">content</span><span class="p">,</span>
+            <span class="na">nonce</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">nonce</span><span class="p">,</span>
+            <span class="na">timestamp</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">timestamp</span>
+        <span class="p">};</span>
+
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nf">createSuccessResponse</span><span class="p">(</span><span class="nx">message</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">catch </span><span class="p">(</span><span class="nx">error</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Error sending message:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">error</span><span class="p">);</span>
+        <span class="k">return</span> <span class="k">this</span><span class="p">.</span><span class="nf">createErrorResponse</span><span class="p">(</span>
+            <span class="nx">StatusCodes</span><span class="p">.</span><span class="nx">INTERNAL_SERVER_ERROR</span><span class="p">,</span>
+            <span class="dl">'</span><span class="s1">Failed to send message.</span><span class="dl">'</span>
+        <span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></div></div></div></section><section id="_real_time_communication_with_websockets"><h2>Real-time Communication with WebSockets</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="rouge highlight"><code data-lang="typescript"><span class="c1">// From websocket.service.ts - Shows real-time message delivery</span>
+<span class="k">public</span> <span class="nf">connect</span><span class="p">(</span><span class="nx">userId</span><span class="p">:</span> <span class="kr">number</span><span class="p">,</span> <span class="nx">token</span><span class="p">:</span> <span class="kr">string</span><span class="p">):</span> <span class="k">void</span> <span class="p">{</span>
+    <span class="k">if </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">socket</span> <span class="o">&amp;&amp;</span> <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nx">connected</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">socket</span> <span class="o">=</span> <span class="nf">io</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">baseUrl</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">auth</span><span class="p">:</span> <span class="p">{</span> <span class="nx">token</span> <span class="p">},</span>
+        <span class="na">transports</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">websocket</span><span class="dl">'</span><span class="p">]</span>
+    <span class="p">});</span>
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nf">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">connect</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">'</span><span class="s1">WebSocket connected</span><span class="dl">'</span><span class="p">);</span>
+        <span class="c1">// Join a room specific to this user for receiving messages</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nf">emit</span><span class="p">(</span><span class="dl">'</span><span class="s1">join</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span> <span class="nx">userId</span> <span class="p">});</span>
+    <span class="p">});</span>
+
+    <span class="k">this</span><span class="p">.</span><span class="nx">socket</span><span class="p">.</span><span class="nf">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">new_message</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">message</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="c1">// Notify message handlers when a new message arrives</span>
+        <span class="k">this</span><span class="p">.</span><span class="nx">messageHandlers</span><span class="p">.</span><span class="nf">forEach</span><span class="p">(</span><span class="nx">handler</span> <span class="o">=&gt;</span> <span class="nf">handler</span><span class="p">(</span><span class="nx">message</span><span class="p">));</span>
+    <span class="p">});</span>
+
+    <span class="c1">// Error handling, reconnection logic, etc.</span>
+<span class="p">}</span></code></pre></div></div></div></section><section id="_local_message_storage_for_offline_access"><h2>Local Message Storage for Offline Access</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="rouge highlight"><code data-lang="typescript"><span class="c1">// From storage.service.ts - Shows local message storage capability</span>
+<span class="k">public</span> <span class="nf">storeMessages</span><span class="p">(</span><span class="nx">IncomingMessages</span><span class="p">:</span> <span class="nx">IMessage</span><span class="p">[]):</span> <span class="k">void</span> <span class="p">{</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">IncomingMessages</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">messages</span><span class="dl">"</span><span class="p">);</span>
+        <span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="kd">const</span> <span class="na">userId</span><span class="p">:</span> <span class="kr">number</span> <span class="o">=</span> <span class="nx">IncomingMessages</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">sender_uid</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="na">receiverId</span><span class="p">:</span> <span class="kr">number</span> <span class="o">=</span> <span class="nx">IncomingMessages</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nx">receiver_uid</span><span class="p">;</span>
+
+    <span class="kd">const</span> <span class="nx">existingMessagesStr</span> <span class="o">=</span> <span class="nx">localStorage</span><span class="p">.</span><span class="nf">getItem</span><span class="p">(</span><span class="dl">'</span><span class="s1">local_message_storing</span><span class="dl">'</span><span class="p">);</span>
+    <span class="kd">let</span> <span class="na">existingMessages</span><span class="p">:</span> <span class="kr">any</span> <span class="o">=</span> <span class="p">{</span> <span class="na">messages</span><span class="p">:</span> <span class="p">{}</span> <span class="p">};</span>
+
+    <span class="c1">// Process and merge with existing messages</span>
+    <span class="c1">// Store locally for offline access</span>
+
+    <span class="nx">localStorage</span><span class="p">.</span><span class="nf">setItem</span><span class="p">(</span><span class="dl">'</span><span class="s1">local_message_storing</span><span class="dl">'</span><span class="p">,</span> <span class="nx">JSON</span><span class="p">.</span><span class="nf">stringify</span><span class="p">(</span><span class="nx">existingMessages</span><span class="p">));</span>
+<span class="p">}</span></code></pre></div></div></div></section><section id="_contact_management_system"><h2>Contact Management System</h2><div class="slide-content"><div class="listingblock"><div class="content"><pre class="rouge highlight"><code data-lang="typescript"><span class="c1">// From ContactStore.ts - Shows the contact request system</span>
+<span class="k">async</span> <span class="kd">function</span> <span class="nf">sendContactRequest</span><span class="p">(</span><span class="nx">contactUserId</span><span class="p">:</span> <span class="kr">number</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">currentUserId</span><span class="p">.</span><span class="nx">value</span> <span class="o">||</span> <span class="o">!</span><span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nc">Error</span><span class="p">(</span><span class="dl">'</span><span class="s1">You must be logged in to send contact requests</span><span class="dl">'</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="nx">isLoading</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="nx">requestError</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="kc">undefined</span><span class="p">;</span>
+
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="k">await</span> <span class="nx">apiService</span><span class="p">.</span><span class="nf">addContact</span><span class="p">(</span><span class="nx">currentUserId</span><span class="p">.</span><span class="nx">value</span><span class="p">,</span> <span class="nx">contactUserId</span><span class="p">,</span> <span class="nx">token</span><span class="p">.</span><span class="nx">value</span><span class="p">);</span>
+
+        <span class="c1">// Update the contact lists after sending a request</span>
+        <span class="k">await</span> <span class="nf">fetchOutgoingContactRequests</span><span class="p">();</span>
+        <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">catch </span><span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">requestError</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">err</span> <span class="k">instanceof</span> <span class="nb">Error</span> <span class="p">?</span> <span class="nx">err</span><span class="p">.</span><span class="nx">message</span> <span class="p">:</span> <span class="dl">'</span><span class="s1">Failed to send contact request</span><span class="dl">'</span><span class="p">;</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="dl">'</span><span class="s1">Error sending contact request:</span><span class="dl">'</span><span class="p">,</span> <span class="nx">err</span><span class="p">);</span>
+        <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">finally</span> <span class="p">{</span>
+        <span class="nx">isLoading</span><span class="p">.</span><span class="nx">value</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre></div></div></div></section></section>
 <section id="_team_members"><h2>Team Members</h2><div class="slide-content"><div class="ulist"><ul><li><p><strong>Mark Grünzweil</strong> (<a href="https://github.com/m-gruen">GitHub</a>)</p></li><li><p><strong>Henry Ladstätter</strong> (<a href="https://github.com/HenryLad">GitHub</a>)</p></li><li><p><strong>Antonio Subašić</strong> (<a href="https://github.com/antoniosubasic">GitHub</a>)</p></li><li><p><strong>David Vrhovac</strong> (<a href="https://github.com/PlutoTinte06">GitHub</a>)</p></li></ul></div></div></section></div></div><script src="revealjs/dist/reveal.js"></script><script>Array.prototype.slice.call(document.querySelectorAll('.slides section')).forEach(function(slide) {
   if (slide.getAttribute('data-background-color')) return;
   // user needs to explicitly say he wants CSS color to override otherwise we might break custom css or theme (#226)
