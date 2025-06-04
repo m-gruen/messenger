@@ -65,7 +65,7 @@ function confirmLogout() {
       </div>
       
       <!-- Logout Button -->
-      <div class="p-2 mt-auto border-t border-border">
+      <div class="p-2 pb-8 mt-auto border-t border-border">
         <Button variant="destructive" @click="confirmLogout" class="w-full">
           Log Out
         </Button>
