@@ -6,7 +6,6 @@ import type { Contact } from '@/models/contact-model';
 import { DateFormatService } from './date-format.service';
 import { storageService } from '@/services/storage.service';
 import { encryptionService } from './encryption.service';
-import sodium from 'libsodium-wrappers';
 
 export class ApiService {
     private baseUrl: string;
@@ -73,27 +72,18 @@ export class ApiService {
             })
         });
 
-        // Look for a stored private key for this user
         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
         if (storedUser && storedUser.uid === data.uid && storedUser.private_key) {
-            // If we have a stored private key for this user, add it to the response
             data.private_key = storedUser.private_key;
         } else {
             console.warn('No private key found for user. Generating new key pair...');
-            // Generate new keypair for the user
-            await sodium.ready;
-            const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
-            const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
-            const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
-            
-            // Update public key on the server
+            const { publicKey, privateKey } = await encryptionService.generateKeyPair();
             try {
                 await this.fetchApi<void>(`${this.baseUrl}/user/${data.uid}/keys`, {
                     method: 'PUT',
                     body: JSON.stringify({ publicKey })
                 }, data.token);
                 
-                // Add the private key to the data
                 data.private_key = privateKey;
                 data.public_key = publicKey;
             } catch (error) {
@@ -112,12 +102,8 @@ export class ApiService {
      * @returns User data with token
      */
     public async register(username: string, password: string, displayName?: string): Promise<AuthenticatedUser> {
-        await sodium.ready;
-        const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
-        const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
-        const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
+        const { publicKey, privateKey } = await encryptionService.generateKeyPair();
 
-        // Store private key locally before sending the request
         localStorage.setItem('temp_private_key', privateKey);
 
         const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user`, {
@@ -127,17 +113,14 @@ export class ApiService {
                 password,
                 displayName,
                 publicKey
-                // privateKey is not sent to the server
             })
         });
 
-        // Add private key to the user object after successful registration
         const userWithPrivateKey: AuthenticatedUser = {
             ...data,
             private_key: privateKey
         };
 
-        // Remove the temporary storage
         localStorage.removeItem('temp_private_key');
 
         return userWithPrivateKey;
@@ -198,6 +181,22 @@ export class ApiService {
             body: JSON.stringify({
                 currentPassword,
                 newPassword
+            })
+        }, token);
+    }
+
+    /**
+     * Update user's public key
+     * @param uid User ID
+     * @param publicKey New public key
+     * @param token JWT token
+     * @returns Updated user data
+     */
+    public async updatePublicKey(uid: number, publicKey: string, token: string): Promise<AuthenticatedUser> {
+        return await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user/${uid}/keys`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                publicKey
             })
         }, token);
     }
@@ -415,9 +414,8 @@ export class ApiService {
         }
 
         if (!sender.private_key) {
-            // Instead of throwing, we'll log and send a special message
             console.error('No private key found. Unable to encrypt messages.');
-            // Send an unencrypted message indicating the error
+
             const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -451,7 +449,6 @@ export class ApiService {
         } catch (error) {
             console.error('Failed to encrypt or send message:', error);
             
-            // Send an unencrypted message indicating the error
             const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -475,22 +472,10 @@ export class ApiService {
      * @returns Updated user data
      */
     public async regenerateKeys(uid: number, token: string): Promise<AuthenticatedUser> {
-        await sodium.ready;
+        const { publicKey, privateKey } = await encryptionService.generateKeyPair();
         
-        // Generate new keypair
-        const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
-        const publicKey = sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL);
-        const privateKey = sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL);
+        const data = await this.updatePublicKey(uid, publicKey, token);
         
-        // Update the public key on the server
-        const data = await this.fetchApi<AuthenticatedUser>(`${this.baseUrl}/user/${uid}/keys`, {
-            method: 'PUT',
-            body: JSON.stringify({
-                publicKey
-            })
-        }, token);
-        
-        // Add the private key to the response for local storage
         const updatedUser: AuthenticatedUser = {
             ...data,
             private_key: privateKey

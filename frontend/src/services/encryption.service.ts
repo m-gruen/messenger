@@ -26,6 +26,31 @@ export class EncryptionService {
         return sodium.from_base64(base64, sodium.base64_variants.ORIGINAL);
     }
 
+    /**
+     * Generates a new keypair for encryption
+     * @returns Object containing public and private keys in base64 format
+     */
+    public async generateKeyPair(): Promise<{ publicKey: string, privateKey: string }> {
+        await sodium.ready;
+        const { publicKey: rawPublicKey, privateKey: rawPrivateKey } = sodium.crypto_kx_keypair();
+        return {
+            publicKey: sodium.to_base64(rawPublicKey, sodium.base64_variants.ORIGINAL),
+            privateKey: sodium.to_base64(rawPrivateKey, sodium.base64_variants.ORIGINAL)
+        };
+    }
+
+    /**
+     * Derives a public key from a private key
+     * @param privateKeyBase64 The private key in base64 format
+     * @returns The derived public key in base64 format
+     */
+    public async derivePublicKey(privateKeyBase64: string): Promise<string> {
+        await sodium.ready;
+        const privateKeyBytes = sodium.from_base64(privateKeyBase64, sodium.base64_variants.ORIGINAL);
+        const publicKeyBytes = sodium.crypto_scalarmult_base(privateKeyBytes);
+        return sodium.to_base64(publicKeyBytes, sodium.base64_variants.ORIGINAL);
+    }
+
     private async getSharedKeyClient(client: IKeyPair, server: IPublicKey): Promise<sodium.CryptoKX> {
         await sodium.ready;
         

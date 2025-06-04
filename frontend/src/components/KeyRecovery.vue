@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/AuthStore';
 import { apiService } from '@/services/api.service';
+import { encryptionService } from '@/services/encryption.service';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const authStore = useAuthStore();
@@ -13,6 +14,7 @@ const success = ref('');
 const isLoading = ref(false);
 const importKey = ref('');
 const showRegenerateConfirm = ref(false);
+const showImportConfirm = ref(false);
 
 const hasPrivateKey = computed(() => {
   return !!user.value?.private_key;
@@ -74,6 +76,16 @@ const methods = {
     }
   },
 
+  // Function to prompt for key import confirmation
+  confirmImportPrivateKey() {
+    if (!importKey.value.trim()) {
+      error.value = 'Please enter a private key';
+      return;
+    }
+    
+    showImportConfirm.value = true;
+  },
+  
   // Function to import a private key
   async importPrivateKey() {
     if (!importKey.value.trim()) {
@@ -91,16 +103,15 @@ const methods = {
     success.value = '';
 
     try {
-      // Update the user object with the imported private key
-      const updatedUser = {
-        ...user.value,
-        private_key: importKey.value.trim()
-      };
+      const publicKey = await encryptionService.derivePublicKey(importKey.value.trim());
       
-      // Store the updated user data
+      const updatedUser = await apiService.updatePublicKey(user.value.uid, publicKey, token.value);
+      
+      updatedUser.private_key = importKey.value.trim();
+      
       authStore.setUser(updatedUser);
       
-      success.value = 'Successfully imported private key';
+      success.value = 'Successfully imported private key and updated public key on server';
       importKey.value = '';
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to import private key';
@@ -173,6 +184,27 @@ onMounted(() => {
       </div>
 
       <div class="space-y-3">
+        <h3 class="font-medium mb-2">Import Private Key</h3>
+        <p class="text-sm text-muted-foreground">
+          If you have a backup of your private key, you can import it here.
+          {{ hasPrivateKey ? 'This will replace your current private key.' : '' }}
+        </p>
+        <textarea 
+          v-model="importKey" 
+          placeholder="Paste your private key here"
+          class="w-full p-3 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+          rows="2"
+        ></textarea>
+        <button 
+          @click="methods.confirmImportPrivateKey"
+          class="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+          :disabled="!importKey.trim() || isLoading"
+        >
+          Import Key
+        </button>
+      </div>
+
+      <div class="space-y-3">
         <h3 class="font-medium mb-2">{{ hasPrivateKey ? 'Regenerate' : 'Generate' }} Key Pair</h3>
         <p class="text-sm text-muted-foreground">
           {{ hasPrivateKey 
@@ -194,26 +226,6 @@ onMounted(() => {
           <span v-else>{{ hasPrivateKey ? 'Regenerate Key Pair' : 'Generate New Key Pair' }}</span>
         </button>
       </div>
-
-      <div v-if="!hasPrivateKey" class="space-y-3">
-        <h3 class="font-medium mb-2">Import Private Key</h3>
-        <p class="text-sm text-muted-foreground">
-          If you have a backup of your private key, you can import it here.
-        </p>
-        <textarea 
-          v-model="importKey" 
-          placeholder="Paste your private key here"
-          class="w-full p-3 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-          rows="3"
-        ></textarea>
-        <button 
-          @click="methods.importPrivateKey"
-          class="w-full py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
-          :disabled="!importKey.trim() || isLoading"
-        >
-          Import Key
-        </button>
-      </div>
     </div>
   </div>
 
@@ -225,5 +237,15 @@ onMounted(() => {
     confirmLabel="Regenerate Keys"
     confirmVariant="destructive"
     @confirm="methods.regenerateKeys"
+  />
+  
+  <!-- Confirm Dialog for Key Import -->
+  <ConfirmDialog
+    v-model:show="showImportConfirm"
+    title="Confirm Key Import"
+    message="Warning: Importing a private key will replace your current encryption keys and may result in losing access to previously received messages if the key doesn't match what was used to encrypt them. Are you sure you want to continue?"
+    confirmLabel="Import Key"
+    confirmVariant="destructive"
+    @confirm="methods.importPrivateKey"
   />
 </template>
