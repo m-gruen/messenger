@@ -325,12 +325,19 @@ async function backupMessages() {
 
 // Restore messages from a backup file
 async function restoreMessages(event: Event) {
-    if (isDownloadingMessages.value) return;
-    
-    const fileInput = event.target as HTMLInputElement;
-    if (!fileInput.files || fileInput.files.length === 0) {
+    console.log('Restore messages event triggered', event);
+    if (isDownloadingMessages.value) {
+        console.log('Already processing, ignoring');
         return;
     }
+    
+    const fileInput = event.target as HTMLInputElement;
+    console.log('File input element:', fileInput);
+    if (!fileInput.files || fileInput.files.length === 0) {
+        console.log('No files selected');
+        return;
+    }
+    console.log('File selected:', fileInput.files[0].name);
     
     isDownloadingMessages.value = true;
     updateError.value = null;
@@ -380,6 +387,20 @@ async function clearLocalMessages() {
         updateError.value = error.message || "Failed to delete messages";
     } finally {
         isDeletingMessages.value = false;
+    }
+}
+
+// Add this after the other refs at the top of your script
+const fileInputRef = ref<HTMLInputElement | null>(null);
+
+// Function to open the file browser dialog for message restore
+function openFileDialog() {
+    // Only open if not currently in a download/upload operation
+    if (fileInputRef.value && !isDownloadingMessages.value) {
+        fileInputRef.value.click();
+        console.log('File dialog opened');
+    } else {
+        console.log('File dialog could not be opened');
     }
 }
 </script>
@@ -613,11 +634,13 @@ async function clearLocalMessages() {
                                     class="hidden"
                                     @change="restoreMessages"
                                     :disabled="isDownloadingMessages"
+                                    ref="fileInputRef"
                                 />
                                 <Button 
                                     variant="outline" 
                                     type="button"
                                     :disabled="isDownloadingMessages"
+                                    @click="openFileDialog"
                                 >
                                     Restore
                                 </Button>
