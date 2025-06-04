@@ -77,3 +77,42 @@ msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: Authentica
         });
     }
 });
+
+// New endpoint to mark messages as received and delete them from the server
+msgRouter.delete('/:userId/received', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+    const userId = parseInt(req.params.userId);
+    const { messageIds } = req.body;
+    
+    if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
+        res.status(StatusCodes.BAD_REQUEST).send({
+            error: 'messageIds must be a non-empty array of message IDs'
+        });
+        return;
+    }
+    
+    if (userId !== req.user?.uid) {
+        res.status(StatusCodes.FORBIDDEN).send({
+            error: 'You can only mark your own messages as received'
+        });
+        return;
+    }
+
+    let dbSession = await DbSession.create(false);
+    try {
+        const msgUtils = new MessageUtils(dbSession);
+
+        const response = await msgUtils.deleteReceivedMessages(userId, messageIds);
+        
+        await dbSession.complete(response.statusCode === StatusCodes.OK);
+
+        res.status(response.statusCode).json(
+            response.data !== null ? response.data : { error: response.error }
+        );
+    } catch (error) {
+        console.error(error);
+        await dbSession.complete(false);
+        res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+            error: "An unexpected error occurred while processing your request"
+        });
+    }
+});

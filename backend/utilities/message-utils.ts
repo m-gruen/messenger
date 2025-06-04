@@ -155,4 +155,60 @@ export class MessageUtils extends Utils {
             );
         }
     }
+    
+    /**
+     * Deletes messages from the server after they have been received and stored locally
+     * @param receiver_uid The ID of the user who received the messages
+     * @param messageIds Array of message IDs to delete
+     * @returns A BaseResponse object containing statusCode and optional error message
+     */
+    public async deleteReceivedMessages(receiver_uid: number, messageIds: number[]): Promise<BaseResponse<{ deleted: number }>> {
+        if (!this.isValidUserId(receiver_uid)) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'Invalid user ID'
+            );
+        }
+
+        if (!Array.isArray(messageIds) || messageIds.length === 0) {
+            return this.createErrorResponse(
+                StatusCodes.BAD_REQUEST,
+                'No message IDs provided'
+            );
+        }
+
+        try {
+            // Filter out any null, undefined, or non-number values
+            const validMessageIds = messageIds
+                .filter(id => id !== null && id !== undefined)
+                .map(id => parseInt(id as any))
+                .filter(id => !isNaN(id));
+            
+            if (validMessageIds.length === 0) {
+                return this.createErrorResponse(
+                    StatusCodes.BAD_REQUEST,
+                    'No valid message IDs provided'
+                );
+            }
+            
+            // Only delete messages where the current user is the receiver
+            const result = await this.dbSession.query(`
+            DELETE FROM message 
+            WHERE receiver_uid = $1 
+            AND mid = ANY($2)
+            RETURNING mid`,
+                [receiver_uid, validMessageIds]
+            );
+
+            return this.createSuccessResponse({ 
+                deleted: result.rowCount || 0 
+            });
+        } catch (error) {
+            console.error('Error deleting received messages:', error);
+            return this.createErrorResponse(
+                StatusCodes.INTERNAL_SERVER_ERROR,
+                'Failed to delete received messages'
+            );
+        }
+    }
 }
