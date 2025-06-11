@@ -156,7 +156,8 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
     if (username === undefined && 
         displayName === undefined && 
         shadowMode === undefined && 
-        fullNameSearch === undefined) {
+        fullNameSearch === undefined
+        && profilePicture === undefined) {
         res.status(StatusCodes.BAD_REQUEST).json({
             error: 'Must provide at least one field to update'
         });
@@ -171,7 +172,8 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
             username,
             displayName,
             shadowMode,
-            fullNameSearch
+            fullNameSearch,
+            profilePicture
         });
 
         await dbSession.complete(result.statusCode === StatusCodes.OK);
