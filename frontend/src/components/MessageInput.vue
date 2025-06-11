@@ -47,7 +47,7 @@ function handleImageUpload(event: Event) {
     return
   }
   
-  // Check file size (max 5MB)
+  // Check initial file size
   const MAX_SIZE = 5 * 1024 * 1024 // 5MB
   if (file.size > MAX_SIZE) {
     alert('Image size should not exceed 5MB')
@@ -56,35 +56,33 @@ function handleImageUpload(event: Event) {
   
   isUploading.value = true
   
-  // Read file as Data URL (base64)
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    if (!e.target || typeof e.target.result !== 'string') return
-    
-    const base64Data = e.target.result.split(',')[1] // Remove the "data:image/jpeg;base64," part
-    
-    // Create an image message content object
-    const messageContent: IImageMessageContent = {
-      type: 'image',
-      format: file.type,
-      content: base64Data
-    }
-    
-    emit('send', messageContent)
-    isUploading.value = false
-    
-    // Reset file input
-    if (fileInputRef.value) {
-      fileInputRef.value.value = ''
-    }
-  }
-  
-  reader.onerror = () => {
-    alert('Failed to read the image file')
-    isUploading.value = false
-  }
-  
-  reader.readAsDataURL(file)
+  // Compress and process image
+  compressImage(file)
+    .then(compressedDataUrl => {
+      // Extract base64 data and format from data URL
+      const base64Data = compressedDataUrl.split(',')[1]; // Remove the "data:image/jpeg;base64," part
+      const format = compressedDataUrl.split(';')[0].split(':')[1]; // Extract MIME type
+      
+      // Create an image message content object
+      const messageContent: IImageMessageContent = {
+        type: 'image',
+        format: format,
+        content: base64Data
+      }
+      
+      emit('send', messageContent)
+      isUploading.value = false
+      
+      // Reset file input
+      if (fileInputRef.value) {
+        fileInputRef.value.value = ''
+      }
+    })
+    .catch(error => {
+      console.error('Image compression failed:', error);
+      alert('Failed to process the image. Please try a smaller image.')
+      isUploading.value = false;
+    });
 }
 
 // Trigger file input click
@@ -92,6 +90,68 @@ function triggerFileUpload() {
   if (fileInputRef.value) {
     fileInputRef.value.click()
   }
+}
+
+// Compress image to avoid payload too large errors
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Create a FileReader to read the file
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      // Create an image to calculate dimensions
+      const img = new Image();
+      
+      img.onload = () => {
+        // Create a canvas to draw and resize the image
+        const canvas = document.createElement('canvas');
+        
+        // Calculate new dimensions while maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        
+        // Target width, reduce size if needed
+        const MAX_WIDTH = 1280; // Reduced from original if larger
+        
+        if (width > MAX_WIDTH) {
+          const ratio = MAX_WIDTH / width;
+          width = MAX_WIDTH;
+          height = height * ratio;
+        }
+        
+        // Set canvas size
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image on canvas with new dimensions
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Get the compressed data URL (JPEG format with reduced quality)
+        // Using JPEG for better compression
+        const quality = 0.7; // 70% quality - good balance between size and quality
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        
+        resolve(compressedDataUrl);
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      img.src = event.target?.result as string;
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+    
+    reader.readAsDataURL(file);
+  });
 }
 
 // Adjust textarea height based on content

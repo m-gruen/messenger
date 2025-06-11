@@ -106,6 +106,44 @@ export const useMessageStore = defineStore('messages', () => {
                             }
                         } catch (decryptError) {
                             console.error('Failed to decrypt WebSocket message:', decryptError);
+                            
+                            // Store the message with an error indicator to prevent it from getting lost
+                            const errorMessage = {
+                                ...processedMessage,
+                                content: JSON.stringify({
+                                    type: 'text',
+                                    content: "⚠️ This message could not be decrypted. It may be an image or contain special content."
+                                }),
+                                decryptionFailed: true
+                            };
+                            
+                            // Store the message anyway so it doesn't get lost
+                            storageService.addMessageToContact(
+                                currentUserId.value,
+                                message.sender_uid,
+                                errorMessage
+                            );
+                            
+                            // Only update UI if this message belongs to the current conversation
+                            if (activeContactId.value === message.sender_uid) {
+                                // Add error message to conversation view
+                                messages.value = [...messages.value, errorMessage].sort((a, b) => {
+                                    const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+                                    const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+                                    return timeB - timeA;
+                                });
+                            }
+                            
+                            // Try to delete the message from the server anyway
+                            try {
+                                await apiService.markMessagesAsReceived(
+                                    currentUserId.value,
+                                    [message.mid],
+                                    token.value
+                                );
+                            } catch (deleteError) {
+                                console.error('Error deleting unreadable message from server:', deleteError);
+                            }
                         }
                     }
                 }

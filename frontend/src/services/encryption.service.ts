@@ -23,7 +23,17 @@ export interface IDecryptedMessage {
 
 export class EncryptionService {
     private static from_base64(base64: string): Uint8Array<ArrayBufferLike> {
-        return sodium.from_base64(base64, sodium.base64_variants.ORIGINAL);
+        try {
+            return sodium.from_base64(base64, sodium.base64_variants.ORIGINAL);
+        } catch (error) {
+            // Try with URL_SAFE variant if ORIGINAL fails (common with large data or image content)
+            try {
+                return sodium.from_base64(base64, sodium.base64_variants.URLSAFE);
+            } catch (innerError: any) {
+                console.error('Failed to decode base64 with any variant:', innerError);
+                throw new Error(`Failed to decode base64: ${innerError.message || 'Unknown error'}`);
+            }
+        }
     }
 
     /**
@@ -86,6 +96,15 @@ export class EncryptionService {
             throw new Error('Cannot encrypt message: Private key not found in sender data');
         }
 
+        // Check if the content is an image message by trying to parse it as JSON
+        let isImageMessage = false;
+        try {
+            const parsed = JSON.parse(content);
+            isImageMessage = parsed?.type === 'image';
+        } catch (e) {
+            // Not JSON or not parseable, continue as normal
+        }
+
         const sharedKey = await this.getSharedKeyClient(sender, receiver);
 
         const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
@@ -95,9 +114,14 @@ export class EncryptionService {
             sharedKey.sharedTx
         );
 
+        // Use URLSAFE variant for image messages to prevent encoding issues
+        const base64Variant = isImageMessage ? 
+            sodium.base64_variants.URLSAFE : 
+            sodium.base64_variants.ORIGINAL;
+
         return {
-            encryptedContentBase64: sodium.to_base64(encryptedContent, sodium.base64_variants.ORIGINAL),
-            nonceBase64: sodium.to_base64(nonce, sodium.base64_variants.ORIGINAL)
+            encryptedContentBase64: sodium.to_base64(encryptedContent, base64Variant),
+            nonceBase64: sodium.to_base64(nonce, base64Variant)
         };
     }
 
@@ -117,16 +141,29 @@ export class EncryptionService {
             ? await this.getSharedKeyClient(server, client)
             : await this.getSharedKeyServer(client, server);
 
-        const encryptedContent = EncryptionService.from_base64(encryptedMessage.encryptedContentBase64);
-        const nonce = EncryptionService.from_base64(encryptedMessage.nonceBase64);
+        try {
+            const encryptedContent = EncryptionService.from_base64(encryptedMessage.encryptedContentBase64);
+            const nonce = EncryptionService.from_base64(encryptedMessage.nonceBase64);
 
-        return sodium.to_string(
-            sodium.crypto_secretbox_open_easy(
-                encryptedContent,
-                nonce,
-                isSender ? sharedKey.sharedTx : sharedKey.sharedRx
-            )
-        );
+            const decrypted = sodium.to_string(
+                sodium.crypto_secretbox_open_easy(
+                    encryptedContent,
+                    nonce,
+                    isSender ? sharedKey.sharedTx : sharedKey.sharedRx
+                )
+            );
+            
+            return decrypted;
+        } catch (error) {
+            console.error('Decryption error:', error);
+            
+            // Check if this appears to be an image message based on content length
+            if (encryptedMessage.encryptedContentBase64.length > 1000) {
+                throw new Error('Failed to decrypt possible image message. The format may be incompatible.');
+            }
+            
+            throw error; // Re-throw the original error
+        }
     }
 }
 

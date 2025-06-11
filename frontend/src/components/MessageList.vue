@@ -279,8 +279,18 @@ function parseMessageContent(content: string): { type: string, content: string, 
       return parsed;
     }
   } catch (e) {
-    console.log('Failed to parse message content as JSON:', e);
-    // If parsing fails, it's a regular text message or potential error
+    // If parsing fails, make a second attempt with escaped JSON
+    try {
+      // Some messages might be double-encoded JSON strings
+      const doubleDecoded = JSON.parse(JSON.stringify(content));
+      const parsed = JSON.parse(doubleDecoded);
+      if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+        return parsed;
+      }
+    } catch (nestedError) {
+      console.log('Failed to parse message content as JSON:', e);
+      // If all parsing fails, it's a regular text message or potential error
+    }
   }
   
   // Default to text if not valid JSON or missing type
