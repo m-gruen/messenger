@@ -7,7 +7,7 @@ export interface IMessage {
     timestamp: Date;
 }
 
-export type MessageContentType = "text" | "image" | "document" | "audio";
+export type MessageContentType = "text" | "image" | "document" | "audio" | "code";
 
 export interface IMessageContent {
     type: MessageContentType;
@@ -20,6 +20,14 @@ export interface IImageMessageContent extends IMessageContent {
     content: string; // Base64 encoded content
     name: string;    // Original filename
     size: number;    // File size in bytes
+}
+
+export interface ICodeMessageContent extends IMessageContent {
+    type: "code";
+    language: string;  // Programming language
+    content: string;   // Actual code content
+    name: string;      // Filename
+    size: number;      // File size in bytes
 }
 
 export interface IDocumentMessageContent extends IMessageContent {

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, defineEmits, nextTick, onMounted } from 'vue'
-import { Send, Smile, Image as ImageIcon, File as FileIcon, Mic, Paperclip, X, AlertCircle } from "lucide-vue-next"
+import { Send, Smile, Image as ImageIcon, File as FileIcon, Mic, Paperclip, X, AlertCircle, Code } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
-import type { ITextMessageContent, IImageMessageContent, IDocumentMessageContent, IAudioMessageContent } from '@/models/message-model'
+import type { ITextMessageContent, IImageMessageContent, IDocumentMessageContent, IAudioMessageContent, ICodeMessageContent } from '@/models/message-model'
 
 const emit = defineEmits(['send'])
 const newMessage = ref('')
@@ -11,6 +11,7 @@ const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const documentInputRef = ref<HTMLInputElement | null>(null)
 const audioInputRef = ref<HTMLInputElement | null>(null)
+const codeInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 const showAttachmentMenu = ref(false)
 
@@ -28,7 +29,7 @@ function showNotification(message: string, type: 'error' | 'info' | 'success' = 
     clearTimeout(notification.value.timeout)
   }
   
-  // Set notification
+  // Set notification 
   notification.value = {
     show: true,
     message,
@@ -234,6 +235,101 @@ function handleAudioUpload(event: Event) {
   reader.readAsDataURL(file)
 }
 
+// Handle code file upload
+function handleCodeUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+  
+  if (!files || !files.length) return
+  
+  const file = files[0]
+  
+  // Check file size
+  const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+  if (file.size > MAX_SIZE) {
+    showNotification('Code file size should not exceed 10MB', 'error')
+    return
+  }
+  
+  isUploading.value = true
+  
+  // Read the file as text
+  const reader = new FileReader()
+  
+  reader.onload = () => {
+    const content = reader.result?.toString()
+    
+    if (!content) {
+      showNotification('Failed to read code file', 'error')
+      isUploading.value = false
+      return
+    }
+    
+    // Detect language from file extension
+    const extension = file.name.split('.').pop()?.toLowerCase() || ''
+    const language = getLanguageFromExtension(extension)
+    
+    // Create a code message content object
+    const messageContent: ICodeMessageContent = {
+      type: 'code',
+      language: language,
+      content: content,
+      name: file.name,
+      size: file.size
+    }
+    
+    emit('send', messageContent)
+    isUploading.value = false
+    
+    // Reset file input
+    if (codeInputRef.value) {
+      codeInputRef.value.value = ''
+    }
+  }
+  
+  reader.onerror = () => {
+    console.error('Error reading code file')
+    showNotification('Failed to read code file', 'error')
+    isUploading.value = false
+  }
+  
+  reader.readAsText(file)
+}
+
+// Detect language from file extension
+function getLanguageFromExtension(extension: string): string {
+  // Map common file extensions to language names recognized by highlight.js
+  const languageMap: { [key: string]: string } = {
+    'js': 'javascript',
+    'ts': 'typescript',
+    'py': 'python',
+    'java': 'java',
+    'html': 'html',
+    'css': 'css',
+    'cpp': 'cpp',
+    'c': 'c',
+    'cs': 'csharp',
+    'php': 'php',
+    'rb': 'ruby',
+    'go': 'go',
+    'rs': 'rust',
+    'swift': 'swift',
+    'sh': 'bash',
+    'bat': 'batch',
+    'ps1': 'powershell',
+    'sql': 'sql',
+    'json': 'json',
+    'xml': 'xml',
+    'md': 'markdown',
+    'jsx': 'javascript',
+    'tsx': 'typescript',
+    'vue': 'html'
+    // Add more as needed
+  }
+  
+  return languageMap[extension] || 'plaintext'
+}
+
 // Trigger file input click
 function triggerFileUpload() {
   if (fileInputRef.value) {
@@ -252,6 +348,13 @@ function triggerDocumentUpload() {
 function triggerAudioUpload() {
   if (audioInputRef.value) {
     audioInputRef.value.click()
+  }
+}
+
+// Trigger code file upload
+function triggerCodeUpload() {
+  if (codeInputRef.value) {
+    codeInputRef.value.click()
   }
 }
 
@@ -410,6 +513,14 @@ onMounted(() => {
       class="hidden"
     />
     
+    <input 
+      type="file" 
+      ref="codeInputRef" 
+      @change="handleCodeUpload" 
+      accept=".js,.ts,.py,.java,.html,.css,.cpp,.c,.cs,.php,.rb,.go,.rs,.swift,.sh,.bash,.bat,.ps1,.sql,.json,.xml,.md,.jsx,.tsx,.vue,.txt" 
+      class="hidden"
+    />
+    
     <form @submit.prevent="sendMessage" class="flex items-center gap-2">
       <!-- Emoji Button -->
       <button 
@@ -474,6 +585,16 @@ onMounted(() => {
           >
             <Mic class="h-4 w-4" />
             <span>Audio</span>
+          </button>
+          
+          <!-- Code Upload Option -->
+          <button 
+            @click="triggerCodeUpload(); showAttachmentMenu = false"
+            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
+            :disabled="isUploading"
+          >
+            <Code class="h-4 w-4" />
+            <span>Code</span>
           </button>
         </div>
       </div>

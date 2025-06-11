@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { defineProps, computed, ref, onMounted, nextTick, watch } from 'vue'
 import type { IMessage } from '@/models/message-model'
-import { MessageSquare, ArrowDown, FileText, Download, Play, Pause } from 'lucide-vue-next'
+import { MessageSquare, ArrowDown, FileText, Download, Play, Pause, Code } from 'lucide-vue-next'
 import { DateFormatService } from '@/services/date-format.service'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css' // Import a theme for syntax highlighting
 
 const props = defineProps({
   messages: {
@@ -274,7 +276,8 @@ function parseMessageContent(content: string): {
   format?: string,
   name?: string,
   size?: number,
-  duration?: number
+  duration?: number,
+  language?: string
 } {
   if (!content) {
     return { type: 'text', content: '' };
@@ -297,254 +300,330 @@ function parseMessageContent(content: string): {
       }
     } catch (nestedError) {
       console.log('Failed to parse message content as JSON:', e);
-      // If all parsing fails, it's a regular text message or potential error
     }
   }
 
-  // Default to text if not valid JSON or missing type
-  return { type: 'text', content: content };
+  // If we can't parse as JSON, treat as plain text
+  return { type: 'text', content };
 }
 
-// Check message type helpers
-function isImageMessage(content: string): boolean {
-  const parsed = parseMessageContent(content);
-  return parsed.type === 'image';
-}
-
-function isDocumentMessage(content: string): boolean {
-  const parsed = parseMessageContent(content);
-  return parsed.type === 'document';
-}
-
-function isAudioMessage(content: string): boolean {
-  const parsed = parseMessageContent(content);
-  return parsed.type === 'audio';
-}
-
-// Get content for rendering
+// Get text content from a message
 function getMessageContent(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  return parsed.type === 'text' ? parsed.content : '';
+  try {
+    const parsed = parseMessageContent(message.content);
+    return parsed.type === 'text' ? parsed.content : '';
+  } catch (e) {
+    return message.content;
+  }
 }
 
-// Get document name for document messages
+// Format file size for display
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+}
+
+// Image message helpers
+function isImageMessage(content: string): boolean {
+  try {
+    const parsed = parseMessageContent(content);
+    return parsed.type === 'image';
+  } catch (e) {
+    return false;
+  }
+}
+
+function getImageSource(message: IMessage): string | null {
+  try {
+    const parsed = parseMessageContent(message.content);
+    if (parsed.type === 'image' && parsed.content && parsed.format) {
+      return `data:${parsed.format};base64,${parsed.content}`;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function getImageName(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    return parsed.type === 'image' && parsed.name ? parsed.name : 'image.jpg';
+  } catch (e) {
+    return 'image.jpg';
+  }
+}
+
+function getImageSize(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    if (parsed.type === 'image' && parsed.size) {
+      return formatFileSize(parsed.size);
+    }
+    return '';
+  } catch (e) {
+    return '';
+  }
+}
+
+// Document message helpers
+function isDocumentMessage(content: string): boolean {
+  try {
+    const parsed = parseMessageContent(content);
+    return parsed.type === 'document';
+  } catch (e) {
+    return false;
+  }
+}
+
 function getDocumentName(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'document' && parsed.name) {
-    return parsed.name;
-  }
-  return 'Document';
-}
-
-// Get document size
-function getFormattedFileSize(size: number): string {
-  if (size < 1024) {
-    return `${size} B`;
-  } else if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  } else {
-    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  try {
+    const parsed = parseMessageContent(message.content);
+    return parsed.type === 'document' && parsed.name ? parsed.name : 'document.pdf';
+  } catch (e) {
+    return 'document.pdf';
   }
 }
 
-// Get file source for downloads
-function getFileSource(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if ((parsed.type === 'document' || parsed.type === 'audio') && parsed.content && parsed.format) {
-    return `data:${parsed.format};base64,${parsed.content}`;
-  }
-  return '';
-}
-
-// Get document file size
 function getDocumentSize(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'document' && parsed.size) {
-    return getFormattedFileSize(parsed.size);
+  try {
+    const parsed = parseMessageContent(message.content);
+    if (parsed.type === 'document' && parsed.size) {
+      return formatFileSize(parsed.size);
+    }
+    return '';
+  } catch (e) {
+    return '';
   }
-  return '';
 }
 
-// Get audio source for audio messages
-function getAudioSource(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'audio' && parsed.content && parsed.format) {
-    return `data:${parsed.format};base64,${parsed.content}`;
+function getFileSource(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    if ((parsed.type === 'document' || parsed.type === 'code') && parsed.content) {
+      return `data:${parsed.format || 'application/octet-stream'};base64,${parsed.content}`;
+    }
+    // For code files that are not base64 encoded
+    if (parsed.type === 'code' && parsed.content) {
+      return `data:text/plain;charset=utf-8,${encodeURIComponent(parsed.content)}`;
+    }
+    return '';
+  } catch (e) {
+    return '';
   }
-  return '';
 }
 
-// Get audio file extension for download
+// Audio message helpers
+function isAudioMessage(content: string): boolean {
+  try {
+    const parsed = parseMessageContent(content);
+    return parsed.type === 'audio';
+  } catch (e) {
+    return false;
+  }
+}
+
+function getAudioSource(message: IMessage): string | null {
+  try {
+    const parsed = parseMessageContent(message.content);
+    if (parsed.type === 'audio' && parsed.content && parsed.format) {
+      return `data:${parsed.format};base64,${parsed.content}`;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function getAudioExtension(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'audio' && parsed.format) {
-    // Extract extension from MIME type
-    const format = parsed.format.toLowerCase();
-
-    // Common audio formats
-    if (format.includes('mp3')) return 'mp3';
-    if (format.includes('wav')) return 'wav';
-    if (format.includes('ogg')) return 'ogg';
-    if (format.includes('m4a') || format.includes('aac')) return 'aac';
-    if (format.includes('flac')) return 'flac';
-
-    // Default to mp3 if format can't be determined
+  try {
+    const parsed = parseMessageContent(message.content);
+    if (parsed.type === 'audio' && parsed.format) {
+      // Extract extension from MIME type
+      const mimeType = parsed.format.toLowerCase();
+      if (mimeType.includes('mp3')) return 'mp3';
+      if (mimeType.includes('wav')) return 'wav';
+      if (mimeType.includes('ogg')) return 'ogg';
+      if (mimeType.includes('m4a')) return 'm4a';
+      return 'mp3'; // Default
+    }
+    return 'mp3';
+  } catch (e) {
     return 'mp3';
   }
-  return 'mp3';
 }
 
-// Audio player state and controls
-interface AudioState {
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  messageId: number | null;
-}
-
-const audioState = ref<AudioState>({
+// Audio playback state
+const audioState = ref({
+  messageId: 0,
   isPlaying: false,
   currentTime: 0,
-  duration: 0,
-  messageId: null
+  duration: 0
 });
 
-// Get audio element by message id
-function getAudioElement(messageId: number): HTMLAudioElement | null {
-  const selector = `audio[data-message-id="${messageId}"]`;
-  const audioElement = document.querySelector(selector) as HTMLAudioElement | null;
-  return audioElement;
-}
-
-// Play or pause audio
-function toggleAudioPlayback(message: IMessage) {
-  const audioElement = getAudioElement(message.mid);
-  if (!audioElement) return;
-
-  // If we're selecting a different audio message
-  if (audioState.value.messageId !== message.mid) {
-    // Reset any previously playing audio
-    const previousAudio = document.querySelector('audio[data-playing="true"]');
-    if (previousAudio) {
-      (previousAudio as HTMLAudioElement).pause();
-      (previousAudio as HTMLAudioElement).currentTime = 0;
-      previousAudio.removeAttribute('data-playing');
-    }
-
-    // Setup the new audio element
-    audioState.value = {
-      isPlaying: true,
-      currentTime: 0,
-      duration: audioElement.duration || 0,
-      messageId: message.mid
-    };
-
-    audioElement.dataset.playing = "true";
-    audioElement.play();
-  } else {
-    // Toggle play/pause on the current audio
-    if (audioState.value.isPlaying) {
-      audioElement.pause();
-      audioState.value.isPlaying = false;
-    } else {
-      audioElement.play();
-      audioState.value.isPlaying = true;
-    }
-  }
-}
-
-// Update time display as audio plays
-function handleTimeUpdate(message: IMessage, event: Event) {
-  if (audioState.value.messageId !== message.mid) return;
-
-  const audioElement = event.target as HTMLAudioElement;
-  audioState.value.currentTime = audioElement.currentTime;
-}
-
-// When audio metadata is loaded
-function handleAudioMetadata(message: IMessage, event: Event) {
-  const audioElement = event.target as HTMLAudioElement;
-  if (audioState.value.messageId === message.mid) {
-    audioState.value.duration = audioElement.duration;
-  }
-}
-
-// When audio playback ends
-function handleAudioEnded(message: IMessage) {
-  if (audioState.value.messageId !== message.mid) return;
-
-  audioState.value = {
-    ...audioState.value,
-    isPlaying: false,
-    currentTime: 0
-  };
-}
-
-// Format time for audio display (mm:ss)
+// Format audio time in mm:ss format
 function formatAudioTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Set audio position when clicking on the progress bar
-function setAudioPosition(event: MouseEvent, message: IMessage) {
-  const audioElement = getAudioElement(message.mid);
-  if (!audioElement || audioState.value.messageId !== message.mid) return;
+// Audio playback controls
+function toggleAudioPlayback(message: IMessage): void {
+  const audioElements = document.querySelectorAll('audio');
+  const currentAudio = document.querySelector(`audio[data-message-id="${message.mid}"]`) as HTMLAudioElement;
+  
+  if (!currentAudio) return;
+  
+  // Pause any other playing audio
+  audioElements.forEach(audio => {
+    if (audio !== currentAudio && !audio.paused) {
+      audio.pause();
+    }
+  });
+  
+  // Toggle play/pause for current audio
+  if (audioState.value.messageId === message.mid && audioState.value.isPlaying) {
+    currentAudio.pause();
+    audioState.value.isPlaying = false;
+  } else {
+    currentAudio.play();
+    audioState.value.messageId = message.mid;
+    audioState.value.isPlaying = true;
+    
+    // Set duration if not already set
+    if (!audioState.value.duration) {
+      audioState.value.duration = currentAudio.duration;
+    }
+  }
+}
 
-  const progressBar = event.currentTarget as HTMLElement;
-  const rect = progressBar.getBoundingClientRect();
-  const clickPosition = (event.clientX - rect.left) / rect.width;
+function handleTimeUpdate(message: IMessage, event: Event): void {
+  if (audioState.value.messageId === message.mid) {
+    const audio = event.target as HTMLAudioElement;
+    audioState.value.currentTime = audio.currentTime;
+  }
+}
 
-  // Set the new position
-  const newTime = clickPosition * audioState.value.duration;
-  audioElement.currentTime = newTime;
+function handleAudioMetadata(message: IMessage, event: Event): void {
+  const audio = event.target as HTMLAudioElement;
+  if (audio && audio.duration && audioState.value.messageId === message.mid) {
+    audioState.value.duration = audio.duration;
+  }
+}
+
+function handleAudioEnded(message: IMessage): void {
+  if (audioState.value.messageId === message.mid) {
+    audioState.value.isPlaying = false;
+    audioState.value.currentTime = 0;
+  }
+}
+
+function setAudioPosition(event: MouseEvent, message: IMessage): void {
+  const target = event.currentTarget as HTMLElement;
+  if (!target) return;
+  
+  const audio = document.querySelector(`audio[data-message-id="${message.mid}"]`) as HTMLAudioElement;
+  if (!audio) return;
+  
+  const rect = target.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const percentage = clickX / rect.width;
+  
+  // Set time based on percentage of progress bar clicked
+  const newTime = percentage * audio.duration;
+  audio.currentTime = newTime;
   audioState.value.currentTime = newTime;
+  
+  // If paused, start playing
+  if (audio.paused) {
+    audio.play();
+    audioState.value.messageId = message.mid;
+    audioState.value.isPlaying = true;
+  }
 }
 
-// Get image source for image messages
-function getImageSource(message: IMessage): string | null {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'image' && parsed.content && parsed.format) {
-    return `data:${parsed.format};base64,${parsed.content}`;
+// Code message helpers (continued)
+function isCodeMessage(content: string): boolean {
+  try {
+    const parsed = parseMessageContent(content);
+    return parsed.type === 'code';
+  } catch (e) {
+    return false;
   }
-  return null;
 }
 
-// Get image name
-function getImageName(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'image' && parsed.name) {
-    return parsed.name;
+function formatCode(code: string, language: string): string {
+  try {
+    // Sanitize code to prevent XSS
+    const sanitizedCode = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    // Apply syntax highlighting
+    if (language && hljs.getLanguage(language)) {
+      return hljs.highlight(sanitizedCode, { language }).value;
+    } else {
+      // Fallback to auto-detection
+      return hljs.highlightAuto(sanitizedCode).value;
+    }
+  } catch (e) {
+    console.error('Error highlighting code:', e);
+    return code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
-  return `image-${message.mid}.jpg`;
 }
 
-// Get image size
-function getImageSize(message: IMessage): string {
-  const parsed = parseMessageContent(message.content);
-  if (parsed.type === 'image' && parsed.size) {
-    return getFormattedFileSize(parsed.size);
+// Get code content from message
+function getCodeContent(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    return parsed.type === 'code' ? parsed.content || '' : '';
+  } catch (e) {
+    return '';
   }
-  return '';
 }
 
-// File icon functionality
-function getFileIcon(format: string, fileName: string = ''): string {
-  if (format.includes('pdf')) {
-    return 'pdf';
-  } else if (format.includes('word') || format.includes('docx')) {
-    return 'doc';
-  } else if (format.includes('excel') || format.includes('sheet') || format.includes('xlsx')) {
-    return 'sheet';
-  } else if (format.includes('powerpoint') || format.includes('presentation') || format.includes('pptx')) {
-    return 'presentation';
-  } else if (format.includes('text') || fileName.toLowerCase().endsWith('.txt')) {
-    return 'text';
-  } else if (format.includes('zip') || fileName.toLowerCase().endsWith('.zip')) {
-    return 'zip';
+// Get code language from message
+function getCodeLanguage(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    return parsed.type === 'code' && parsed.language ? parsed.language : 'plaintext';
+  } catch (e) {
+    return 'plaintext';
   }
-  return 'generic';
+}
+
+// Get code file name from message
+function getCodeName(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    return parsed.type === 'code' && parsed.name ? parsed.name : 'code.txt';
+  } catch (e) {
+    return 'code.txt';
+  }
+}
+
+// Get code file size for display
+function getCodeSize(message: IMessage): string {
+  try {
+    const parsed = parseMessageContent(message.content);
+    if (parsed.type === 'code' && parsed.size) {
+      return formatFileSize(parsed.size);
+    }
+    return '';
+  } catch (e) {
+    return '';
+  }
 }
 </script>
 
@@ -655,7 +734,7 @@ function getFileIcon(format: string, fileName: string = ''): string {
                 <div class="relative message-content">
                   <!-- Parse the message content -->
                   <template
-                    v-if="!isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content)">
+                    v-if="!isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content) && !isCodeMessage(message.content)">
                     <!-- Text message content -->
                     <p :class="[
                       'message-text',
@@ -704,8 +783,7 @@ function getFileIcon(format: string, fileName: string = ''): string {
                     <div class="document-preview">
                       <a :href="getFileSource(message)" :download="getDocumentName(message)"
                         class="flex items-start p-2 rounded-lg document-link">
-                        <div class="document-icon mr-2"
-                          :class="getFileIcon(parseMessageContent(message.content).format || '', getDocumentName(message))">
+                        <div class="document-icon mr-2">
                           <FileText class="h-8 w-8" />
                         </div>
                         <div class="flex-1 min-w-0">
@@ -729,12 +807,47 @@ function getFileIcon(format: string, fileName: string = ''): string {
                     </div>
                   </div>
 
+                  <!-- Code message content -->
+                  <div v-else-if="isCodeMessage(message.content)" class="code-container"
+                    :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
+                    <div class="code-preview">
+                      <div class="code-header flex items-center justify-between p-2 bg-zinc-800 border-b border-zinc-700 rounded-t-lg">
+                        <div class="flex items-center">
+                          <Code class="h-5 w-5 mr-2 text-blue-400" />
+                          <div class="code-name font-medium truncate">
+                            {{ getCodeName(message) }}
+                          </div>
+                          <div class="code-size text-xs opacity-70 ml-2">
+                            {{ getCodeSize(message) }}
+                          </div>
+                        </div>
+                        <a :href="`data:text/plain;charset=utf-8,${encodeURIComponent(getCodeContent(message))}`" 
+                           :download="getCodeName(message)"
+                           class="code-download-button" 
+                           title="Download code file" 
+                           @click.stop>
+                          <Download class="h-5 w-5" />
+                        </a>
+                      </div>
+                      <div class="code-content p-0 overflow-x-auto">
+                        <pre class="text-sm m-0 p-4 bg-zinc-900"><code v-html="formatCode(getCodeContent(message), getCodeLanguage(message))"></code></pre>
+                      </div>
+                      
+                      <!-- Timestamp below code block -->
+                      <span
+                        v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
+                        class="text-xs opacity-70 message-timestamp code-timestamp">
+                        {{ formatTimeForMessage(message.timestamp) }}
+                      </span>
+                    </div>
+                  </div>
+
                   <!-- Audio message content -->
                   <div v-else-if="isAudioMessage(message.content)" class="audio-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     <div class="audio-player p-3 pb-4">
                       <!-- Hidden audio element without controls -->
-                      <audio :src="getAudioSource(message)" :data-message-id="message.mid" preload="metadata"
+                      <audio :src="getAudioSource(message) || ''" :data-message-id="message.mid" preload="metadata"
                         class="hidden" @timeupdate="handleTimeUpdate(message, $event)"
                         @loadedmetadata="handleAudioMetadata(message, $event)" @ended="handleAudioEnded(message)">
                       </audio>
@@ -775,7 +888,7 @@ function getFileIcon(format: string, fileName: string = ''): string {
                         </div>
 
                         <!-- Download button -->
-                        <a :href="getAudioSource(message)"
+                        <a :href="getAudioSource(message) || ''"
                           :download="`audio-${message.mid}.${getAudioExtension(message)}`"
                           class="audio-download-button ml-2" title="Download audio" @click.stop>
                           <Download class="h-5 w-5" />
@@ -791,9 +904,9 @@ function getFileIcon(format: string, fileName: string = ''): string {
                     </div>
                   </div>
 
-                  <!-- Show time only in single or last messages in a group (but not for images, documents, or audio) -->
+                  <!-- Show time only in single or last messages in a group (but not for images, documents, audio, or code) -->
                   <span
-                    v-if="(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') && !isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content)"
+                    v-if="(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') && !isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content) && !isCodeMessage(message.content)"
                     class="text-xs opacity-70 message-timestamp"
                     :class="{ 'emoji-timestamp': getEmojiMessageStyle(getMessageContent(message)) }">
                     {{ formatTimeForMessage(message.timestamp) }}
@@ -1152,10 +1265,13 @@ function getFileIcon(format: string, fileName: string = ''): string {
 
 .document-timestamp {
   position: absolute;
-  color: rgba(155, 155, 155, 0.8);
+  color: rgba(255, 255, 255, 0.9);
   bottom: -16px;
   right: 6px;
   font-size: 0.65rem;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 2px 5px;
+  border-radius: 10px;
 }
 
 /* Audio message styling */
@@ -1255,4 +1371,116 @@ function getFileIcon(format: string, fileName: string = ''): string {
 }
 
 /* Audio timestamp now uses document-timestamp class for consistency */
+
+/* Code message styling */
+.code-container {
+  margin: 2px 0;
+  position: relative;
+  padding-bottom: 24px; /* Increased padding for timestamp at bottom: -16px */
+  width: 100%;
+}
+
+.code-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.code-header {
+  padding: 8px 12px;
+  background-color: #1f2937; /* gray-800 in Tailwind */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.code-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.code-size {
+  color: rgba(155, 155, 155, 0.8);
+  margin-left: 8px;
+  font-size: 0.75rem;
+}
+
+.code-content {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #0d1117; /* GitHub dark theme background */
+}
+
+.code-content pre {
+  margin: 0;
+  padding: 1rem;
+}
+
+.code-download-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.code-download-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.code-timestamp {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.9);
+  bottom: -16px;
+  right: 6px;
+  font-size: 0.65rem;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 2px 5px;
+  border-radius: 10px;
+}
+
+/* Syntax highlighting enhancements */
+.hljs-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.hljs-keyword {
+  color: #ff7b72;
+  font-weight: bold;
+}
+
+.hljs-string {
+  color: #a5d6ff;
+}
+
+.hljs-number {
+  color: #79c0ff;
+}
+
+.hljs-function {
+  color: #d2a8ff;
+}
+
+.hljs-title {
+  color: #79c0ff;
+}
+
+.hljs-params {
+  color: #c9d1d9;
+}
+
+.hljs-built_in {
+  color: #ffa657;
+}
 </style>
