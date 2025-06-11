@@ -249,7 +249,7 @@ function countEmojis(text: string): number {
 }
 
 function getEmojiMessageStyle(text: string): string | null {
-  if (!isEmojiOnly(text)) {
+  if (!text || !isEmojiOnly(text)) {
     return null; // Not an emoji-only message
   }
   
@@ -380,14 +380,14 @@ function getImageSource(message: IMessage): string | null {
               <div v-for="(message, messageIndex) in minuteGroup.messages" :key="message.mid"
                 :class="[
                   // Check if this is an emoji-only message
-                  getEmojiMessageStyle(message.content) || 'px-3 py-2 shadow-sm inline-block',
+                  getEmojiMessageStyle(getMessageContent(message)) || 'px-3 py-2 shadow-sm inline-block',
                   
                   // Base styling
                   {
                     // Sender styles (you) - only if not emoji-only message
-                    'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(message.content),
+                    'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
                     // Receiver styles (other person) - only if not emoji-only message
-                    'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(message.content),
+                    'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
 
                     // Spacing between messages in the same group
                     'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
@@ -400,7 +400,7 @@ function getImageSource(message: IMessage): string | null {
                     'max-w-message': true
                   },
                   // Only apply bubble styling for non-emoji messages
-                  !getEmojiMessageStyle(message.content) ? [
+                  !getEmojiMessageStyle(getMessageContent(message)) ? [
                     // Single message (completely rounded)
                     getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
 
@@ -427,7 +427,12 @@ function getImageSource(message: IMessage): string | null {
                 <div class="relative message-content">
                   <!-- Text message content -->
                   <p v-if="!isImageMessage(message.content)"
-                    :class="['message-text', (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
+                    :class="[
+                      'message-text', 
+                      (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '',
+                      // Apply emoji styling classes directly to text element if it's an emoji-only message
+                      getEmojiMessageStyle(getMessageContent(message))
+                    ]">
                     {{ getMessageContent(message) }}
                   </p>
                   
@@ -452,7 +457,7 @@ function getImageSource(message: IMessage): string | null {
                   <span
                     v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
                     class="text-xs opacity-70 message-timestamp"
-                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(message.content), 'image-timestamp': isImageMessage(message.content) }">
+                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(getMessageContent(message)), 'image-timestamp': isImageMessage(message.content) }">
                     {{ formatTimeForMessage(message.timestamp) }}
                   </span>
                 </div>
@@ -601,6 +606,36 @@ function getImageSource(message: IMessage): string | null {
   background: transparent !important;
   box-shadow: none !important;
   padding: 2px !important;
+}
+
+/* Single emoji styling - very large */
+.emoji-single {
+  font-size: 4rem !important;
+  line-height: 1.2;
+  padding: 0.2rem !important;
+}
+
+/* Few emojis styling - large */
+.emoji-few {
+  font-size: 3rem !important;
+  line-height: 1.2;
+  padding: 0.2rem !important;
+}
+
+/* Several emojis styling - medium */
+.emoji-several {
+  font-size: 2rem !important;
+  line-height: 1.3;
+  padding: 0.2rem !important;
+}
+
+/* Emoji timestamp positioning */
+.emoji-timestamp {
+  position: absolute;
+  color: rgba(155, 155, 155, 0.8) !important;
+  bottom: -1.5em !important;
+  right: 3px !important;
+  font-size: 0.65rem;
 }
 
 /* Image styling */
