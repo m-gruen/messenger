@@ -364,7 +364,7 @@ onMounted(() => {
       type="file" 
       ref="documentInputRef" 
       @change="handleDocumentUpload" 
-      accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx" 
+      accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx,.zip" 
       class="hidden"
     />
     

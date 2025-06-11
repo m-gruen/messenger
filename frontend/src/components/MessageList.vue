@@ -511,21 +511,23 @@ function getImageSource(message: IMessage): string | null {
   return null;
 }
 
-// File icon functionality to be implemented in future updates
-// function getFileIcon(format: string): string {
-//   if (format.includes('pdf')) {
-//     return 'pdf';
-//   } else if (format.includes('word') || format.includes('doc')) {
-//     return 'doc';
-//   } else if (format.includes('excel') || format.includes('sheet') || format.includes('xls')) {
-//     return 'sheet';
-//   } else if (format.includes('powerpoint') || format.includes('presentation') || format.includes('ppt')) {
-//     return 'presentation';
-//   } else if (format.includes('text')) {
-//     return 'text';
-//   }
-//   return 'generic';
-// }
+// File icon functionality
+function getFileIcon(format: string, fileName: string = ''): string {
+  if (format.includes('pdf')) {
+    return 'pdf';
+  } else if (format.includes('word') || format.includes('docx')) {
+    return 'doc';
+  } else if (format.includes('excel') || format.includes('sheet') || format.includes('xlsx')) {
+    return 'sheet';
+  } else if (format.includes('powerpoint') || format.includes('presentation') || format.includes('pptx')) {
+    return 'presentation';
+  } else if (format.includes('text') || fileName.toLowerCase().endsWith('.txt')) {
+    return 'text';
+  } else if (format.includes('zip') || fileName.toLowerCase().endsWith('.zip')) {
+    return 'zip';
+  }
+  return 'generic';
+}
 </script>
 
 <template>
@@ -677,7 +679,7 @@ function getImageSource(message: IMessage): string | null {
                       <a :href="getFileSource(message)" 
                          :download="getDocumentName(message)"
                          class="flex items-start p-2 rounded-lg document-link">
-                        <div class="document-icon mr-2">
+                        <div class="document-icon mr-2" :class="getFileIcon(parseMessageContent(message.content).format || '', getDocumentName(message))">
                           <FileText class="h-8 w-8" />
                         </div>
                         <div class="flex-1 min-w-0">
@@ -1050,6 +1052,31 @@ function getImageSource(message: IMessage): string | null {
 
 .document-size {
   color: rgba(155, 155, 155, 0.8);
+}
+
+/* Document icon styling */
+.document-icon.pdf svg {
+  color: #e53935; /* Red */
+}
+
+.document-icon.doc svg {
+  color: #1565c0; /* Blue */
+}
+
+.document-icon.sheet svg {
+  color: #2e7d32; /* Green */
+}
+
+.document-icon.presentation svg {
+  color: #ff8f00; /* Orange/Amber */
+}
+
+.document-icon.text svg {
+  color: #78909c; /* Blue Grey */
+}
+
+.document-icon.zip svg {
+  color: #7b1fa2; /* Purple */
 }
 
 .document-timestamp {
