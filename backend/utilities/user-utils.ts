@@ -221,7 +221,8 @@ export class UserUtils extends Utils {
                     username: user.username,
                     display_name: user.display_name,
                     created_at: user.created_at,
-                    public_key: user.public_key
+                    public_key: user.public_key,
+                    profile_picture: user.profile_picture
                 });
             }
 
@@ -241,8 +242,8 @@ export class UserUtils extends Utils {
                 username: user.username,
                 display_name: user.display_name,
                 created_at: user.created_at,
-                public_key: user.public_key
-
+                public_key: user.public_key,
+                profile_picture: user.profile_picture
             };
 
             return this.createSuccessResponse(userData);
@@ -318,7 +319,8 @@ export class UserUtils extends Utils {
                 shadow_mode: user.shadow_mode,
                 full_name_search: user.full_name_search,
                 public_key: user.public_key,
-                token: token
+                token: token,
+                profile_picture: user.profile_picture
             };
 
             return this.createSuccessResponse(userData);
@@ -367,7 +369,8 @@ export class UserUtils extends Utils {
                 created_at = TO_TIMESTAMP(0),
                 shadow_mode = FALSE,
                 full_name_search = FALSE,
-                public_key = NULL
+                public_key = NULL,
+                profile_picture = NULL
             WHERE uid = $1`,
                 [uid, deletedUsername, impossibleHash]
             );
@@ -576,7 +579,8 @@ export class UserUtils extends Utils {
                 is_deleted: user.is_deleted,
                 shadow_mode: user.shadow_mode,
                 full_name_search: user.full_name_search,
-                public_key: user.public_key
+                public_key: user.public_key,
+                profile_picture: user.profile_picture
             };
 
             return this.createSuccessResponse(userData);
@@ -682,7 +686,8 @@ export class UserUtils extends Utils {
                 shadow_mode: updatedUser.shadow_mode,
                 full_name_search: updatedUser.full_name_search,
                 public_key: updatedUser.public_key,
-                token: token
+                token: token,
+                profile_picture: updatedUser.profile_picture
             };
 
             return this.createSuccessResponse(userData);
@@ -734,7 +739,8 @@ export class UserUtils extends Utils {
                 username: row.username,
                 display_name: row.display_name,
                 created_at: row.created_at,
-                public_key: row.public_key
+                public_key: row.public_key,
+                profile_picture: row.profile_picture
             }));
 
             return this.createSuccessResponse(users);
@@ -826,7 +832,8 @@ export class UserUtils extends Utils {
                 is_deleted: user.is_deleted,
                 shadow_mode: user.shadow_mode,
                 full_name_search: user.full_name_search,
-                public_key: user.public_key
+                public_key: user.public_key,
+                profile_picture: user.profile_picture
             };
 
             return this.createSuccessResponse(userData);
