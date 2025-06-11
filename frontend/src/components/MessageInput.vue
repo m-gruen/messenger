@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, defineEmits, nextTick, onMounted } from 'vue'
-import { Send, Smile, Image as ImageIcon, File as FileIcon, Mic, Paperclip, X } from "lucide-vue-next"
+import { Send, Smile, Image as ImageIcon, File as FileIcon, Mic, Paperclip, X, AlertCircle } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
 import type { ITextMessageContent, IImageMessageContent, IDocumentMessageContent, IAudioMessageContent } from '@/models/message-model'
 
@@ -13,6 +13,38 @@ const documentInputRef = ref<HTMLInputElement | null>(null)
 const audioInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 const showAttachmentMenu = ref(false)
+
+// Notification system
+const notification = ref({
+  show: false,
+  message: '',
+  type: 'error', // 'error' | 'info' | 'success'
+  timeout: null as number | null
+})
+
+function showNotification(message: string, type: 'error' | 'info' | 'success' = 'error') {
+  // Clear any existing timeout
+  if (notification.value.timeout) {
+    clearTimeout(notification.value.timeout)
+  }
+  
+  // Set notification
+  notification.value = {
+    show: true,
+    message,
+    type,
+    timeout: null
+  }
+  
+  // Auto hide after 5 seconds
+  notification.value.timeout = window.setTimeout(() => {
+    hideNotification()
+  }, 5000) as unknown as number
+}
+
+function hideNotification() {
+  notification.value.show = false
+}
 
 // Send message on form submit
 function sendMessage() {
@@ -46,14 +78,14 @@ function handleImageUpload(event: Event) {
   
   // Check if file is an image
   if (!file.type.startsWith('image/')) {
-    alert('Please select an image file')
+    showNotification('Please select an image file', 'error')
     return
   }
   
   // Check initial file size
   const MAX_SIZE = 5 * 1024 * 1024 // 5MB
   if (file.size > MAX_SIZE) {
-    alert('Image size should not exceed 5MB')
+    showNotification('Image size should not exceed 5MB', 'error')
     return
   }
   
@@ -83,7 +115,7 @@ function handleImageUpload(event: Event) {
     })
     .catch(error => {
       console.error('Image compression failed:', error);
-      alert('Failed to process the image. Please try a smaller image.')
+      showNotification('Failed to process the image. Please try a smaller image.', 'error')
       isUploading.value = false;
     });
 }
@@ -100,7 +132,7 @@ function handleDocumentUpload(event: Event) {
   // Check file size
   const MAX_SIZE = 10 * 1024 * 1024 // 10MB
   if (file.size > MAX_SIZE) {
-    alert('Document size should not exceed 10MB')
+    showNotification('Document size should not exceed 10MB', 'error')
     return
   }
   
@@ -113,7 +145,7 @@ function handleDocumentUpload(event: Event) {
     const base64Data = reader.result?.toString().split(',')[1] // Get base64 data
     
     if (!base64Data) {
-      alert('Failed to read document')
+      showNotification('Failed to read document', 'error')
       isUploading.value = false
       return
     }
@@ -138,7 +170,7 @@ function handleDocumentUpload(event: Event) {
   
   reader.onerror = () => {
     console.error('Error reading file')
-    alert('Failed to read document file')
+    showNotification('Failed to read document file', 'error')
     isUploading.value = false
   }
   
@@ -157,7 +189,7 @@ function handleAudioUpload(event: Event) {
   // Check file size
   const MAX_SIZE = 10 * 1024 * 1024 // 10MB
   if (file.size > MAX_SIZE) {
-    alert('Audio size should not exceed 10MB')
+    showNotification('Audio size should not exceed 10MB', 'error')
     return
   }
   
@@ -169,7 +201,7 @@ function handleAudioUpload(event: Event) {
     const base64Data = reader.result?.toString().split(',')[1] // Get base64 data
     
     if (!base64Data) {
-      alert('Failed to read audio file')
+      showNotification('Failed to read audio file', 'error')
       isUploading.value = false
       return
     }
@@ -193,7 +225,7 @@ function handleAudioUpload(event: Event) {
   
   reader.onerror = () => {
     console.error('Error reading audio file')
-    alert('Failed to read audio file')
+    showNotification('Failed to read audio file', 'error')
     isUploading.value = false
   }
   
@@ -476,6 +508,41 @@ onMounted(() => {
     <div v-if="isUploading" class="absolute inset-0 bg-background/50 flex items-center justify-center">
       <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
     </div>
+    
+    <!-- Notification Toast -->
+    <transition
+      enter-active-class="transform transition duration-300 ease-out"
+      enter-from-class="opacity-0 translate-y-4"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transform transition duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div v-if="notification.show" 
+           class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 px-4 py-3 rounded-lg shadow-xl max-w-md"
+           :class="{
+             'bg-red-500 text-white border border-red-700': notification.type === 'error',
+             'bg-green-500 text-white border border-green-700': notification.type === 'success',
+             'bg-blue-500 text-white border border-blue-700': notification.type === 'info'
+           }">
+        <div class="flex items-center">
+          <!-- Icon -->
+          <div class="mr-3 flex-shrink-0">
+            <AlertCircle class="h-5 w-5" />
+          </div>
+          
+          <!-- Message -->
+          <div class="flex-1 font-medium text-sm">
+            {{ notification.message }}
+          </div>
+          
+          <!-- Close button -->
+          <button @click="hideNotification" class="ml-4 p-1 rounded-full hover:bg-white/20 transition-colors">
+            <X class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
