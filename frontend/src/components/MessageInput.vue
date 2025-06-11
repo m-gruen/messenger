@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { ref, defineEmits, nextTick, onMounted } from 'vue'
-import { Send, Smile, Image as ImageIcon } from "lucide-vue-next"
+import { Send, Smile, Image as ImageIcon, File as FileIcon, Mic, Paperclip, X } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
-import type { ITextMessageContent, IImageMessageContent } from '@/models/message-model'
+import type { ITextMessageContent, IImageMessageContent, IDocumentMessageContent, IAudioMessageContent } from '@/models/message-model'
 
 const emit = defineEmits(['send'])
 const newMessage = ref('')
 const showEmojiPicker = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const documentInputRef = ref<HTMLInputElement | null>(null)
+const audioInputRef = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
+const showAttachmentMenu = ref(false)
 
 // Send message on form submit
 function sendMessage() {
@@ -85,10 +88,136 @@ function handleImageUpload(event: Event) {
     });
 }
 
+// Handle document upload
+function handleDocumentUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+  
+  if (!files || !files.length) return
+  
+  const file = files[0]
+  
+  // Check file size
+  const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+  if (file.size > MAX_SIZE) {
+    alert('Document size should not exceed 10MB')
+    return
+  }
+  
+  isUploading.value = true
+  
+  // Read the file as base64
+  const reader = new FileReader()
+  
+  reader.onload = () => {
+    const base64Data = reader.result?.toString().split(',')[1] // Get base64 data
+    
+    if (!base64Data) {
+      alert('Failed to read document')
+      isUploading.value = false
+      return
+    }
+    
+    // Create a document message content object
+    const messageContent: IDocumentMessageContent = {
+      type: 'document',
+      format: file.type,
+      content: base64Data,
+      name: file.name,
+      size: file.size
+    }
+    
+    emit('send', messageContent)
+    isUploading.value = false
+    
+    // Reset file input
+    if (documentInputRef.value) {
+      documentInputRef.value.value = ''
+    }
+  }
+  
+  reader.onerror = () => {
+    console.error('Error reading file')
+    alert('Failed to read document file')
+    isUploading.value = false
+  }
+  
+  reader.readAsDataURL(file)
+}
+
+// Handle audio upload
+function handleAudioUpload(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+  
+  if (!files || !files.length) return
+  
+  const file = files[0]
+  
+  // Check file size
+  const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+  if (file.size > MAX_SIZE) {
+    alert('Audio size should not exceed 10MB')
+    return
+  }
+  
+  isUploading.value = true
+  
+  const reader = new FileReader()
+  
+  reader.onload = () => {
+    const base64Data = reader.result?.toString().split(',')[1] // Get base64 data
+    
+    if (!base64Data) {
+      alert('Failed to read audio file')
+      isUploading.value = false
+      return
+    }
+    
+    // Create an audio message content object
+    const messageContent: IAudioMessageContent = {
+      type: 'audio',
+      format: file.type,
+      content: base64Data,
+      name: file.name
+    }
+    
+    emit('send', messageContent)
+    isUploading.value = false
+    
+    // Reset file input
+    if (audioInputRef.value) {
+      audioInputRef.value.value = ''
+    }
+  }
+  
+  reader.onerror = () => {
+    console.error('Error reading audio file')
+    alert('Failed to read audio file')
+    isUploading.value = false
+  }
+  
+  reader.readAsDataURL(file)
+}
+
 // Trigger file input click
 function triggerFileUpload() {
   if (fileInputRef.value) {
     fileInputRef.value.click()
+  }
+}
+
+// Trigger document file upload
+function triggerDocumentUpload() {
+  if (documentInputRef.value) {
+    documentInputRef.value.click()
+  }
+}
+
+// Trigger audio file upload
+function triggerAudioUpload() {
+  if (audioInputRef.value) {
+    audioInputRef.value.click()
   }
 }
 
@@ -222,12 +351,28 @@ onMounted(() => {
 
 <template>
   <div class="p-4 border-t bg-card relative">
-    <!-- Hidden file input -->
+    <!-- Hidden file inputs -->
     <input 
       type="file" 
       ref="fileInputRef" 
       @change="handleImageUpload" 
       accept="image/*" 
+      class="hidden"
+    />
+    
+    <input 
+      type="file" 
+      ref="documentInputRef" 
+      @change="handleDocumentUpload" 
+      accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx" 
+      class="hidden"
+    />
+    
+    <input 
+      type="file" 
+      ref="audioInputRef" 
+      @change="handleAudioUpload" 
+      accept="audio/*" 
       class="hidden"
     />
     
@@ -242,16 +387,62 @@ onMounted(() => {
         <Smile class="h-5 w-5" />
       </button>
       
-      <!-- Image Upload Button -->
-      <button 
-        type="button" 
-        @click="triggerFileUpload"
-        class="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
-        aria-label="Upload image"
-        :disabled="isUploading"
-      >
-        <ImageIcon class="h-5 w-5" />
-      </button>
+      <!-- Attachment Menu Button -->
+      <div class="relative">
+        <button 
+          type="button" 
+          @click="showAttachmentMenu = !showAttachmentMenu"
+          class="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+          aria-label="Add attachment"
+          :disabled="isUploading"
+        >
+          <Paperclip class="h-5 w-5" />
+        </button>
+        
+        <!-- Attachment Menu Popup -->
+        <div v-if="showAttachmentMenu" 
+          class="absolute bottom-full mb-2 left-0 bg-card border rounded-lg shadow-lg py-1 min-w-[160px]"
+        >
+          <!-- Close button -->
+          <button 
+            @click="showAttachmentMenu = false" 
+            class="absolute top-1 right-1 p-1 rounded-full hover:bg-muted"
+            aria-label="Close attachment menu"
+          >
+            <X class="h-3 w-3" />
+          </button>
+          
+          <!-- Image Upload Option -->
+          <button 
+            @click="triggerFileUpload(); showAttachmentMenu = false"
+            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
+            :disabled="isUploading"
+          >
+            <ImageIcon class="h-4 w-4" />
+            <span>Image</span>
+          </button>
+          
+          <!-- Document Upload Option -->
+          <button 
+            @click="triggerDocumentUpload(); showAttachmentMenu = false"
+            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
+            :disabled="isUploading"
+          >
+            <FileIcon class="h-4 w-4" />
+            <span>Document</span>
+          </button>
+          
+          <!-- Audio Upload Option -->
+          <button 
+            @click="triggerAudioUpload(); showAttachmentMenu = false"
+            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
+            :disabled="isUploading"
+          >
+            <Mic class="h-4 w-4" />
+            <span>Audio</span>
+          </button>
+        </div>
+      </div>
       
       <!-- Emoji Picker -->
       <EmojiPicker :is-open="showEmojiPicker" @select="insertEmoji" @close="showEmojiPicker = false" />

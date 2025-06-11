@@ -47,7 +47,8 @@ const emit = defineEmits<{
   'send-message': [content: any],
   'clear-send-error': [],
   'load-more-messages': [],
-  'view-image': [src: string | null]
+  'view-image': [src: string | null],
+  'download-file': [src: string | null, filename: string]
 }>()
 
 // Automatically dismiss send error after 5 seconds
