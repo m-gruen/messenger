@@ -447,17 +447,23 @@ function getImageSource(message: IMessage): string | null {
                         style="max-height: 300px;" 
                         @click="emit('view-image', getImageSource(message))"
                       />
+                      <!-- Timestamp included directly in the image container for better positioning -->
+                      <span
+                        v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
+                        class="text-xs opacity-70 message-timestamp image-timestamp">
+                        {{ formatTimeForMessage(message.timestamp) }}
+                      </span>
                     </template>
                     <div v-else class="image-error p-2 text-destructive">
                       Image data could not be loaded
                     </div>
                   </div>
 
-                  <!-- Show time only in single or last messages in a group -->
+                  <!-- Show time only in single or last messages in a group (but not for images) -->
                   <span
-                    v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
+                    v-if="(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') && !isImageMessage(message.content)"
                     class="text-xs opacity-70 message-timestamp"
-                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(getMessageContent(message)), 'image-timestamp': isImageMessage(message.content) }">
+                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(getMessageContent(message)) }">
                     {{ formatTimeForMessage(message.timestamp) }}
                   </span>
                 </div>
@@ -643,6 +649,8 @@ function getImageSource(message: IMessage): string | null {
   cursor: pointer;
   transition: transform 0.2s;
   margin: 2px 0;
+  position: relative;
+  padding-bottom: 18px; /* Add padding for timestamp */
 }
 
 .image-container img {
@@ -654,9 +662,13 @@ function getImageSource(message: IMessage): string | null {
 }
 
 .image-timestamp {
-  color: rgba(155, 155, 155, 0.8) !important;
-  bottom: -1.5em !important;
-  right: 3px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  bottom: 4px !important;
+  right: 6px !important;
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 2px 5px;
+  border-radius: 10px;
+  font-size: 0.65rem;
 }
 
 .image-error {
