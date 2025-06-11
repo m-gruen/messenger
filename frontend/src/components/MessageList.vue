@@ -374,6 +374,26 @@ function getAudioSource(message: IMessage): string {
   return '';
 }
 
+// Get audio file extension for download
+function getAudioExtension(message: IMessage): string {
+  const parsed = parseMessageContent(message.content);
+  if (parsed.type === 'audio' && parsed.format) {
+    // Extract extension from MIME type
+    const format = parsed.format.toLowerCase();
+    
+    // Common audio formats
+    if (format.includes('mp3')) return 'mp3';
+    if (format.includes('wav')) return 'wav';
+    if (format.includes('ogg')) return 'ogg';
+    if (format.includes('m4a') || format.includes('aac')) return 'aac';
+    if (format.includes('flac')) return 'flac';
+    
+    // Default to mp3 if format can't be determined
+    return 'mp3';
+  }
+  return 'mp3';
+}
+
 // Audio player state and controls
 interface AudioState {
   isPlaying: boolean;
@@ -684,7 +704,7 @@ function getImageSource(message: IMessage): string | null {
                   <!-- Audio message content -->
                   <div v-else-if="isAudioMessage(message.content)" class="audio-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
-                    <div class="audio-player p-3">
+                    <div class="audio-player p-3 pb-4">
                       <!-- Hidden audio element without controls -->
                       <audio 
                         :src="getAudioSource(message)" 
@@ -739,12 +759,23 @@ function getImageSource(message: IMessage): string | null {
                             }}</span>
                           </div>
                         </div>
+                        
+                        <!-- Download button -->
+                        <a 
+                          :href="getAudioSource(message)" 
+                          :download="`audio-${message.mid}.${getAudioExtension(message)}`"
+                          class="audio-download-button ml-2" 
+                          title="Download audio"
+                          @click.stop
+                        >
+                          <Download class="h-5 w-5" />
+                        </a>
                       </div>
                       
-                      <!-- Timestamp below audio -->
+                      <!-- Timestamp below audio (similar to document timestamp) -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
-                        class="text-xs opacity-70 message-timestamp audio-timestamp">
+                        class="text-xs opacity-70 message-timestamp document-timestamp">
                         {{ formatTimeForMessage(message.timestamp) }}
                       </span>
                     </div>
@@ -1033,14 +1064,14 @@ function getImageSource(message: IMessage): string | null {
 .audio-container {
   margin: 2px 0;
   position: relative;
-  padding-bottom: 18px; /* For timestamp */
+  padding-bottom: 16px; /* Reduced padding for timestamp */
 }
 
 .audio-player {
   position: relative;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible; /* Keep visible to show timestamp outside container */
 }
 
 .custom-audio-player {
@@ -1072,6 +1103,23 @@ function getImageSource(message: IMessage): string | null {
   color: #3b82f6; /* blue-500 */
 }
 
+.audio-download-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: inherit;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  padding: 4px;
+  border-radius: 50%;
+}
+
+.audio-download-button:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: scale(1.1);
+}
+
 .audio-progress-container {
   display: flex;
   flex-direction: column;
@@ -1101,11 +1149,10 @@ function getImageSource(message: IMessage): string | null {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.audio-timestamp {
-  position: absolute;
-  color: rgba(155, 155, 155, 0.8);
-  bottom: -16px;
-  right: 6px;
-  font-size: 0.65rem;
+/* Audio timestamp styling */
+.audio-player .document-timestamp {
+  bottom: -12px; /* Smaller bottom spacing than regular document timestamp */
 }
+
+/* Audio timestamp now uses document-timestamp class for consistency */
 </style>
