@@ -200,7 +200,7 @@ export class UserUtils extends Utils {
 
         try {
             const result = await this.dbSession.query(`
-                SELECT uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search, public_key
+                SELECT uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search, public_key, profile_picture
                 FROM account 
                 WHERE uid = $1`,
                 [uid]
@@ -280,7 +280,8 @@ export class UserUtils extends Utils {
                     is_deleted,
                     shadow_mode,
                     full_name_search,
-                    public_key
+                    public_key,
+                    profile_picture
                 FROM account 
                 WHERE username = $1`,
                 [username]
@@ -414,6 +415,7 @@ export class UserUtils extends Utils {
             displayName?: string | null;
             shadowMode?: boolean | string;
             fullNameSearch?: boolean | string;
+            profilePicture?: string | null;
         }
     ): Promise<UserResponse> {
         if (!this.isValidUserId(uid)) {
@@ -423,7 +425,7 @@ export class UserUtils extends Utils {
             );
         }
 
-        const { username, displayName, shadowMode, fullNameSearch } = options;
+        const { username, displayName, shadowMode, fullNameSearch, profilePicture } = options;
 
         try {
             const userQuery = await this.dbSession.query(
@@ -523,6 +525,11 @@ export class UserUtils extends Utils {
                 updateFields.push(`full_name_search = $${updateParams.length}`);
             }
 
+            if (profilePicture !== undefined) {
+                updateParams.push(profilePicture);
+                updateFields.push(`profile_picture = $${updateParams.length}`);
+            }
+
             if (updateFields.length === 0) {
                 return this.createErrorResponse(
                     StatusCodes.BAD_REQUEST,
@@ -540,7 +547,8 @@ export class UserUtils extends Utils {
                 is_deleted,
                 shadow_mode,
                 full_name_search,
-                public_key
+                public_key,
+                profile_picture
             `;
             updateParams.push(uid);
 
@@ -618,7 +626,8 @@ export class UserUtils extends Utils {
                     is_deleted,
                     shadow_mode,
                     full_name_search,
-                    public_key
+                    public_key,
+                    profile_picture
                 FROM account WHERE uid = $1 AND is_deleted = FALSE`,
                 [uid]
             );
@@ -647,7 +656,7 @@ export class UserUtils extends Utils {
 
             const updateResult = await this.dbSession.query(
                 `UPDATE account SET password_hash = $2 WHERE uid = $1 
-                RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search, public_key`,
+                RETURNING uid, username, created_at, display_name, is_deleted, shadow_mode, full_name_search, public_key, profile_picture`,
                 [uid, hashedNewPassword]
             );
 
@@ -706,7 +715,7 @@ export class UserUtils extends Utils {
 
         try {
             const searchResults = await this.dbSession.query(`
-                SELECT uid, username, display_name, created_at, public_key
+                SELECT uid, username, display_name, created_at, public_key, profile_picture
                 FROM account
                 WHERE 
                     (shadow_mode IS NULL OR shadow_mode = false)
@@ -791,7 +800,8 @@ export class UserUtils extends Utils {
                     is_deleted,
                     shadow_mode,
                     full_name_search,
-                    public_key
+                    public_key,
+                    profile_picture
             `, [publicKey, uid]);
 
             if (result.rowCount === 0) {

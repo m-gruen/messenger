@@ -144,7 +144,7 @@ userRouter.delete('/:uid', authenticateToken, async (req: AuthenticatedRequest, 
 
 userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const uid = parseInt(req.params.uid);
-    const { username, displayName, shadowMode, fullNameSearch } = req.body;
+    const { username, displayName, shadowMode, fullNameSearch, profilePicture } = req.body;
 
     if (uid !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).json({

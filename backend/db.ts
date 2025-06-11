@@ -95,7 +95,8 @@ export class DbSession {
                     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
                     shadow_mode BOOLEAN NOT NULL DEFAULT FALSE,
                     full_name_search BOOLEAN NOT NULL DEFAULT FALSE,
-                    public_key VARCHAR(5000)
+                    public_key VARCHAR(5000),
+                    profile_picture TEXT
                 )`,
                 `CREATE TABLE IF NOT EXISTS message (
                     mid SERIAL PRIMARY KEY,

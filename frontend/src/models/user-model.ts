@@ -9,6 +9,7 @@ export interface AuthenticatedUser {
     public_key: string;
     token: string;
     private_key?: string;
+    profile_picture?: string;
 }
 
 export interface User {
@@ -17,4 +18,5 @@ export interface User {
     display_name?: string;
     created_at: Date;
     public_key: string;
+    profile_picture?: string;
 }

@@ -8,6 +8,7 @@ export interface AuthenticatedUser {
     full_name_search?: boolean;
     public_key: string;
     token: string;
+    profile_picture?: string;
 }
 
 export interface User {
@@ -16,4 +17,5 @@ export interface User {
     display_name?: string;
     created_at: Date;
     public_key: string;
+    profile_picture?: string;
 }
