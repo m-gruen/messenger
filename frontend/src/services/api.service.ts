@@ -83,7 +83,7 @@ export class ApiService {
                     method: 'PUT',
                     body: JSON.stringify({ publicKey })
                 }, data.token);
-                
+
                 data.private_key = privateKey;
                 data.public_key = publicKey;
             } catch (error) {
@@ -423,7 +423,7 @@ export class ApiService {
                     nonce: "error"
                 })
             }, token);
-            
+
             return {
                 ...data,
                 content: "⚠️ Message could not be encrypted. Private key is missing.",
@@ -449,7 +449,7 @@ export class ApiService {
             };
         } catch (error) {
             console.error('Failed to encrypt or send message:', error);
-            
+
             const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {
                 method: 'POST',
                 body: JSON.stringify({
@@ -457,7 +457,7 @@ export class ApiService {
                     nonce: "error"
                 })
             }, token);
-            
+
             return {
                 ...data,
                 content: "⚠️ Message could not be encrypted. Encryption failed.",
@@ -474,14 +474,14 @@ export class ApiService {
      */
     public async regenerateKeys(uid: number, token: string): Promise<AuthenticatedUser> {
         const { publicKey, privateKey } = await encryptionService.generateKeyPair();
-        
+
         const data = await this.updatePublicKey(uid, publicKey, token);
-        
+
         const updatedUser: AuthenticatedUser = {
             ...data,
             private_key: privateKey
         };
-        
+
         return updatedUser;
     }
 
@@ -492,8 +492,8 @@ export class ApiService {
      * @param token JWT token
      * @returns Result of the operation
      */
-    public async markMessagesAsReceived(userId: number, messageIds: number[], token: string): Promise<{deleted: number}> {
-        return this.fetchApi<{deleted: number}>(`${this.baseUrl}/message/${userId}/received`, {
+    public async markMessagesAsReceived(userId: number, messageIds: number[], token: string): Promise<{ deleted: number }> {
+        return this.fetchApi<{ deleted: number }>(`${this.baseUrl}/message/${userId}/received`, {
             method: 'DELETE',
             body: JSON.stringify({ messageIds })
         }, token);

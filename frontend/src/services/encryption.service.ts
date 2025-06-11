@@ -63,7 +63,7 @@ export class EncryptionService {
 
     private async getSharedKeyClient(client: IKeyPair, server: IPublicKey): Promise<sodium.CryptoKX> {
         await sodium.ready;
-        
+
         if (!client.private_key) {
             throw new Error('Private key not available for client');
         }
@@ -115,8 +115,8 @@ export class EncryptionService {
         );
 
         // Use URLSAFE variant for image messages to prevent encoding issues
-        const base64Variant = isImageMessage ? 
-            sodium.base64_variants.URLSAFE : 
+        const base64Variant = isImageMessage ?
+            sodium.base64_variants.URLSAFE :
             sodium.base64_variants.ORIGINAL;
 
         return {
@@ -152,17 +152,17 @@ export class EncryptionService {
                     isSender ? sharedKey.sharedTx : sharedKey.sharedRx
                 )
             );
-            
+
             return decrypted;
         } catch (error) {
             console.error('Decryption error:', error);
-            
+
             // Check if this appears to be an image message based on content length
             if (encryptedMessage.encryptedContentBase64.length > 1000) {
                 throw new Error('Failed to decrypt possible image message. The format may be incompatible.');
             }
-            
-            throw error; // Re-throw the original error
+
+            throw error;
         }
     }
 }

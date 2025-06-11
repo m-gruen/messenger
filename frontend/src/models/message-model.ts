@@ -16,34 +16,34 @@ export interface IMessageContent {
 
 export interface IImageMessageContent extends IMessageContent {
     type: "image";
-    format: string;  // MIME type
-    content: string; // Base64 encoded content
-    name: string;    // Original filename
-    size: number;    // File size in bytes
+    format: string;
+    content: string;
+    name: string;
+    size: number;
 }
 
 export interface ICodeMessageContent extends IMessageContent {
     type: "code";
-    language: string;  // Programming language
-    content: string;   // Actual code content
-    name: string;      // Filename
-    size: number;      // File size in bytes
+    language: string;
+    content: string;
+    name: string;
+    size: number;
 }
 
 export interface IDocumentMessageContent extends IMessageContent {
     type: "document";
-    format: string;  // MIME type
-    content: string; // Base64 encoded content
-    name: string;    // Original filename
-    size: number;    // File size in bytes
+    format: string;
+    content: string;
+    name: string;
+    size: number;
 }
 
 export interface IAudioMessageContent extends IMessageContent {
     type: "audio";
-    format: string;  // MIME type
-    content: string; // Base64 encoded content
-    duration?: number; // Duration in seconds, if available
-    name?: string;   // Original filename, if applicable
+    format: string;
+    content: string;
+    duration?: number;
+    name?: string;
 }
 
 export interface ITextMessageContent extends IMessageContent {
@@ -63,4 +63,3 @@ export interface IUserMessagesStore {
 export interface ILocalMessagesStore {
     [userId: string]: IUserMessagesStore;
 }
-

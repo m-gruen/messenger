@@ -34,10 +34,10 @@ export const useMessageStore = defineStore('messages', () => {
         try {
             // Process the message to ensure valid date
             const processedMessage = ensureValidDate(message);
-            
+
             // Check if we're the receiver of this message
             const isReceiver = message.receiver_uid === currentUserId.value;
-            
+
             // If I am the receiver, I need to:
             // 1. Decrypt and store the message locally
             // 2. Delete it from the server
@@ -47,12 +47,12 @@ export const useMessageStore = defineStore('messages', () => {
                 if (messageExists) {
                     return;
                 }
-                
+
                 // Check if we have content and nonce (required for encrypted messages)
                 if (message.content && message.nonce) {
                     const senderUser = await apiService.getUserById(message.sender_uid, token.value);
                     const currentUser = storageService.getUser();
-                    
+
                     if (senderUser && currentUser) {
                         try {
                             // Decrypt the message
@@ -65,21 +65,21 @@ export const useMessageStore = defineStore('messages', () => {
                                 },
                                 false // Current user is the receiver
                             );
-                            
+
                             // Create the message with decrypted content
                             // The decryptedContent is the JSON string of our structured message
                             const decryptedMessage = {
                                 ...processedMessage,
                                 content: decryptedContent // This should already be a JSON string
                             };
-                            
+
                             // Store locally for future access
                             storageService.addMessageToContact(
                                 currentUserId.value,
                                 message.sender_uid,
                                 decryptedMessage
                             );
-                            
+
                             // Delete from server now that it's stored locally
                             try {
                                 await apiService.markMessagesAsReceived(
@@ -91,7 +91,7 @@ export const useMessageStore = defineStore('messages', () => {
                             } catch (deleteError) {
                                 console.error('Error deleting message from server:', deleteError);
                             }
-                            
+
                             // Only update UI if this message belongs to the current conversation
                             if (activeContactId.value === message.sender_uid) {
                                 // Update the conversation view
@@ -100,13 +100,13 @@ export const useMessageStore = defineStore('messages', () => {
                                     const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
                                     return timeB - timeA;
                                 });
-                                
+
                                 // Scroll to show the new message
                                 smoothScrollToRecentMessages();
                             }
                         } catch (decryptError) {
                             console.error('Failed to decrypt WebSocket message:', decryptError);
-                            
+
                             // Store the message with an error indicator to prevent it from getting lost
                             const errorMessage = {
                                 ...processedMessage,
@@ -116,14 +116,14 @@ export const useMessageStore = defineStore('messages', () => {
                                 }),
                                 decryptionFailed: true
                             };
-                            
+
                             // Store the message anyway so it doesn't get lost
                             storageService.addMessageToContact(
                                 currentUserId.value,
                                 message.sender_uid,
                                 errorMessage
                             );
-                            
+
                             // Only update UI if this message belongs to the current conversation
                             if (activeContactId.value === message.sender_uid) {
                                 // Add error message to conversation view
@@ -133,7 +133,7 @@ export const useMessageStore = defineStore('messages', () => {
                                     return timeB - timeA;
                                 });
                             }
-                            
+
                             // Try to delete the message from the server anyway
                             try {
                                 await apiService.markMessagesAsReceived(
@@ -147,7 +147,7 @@ export const useMessageStore = defineStore('messages', () => {
                         }
                     }
                 }
-            } 
+            }
             // If I'm the sender, I already have the message locally - no need to do anything
             // The receiver will handle deletion from server
         } catch (err) {
@@ -250,41 +250,41 @@ export const useMessageStore = defineStore('messages', () => {
             // New approach: First check for any new messages on the server
             let newMessagesFound = false;
             let messagesToAcknowledge: number[] = [];
-            
+
             if (token.value) {
                 try {
                     // Fetch server messages
                     const serverMessages = await apiService.getMessages(
-                        currentUserId.value, 
-                        contactUserId, 
+                        currentUserId.value,
+                        contactUserId,
                         token.value
                     );
-                    
+
                     if (serverMessages.length > 0) {
                         newMessagesFound = true;
-                        
+
                         // Process all messages to ensure valid dates
                         const processedMessages = serverMessages.map(ensureValidDate);
-                        
+
                         // Store the message IDs we need to acknowledge
                         messagesToAcknowledge = processedMessages
                             .filter(msg => msg.receiver_uid === currentUserId.value)
                             .map(msg => msg.mid);
-                        
+
                         // Store fetched messages locally
                         storageService.storeMessagesForContact(
                             currentUserId.value,
                             contactUserId,
                             processedMessages
                         );
-                        
+
                         console.log(`Stored ${processedMessages.length} new messages from server`);
-                        
+
                         // Delete the messages from server after storing locally
                         if (messagesToAcknowledge.length > 0) {
                             try {
                                 const result = await apiService.markMessagesAsReceived(
-                                    currentUserId.value, 
+                                    currentUserId.value,
                                     messagesToAcknowledge,
                                     token.value
                                 );
@@ -300,24 +300,24 @@ export const useMessageStore = defineStore('messages', () => {
                     // Continue with local messages
                 }
             }
-            
+
             // Now load all messages from local storage (including any we just received)
             const localMessages = storageService.getMessagesForContact(
-                currentUserId.value, 
+                currentUserId.value,
                 contactUserId
             );
-            
+
             // Process all messages to ensure valid dates
             const processedLocalMessages = localMessages.map(ensureValidDate);
-            
+
             // Sort messages (newest first for display)
             messages.value = processedLocalMessages.sort((a, b) => {
                 return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
             });
-            
+
             // Position to recent messages
             positionToRecentMessages();
-            
+
             // Show a notification if we found new messages
             if (newMessagesFound) {
                 console.log('New messages were found and added to local storage');
@@ -341,14 +341,14 @@ export const useMessageStore = defineStore('messages', () => {
             // Get the contact user data for encryption keys
             const contactUser = await apiService.getUserById(receiverId, token.value);
             const currentUser = storageService.getUser();
-            
+
             if (!contactUser || !currentUser) {
                 throw new Error('Could not get user information needed for encryption');
             }
-            
+
             // Format content based on message type
             let messageContent: string;
-            
+
             // Check if content is a structured object (from image upload)
             if (typeof content === 'object' && content !== null) {
                 // It's either an image or other structured content
@@ -360,7 +360,7 @@ export const useMessageStore = defineStore('messages', () => {
                     content: content
                 });
             }
-            
+
             // First prepare local representation with placeholders for ID and timestamp
             // that will be filled in after server response
             const tempMessage: IMessage = {
@@ -374,17 +374,17 @@ export const useMessageStore = defineStore('messages', () => {
 
             // Add the unencrypted message to the displayed messages immediately
             const processedTempMessage = ensureValidDate(tempMessage);
-            
+
             // Add to the list and re-sort
             messages.value = [...messages.value, processedTempMessage].sort((a, b) => {
                 const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
                 const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
                 return timeB - timeA;
             });
-            
+
             // Smoothly scroll to show the new message
             smoothScrollToRecentMessages();
-            
+
             // Now send the encrypted message to the server
             const newMessage = await apiService.sendMessage(
                 currentUserId.value,
@@ -392,32 +392,32 @@ export const useMessageStore = defineStore('messages', () => {
                 messageContent, // Send the JSON stringified content
                 token.value
             );
-            
+
             // Process the message to ensure valid date
             const processedMessage = ensureValidDate({ ...newMessage });
-            
+
             // Create the actual message to store locally
             const storedMessage = {
                 ...processedMessage,
                 content: messageContent // Store the decrypted content as JSON string
             };
-            
+
             // Find and replace the temporary message
-            const tempIndex = messages.value.findIndex(m => 
-                m.mid === -1 && 
-                m.sender_uid === processedMessage.sender_uid && 
+            const tempIndex = messages.value.findIndex(m =>
+                m.mid === -1 &&
+                m.sender_uid === processedMessage.sender_uid &&
                 m.receiver_uid === processedMessage.receiver_uid
             );
-            
+
             if (tempIndex !== -1) {
                 // Replace the temp message with the real one
                 messages.value.splice(tempIndex, 1, storedMessage);
             }
-            
+
             // Store the message locally
             storageService.addMessageToContact(
-                currentUserId.value, 
-                receiverId, 
+                currentUserId.value,
+                receiverId,
                 storedMessage
             );
 
@@ -440,10 +440,10 @@ export const useMessageStore = defineStore('messages', () => {
             for (const contact of contacts) {
                 const contactId = contact.contactUserId;
                 console.log(`Fetching messages for contact ${contactId}`);
-                
+
                 try {
                     const contactMessages = await apiService.getMessages(userId, contactId, token.value);
-                    
+
                     if (contactMessages && contactMessages.length > 0) {
                         // Store messages using our new method
                         storageService.storeMessagesForContact(userId, contactId, contactMessages);
@@ -469,14 +469,14 @@ export const useMessageStore = defineStore('messages', () => {
             if (!currentUserId.value) {
                 throw new Error("Current user ID not available");
             }
-            
+
             const result = storageService.deleteMessagesForContact(currentUserId.value, contactId);
-            
+
             // If deleting the active contact's messages, clear the displayed messages
             if (activeContactId.value === contactId) {
                 messages.value = [];
             }
-            
+
             return result;
         } catch (error) {
             console.error('Error deleting contact messages:', error);
@@ -490,10 +490,10 @@ export const useMessageStore = defineStore('messages', () => {
     function deleteAllMessages(): boolean {
         try {
             storageService.deleteAllMessages();
-            
+
             // Clear displayed messages
             messages.value = [];
-            
+
             return true;
         } catch (error) {
             console.error('Error deleting all messages:', error);
@@ -534,13 +534,13 @@ export const useMessageStore = defineStore('messages', () => {
      */
     async function loadPaginatedMessages(contactId: number, page: number, pageSize: number) {
         if (!currentUserId.value) return;
-        
+
         try {
             // First ensure we have all server messages
             if (page === 0) {
                 await fetchMessages(contactId);
             }
-            
+
             // Get paginated messages from local storage
             const paginatedData = storageService.getMessagesForContactPaginated(
                 currentUserId.value,
@@ -548,11 +548,11 @@ export const useMessageStore = defineStore('messages', () => {
                 page,
                 pageSize
             );
-            
+
             // Update total pages info
             totalMessagePages.value = paginatedData.totalPages;
             currentMessagePage.value = paginatedData.currentPage;
-            
+
             // Only replace messages if loading the first page
             // otherwise append to existing messages
             if (page === 0) {
@@ -561,7 +561,7 @@ export const useMessageStore = defineStore('messages', () => {
                 // Add older messages to the beginning (since messages are sorted newest first)
                 messages.value = [...paginatedData.messages, ...messages.value];
             }
-            
+
             // Update active contact if needed
             if (contactId !== activeContactId.value) {
                 activeContactId.value = contactId;

@@ -62,16 +62,16 @@ export class StorageService {
 
             // Create set of existing message IDs for fast lookup
             const existingMids = new Set(existingData.messages.map(msg => msg.mid));
-            
+
             // Filter out duplicate messages
             const uniqueNewMessages = messages.filter(msg => !existingMids.has(msg.mid));
-            
+
             // Combine existing and new messages
             existingData.messages = [...existingData.messages, ...uniqueNewMessages];
-            
+
             // Update timestamp
             existingData.lastUpdated = Date.now().toString();
-            
+
             // Sort messages by timestamp (oldest first)
             existingData.messages.sort((a, b) => {
                 const timeA = new Date(a.timestamp).getTime();
@@ -81,7 +81,7 @@ export class StorageService {
 
             // Store updated conversation data
             localStorage.setItem(key, JSON.stringify(existingData));
-            
+
             console.log(`Stored ${uniqueNewMessages.length} new messages for conversation between ${userId} and ${contactId}`);
         } catch (e) {
             console.error('Error storing messages for contact:', e);
@@ -101,7 +101,7 @@ export class StorageService {
             console.error('Error adding message to contact:', e);
         }
     }
-    
+
     /**
      * Delete all messages for a specific contact
      * @param userId Current user ID
@@ -119,7 +119,7 @@ export class StorageService {
             return false;
         }
     }
-    
+
     /**
      * Get all messages for a specific contact conversation
      * @param userId Current user ID
@@ -130,13 +130,13 @@ export class StorageService {
         try {
             // Generate unique key for this conversation
             const key = this.getConversationKey(userId, contactId);
-            
+
             // Get data from localStorage
             const dataStr = localStorage.getItem(key);
             if (!dataStr) {
                 return [];
             }
-            
+
             // Parse and return messages
             const data: ConversationData = JSON.parse(dataStr);
             return data.messages || [];
@@ -145,7 +145,7 @@ export class StorageService {
             return [];
         }
     }
-    
+
     /**
      * Get the last message for a specific contact conversation
      * @param userId Current user ID
@@ -158,7 +158,7 @@ export class StorageService {
             if (messages.length === 0) {
                 return null;
             }
-            
+
             // Return the last message (since they are sorted by timestamp)
             return messages[messages.length - 1];
         } catch (e) {
@@ -180,18 +180,18 @@ export class StorageService {
                     messageKeys.push(key);
                 }
             }
-            
+
             // Remove each message storage item
             messageKeys.forEach(key => {
                 localStorage.removeItem(key);
             });
-            
+
             console.log(`Cleared all stored messages (${messageKeys.length} conversations)`);
         } catch (e) {
             console.error('Error deleting all messages:', e);
         }
     }
-    
+
     /**
      * Check if there are any messages stored for a specific contact
      * @param userId Current user ID
@@ -207,7 +207,7 @@ export class StorageService {
             return false;
         }
     }
-    
+
     /**
      * Count the number of messages stored for a specific contact
      * @param userId Current user ID
@@ -238,7 +238,7 @@ export class StorageService {
                 console.error('Warning: No private key found for user. End-to-end encryption will not work.');
             }
         }
-        
+
         localStorage.setItem('user', JSON.stringify(user));
     }
 
@@ -284,7 +284,7 @@ export class StorageService {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
     }
-    
+
     /**
      * Backward compatibility method for older code
      * @deprecated Use storeMessagesForContact instead
@@ -293,18 +293,18 @@ export class StorageService {
         if (IncomingMessages.length === 0) {
             return;
         }
-        
+
         try {
             const userId: number = IncomingMessages[0].sender_uid;
             const receiverId: number = IncomingMessages[0].receiver_uid;
-            
+
             // Store messages using the new method
             this.storeMessagesForContact(userId, receiverId, IncomingMessages);
         } catch (e) {
             console.error('Error in legacy storeMessages method:', e);
         }
     }
-    
+
     /**
      * Backward compatibility method for older code
      * @deprecated Use getMessagesForContact instead
@@ -312,7 +312,7 @@ export class StorageService {
     public getStoredMessages(userId: number, contactId: number): IMessage[] {
         return this.getMessagesForContact(userId, contactId);
     }
-    
+
     /**
      * Clear all user data including authentication and messages
      * Use this when logging out or deleting an account
@@ -320,10 +320,10 @@ export class StorageService {
     public clearAllUserData(): void {
         // Clear authentication data
         this.clearAuth();
-        
+
         // Delete all stored messages
         this.deleteAllMessages();
-        
+
         console.log('Cleared all user data from localStorage');
     }
 
@@ -345,7 +345,7 @@ export class StorageService {
             // Get all messages first
             const allMessages = this.getMessagesForContact(userId, contactId);
             const totalCount = allMessages.length;
-            
+
             if (totalCount === 0) {
                 return {
                     messages: [],
@@ -354,23 +354,23 @@ export class StorageService {
                     currentPage: 0
                 };
             }
-            
+
             // Calculate pagination values
             const totalPages = Math.ceil(totalCount / pageSize);
             const safePageNumber = Math.max(0, Math.min(page, totalPages - 1));
-            
+
             // Sort messages by timestamp (newest first for UI display)
             const sortedMessages = [...allMessages].sort((a, b) => {
                 const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
                 const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
                 return timeB - timeA; // Newest first
             });
-            
+
             // Extract the page
             const startIndex = safePageNumber * pageSize;
             const endIndex = Math.min(startIndex + pageSize, totalCount);
             const pagedMessages = sortedMessages.slice(startIndex, endIndex);
-            
+
             return {
                 messages: pagedMessages,
                 totalCount,
@@ -387,7 +387,7 @@ export class StorageService {
             };
         }
     }
-    
+
     /**
      * Optimize message storage by removing duplicates and obsolete entries
      * @param userId Current user ID
@@ -403,7 +403,7 @@ export class StorageService {
             let conversationsOptimized = 0;
             let duplicatesRemoved = 0;
             let bytesReclaimed = 0;
-            
+
             // Find keys to optimize
             const keysToOptimize: string[] = [];
             for (let i = 0; i < localStorage.length; i++) {
@@ -423,40 +423,40 @@ export class StorageService {
                     }
                 }
             }
-            
+
             // Optimize each conversation
             for (const key of keysToOptimize) {
                 const beforeSize = (localStorage.getItem(key) || '').length;
                 const data = JSON.parse(localStorage.getItem(key) || '{}');
-                
+
                 if (data.messages && Array.isArray(data.messages)) {
                     // Find and remove duplicates by message ID
                     const uniqueMessages = new Map();
                     for (const message of data.messages) {
                         uniqueMessages.set(message.mid, message);
                     }
-                    
+
                     const uniqueArray = Array.from(uniqueMessages.values());
                     const removed = data.messages.length - uniqueArray.length;
-                    
+
                     // Update data if we found duplicates
                     if (removed > 0) {
                         data.messages = uniqueArray;
                         data.lastUpdated = Date.now().toString();
-                        
+
                         // Save optimized data
                         localStorage.setItem(key, JSON.stringify(data));
-                        
+
                         duplicatesRemoved += removed;
                         conversationsOptimized++;
-                        
+
                         // Calculate bytes reclaimed
                         const afterSize = (localStorage.getItem(key) || '').length;
                         bytesReclaimed += Math.max(0, beforeSize - afterSize);
                     }
                 }
             }
-            
+
             return {
                 conversationsOptimized,
                 duplicatesRemoved,
