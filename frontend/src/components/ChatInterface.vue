@@ -41,7 +41,14 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['back', 'toggle-details', 'send-message', 'clear-send-error', 'load-more-messages'])
+const emit = defineEmits<{
+  'back': [],
+  'toggle-details': [],
+  'send-message': [content: any],
+  'clear-send-error': [],
+  'load-more-messages': [],
+  'view-image': [src: string | null]
+}>()
 
 // Automatically dismiss send error after 5 seconds
 watch(() => props.sendError, (error) => {
@@ -81,6 +88,7 @@ watch(() => props.sendError, (error) => {
       :error="messagesError" 
       :contact-username="contact.username" 
       @load-more-messages="emit('load-more-messages')"
+      @view-image="src => emit('view-image', src)"
     />
 
     <!-- Message Input -->

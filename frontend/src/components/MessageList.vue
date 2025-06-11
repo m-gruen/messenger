@@ -27,8 +27,11 @@ const props = defineProps({
   }
 })
 
-// Add emits for loading more messages
-const emit = defineEmits(['load-more-messages']);
+// Add emits for loading more messages and image viewing
+const emit = defineEmits<{
+  'load-more-messages': [],
+  'view-image': [src: string | null]
+}>();
 
 // Scroll tracking refs
 const messageListRef = ref<HTMLElement | null>(null);
@@ -224,8 +227,8 @@ function getMessagePosition(message: IMessage, group: { sender: number, messages
 }
 
 // Format time for message timestamp display
-function formatTimeForMessage(dateString: string | Date | undefined) {
-  return DateFormatService.formatMessageTime(dateString);
+function formatTimeForMessage(dateString: string | Date | undefined): string {
+  return DateFormatService.formatMessageTime(dateString) || '';
 }
 
 // Emoji detection and styling utilities
@@ -261,6 +264,48 @@ function getEmojiMessageStyle(text: string): string | null {
   } else {
     return null; // 9+ emojis, normal message styling
   }
+}
+
+// Parse message content to detect JSON structure
+function parseMessageContent(content: string): { type: string, content: string, format?: string } {
+  if (!content) {
+    return { type: 'text', content: '' };
+  }
+
+  try {
+    // Try to parse as JSON
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+      return parsed;
+    }
+  } catch (e) {
+    console.log('Failed to parse message content as JSON:', e);
+    // If parsing fails, it's a regular text message or potential error
+  }
+  
+  // Default to text if not valid JSON or missing type
+  return { type: 'text', content: content };
+}
+
+// Check if a message contains an image
+function isImageMessage(content: string): boolean {
+  const parsed = parseMessageContent(content);
+  return parsed.type === 'image';
+}
+
+// Get content for rendering
+function getMessageContent(message: IMessage): string {
+  const parsed = parseMessageContent(message.content);
+  return parsed.type === 'text' ? parsed.content : '';
+}
+
+// Get image source for image messages
+function getImageSource(message: IMessage): string | null {
+  const parsed = parseMessageContent(message.content);
+  if (parsed.type === 'image' && parsed.content && parsed.format) {
+    return `data:${parsed.format};base64,${parsed.content}`;
+  }
+  return null;
 }
 </script>
 
@@ -370,16 +415,34 @@ function getEmojiMessageStyle(text: string): string | null {
                 ]">
                 <!-- Fixed message layout with only last line having padding for timestamp -->
                 <div class="relative message-content">
-                  <p
+                  <!-- Text message content -->
+                  <p v-if="!isImageMessage(message.content)"
                     :class="['message-text', (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
-                    {{ message.content }}
+                    {{ getMessageContent(message) }}
                   </p>
+                  
+                  <!-- Image message content -->
+                  <div v-else class="image-container"
+                    :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
+                    <template v-if="getImageSource(message)">
+                      <img 
+                        :src="getImageSource(message) || ''" 
+                        alt="Image message" 
+                        class="rounded-lg max-w-full"
+                        style="max-height: 300px;" 
+                        @click="emit('view-image', getImageSource(message))"
+                      />
+                    </template>
+                    <div v-else class="image-error p-2 text-destructive">
+                      Image data could not be loaded
+                    </div>
+                  </div>
 
                   <!-- Show time only in single or last messages in a group -->
                   <span
                     v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
                     class="text-xs opacity-70 message-timestamp"
-                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(message.content) }">
+                    :class="{ 'emoji-timestamp': getEmojiMessageStyle(message.content), 'image-timestamp': isImageMessage(message.content) }">
                     {{ formatTimeForMessage(message.timestamp) }}
                   </span>
                 </div>
@@ -530,32 +593,31 @@ function getEmojiMessageStyle(text: string): string | null {
   padding: 2px !important;
 }
 
-/* Single emoji - very large */
-.emoji-single {
-  font-size: 4rem;
-  line-height: 1.2;
-  padding: 4px !important;
+/* Image styling */
+.image-container {
+  cursor: pointer;
+  transition: transform 0.2s;
+  margin: 2px 0;
 }
 
-/* 2-3 emojis - large */
-.emoji-few {
-  font-size: 2.75rem;
-  line-height: 1.2;
+.image-container img {
+  border-radius: 12px;
 }
 
-/* 4-8 emojis - medium */
-.emoji-several {
-  font-size: 2rem;
-  line-height: 1.2;
+.image-container:hover {
+  transform: scale(1.02);
 }
 
-/* Adjusting timestamp for emoji messages */
-.emoji-timestamp {
+.image-timestamp {
   color: rgba(155, 155, 155, 0.8) !important;
-  bottom: -1.2em !important;
+  bottom: -1.5em !important;
   right: 3px !important;
-  font-size: 0.75rem !important; 
-  font-weight: 500 !important;  
+}
+
+.image-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  font-size: 0.85rem;
 }
 
 /* Viewing older messages notification styling */

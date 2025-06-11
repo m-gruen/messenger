@@ -401,7 +401,7 @@ export class ApiService {
      * Send a message
      * @param senderId Sender user ID
      * @param receiverId Receiver user ID
-     * @param content Message content
+     * @param content Message content (can be string or JSON object)
      * @param token JWT token
      * @returns The sent message
      */
@@ -432,6 +432,7 @@ export class ApiService {
         }
 
         try {
+            // Encrypt the content string - which might be JSON stringified already
             const { encryptedContentBase64, nonceBase64 } = await encryptionService.encryptMessage(sender, receiver, content);
 
             const data = await this.fetchApi<any>(`${this.baseUrl}/message/${senderId}/${receiverId}`, {

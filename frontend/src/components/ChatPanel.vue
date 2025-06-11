@@ -39,6 +39,24 @@ const messageStore = useMessageStore()
 const showContactDetails = ref(false)
 const showChat = ref(props.visible) // Initialize with visible prop
 
+// Image preview state
+const showImagePreview = ref(false)
+const previewImageSrc = ref<string | null>(null)
+
+// Function to handle image preview
+function handleViewImage(src: string | null) {
+  if (src) {
+    previewImageSrc.value = src;
+    showImagePreview.value = true;
+  }
+}
+
+// Function to close image preview
+function closeImagePreview() {
+  showImagePreview.value = false;
+  previewImageSrc.value = null;
+}
+
 // Contact action states
 const isRemovingContact = ref(false)
 const isBlockingContact = ref(false)
@@ -276,6 +294,7 @@ function isContactBlocked(): boolean {
       @send-message="sendMessage"
       @clear-send-error="messageStore.clearSendError"
       @load-more-messages="loadMoreMessages"
+      @view-image="handleViewImage"
     />
 
     <!-- Contact Details (positioned adjacent to chat instead of on top) -->
@@ -296,5 +315,35 @@ function isContactBlocked(): boolean {
       @unblock="unblockContact"
       @cancel-remove="() => {}" 
     />
+
+    <!-- Image Preview Modal -->
+    <div v-if="showImagePreview && previewImageSrc" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+      <span class="absolute top-4 right-4 cursor-pointer close-button" @click="closeImagePreview">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </span>
+      <img :src="previewImageSrc" class="max-w-full max-h-full object-contain" />
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Image preview styling */
+.image-preview-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.close-button {
+  transition: transform 0.2s;
+}
+
+.close-button:hover {
+  transform: scale(1.1);
+}
+</style>

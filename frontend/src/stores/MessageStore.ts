@@ -67,9 +67,10 @@ export const useMessageStore = defineStore('messages', () => {
                             );
                             
                             // Create the message with decrypted content
+                            // The decryptedContent is the JSON string of our structured message
                             const decryptedMessage = {
                                 ...processedMessage,
-                                content: decryptedContent
+                                content: decryptedContent // This should already be a JSON string
                             };
                             
                             // Store locally for future access
@@ -294,7 +295,7 @@ export const useMessageStore = defineStore('messages', () => {
     /**
      * Send a new message to a contact
      */
-    async function sendMessage(receiverId: number, content: string) {
+    async function sendMessage(receiverId: number, content: any) {
         // Clear any previous send errors
         sendError.value = undefined;
 
@@ -307,13 +308,28 @@ export const useMessageStore = defineStore('messages', () => {
                 throw new Error('Could not get user information needed for encryption');
             }
             
+            // Format content based on message type
+            let messageContent: string;
+            
+            // Check if content is a structured object (from image upload)
+            if (typeof content === 'object' && content !== null) {
+                // It's either an image or other structured content
+                messageContent = JSON.stringify(content);
+            } else {
+                // It's a plain text message
+                messageContent = JSON.stringify({
+                    type: 'text',
+                    content: content
+                });
+            }
+            
             // First prepare local representation with placeholders for ID and timestamp
             // that will be filled in after server response
             const tempMessage: IMessage = {
                 mid: -1, // Temporary ID that will be replaced
                 sender_uid: currentUserId.value,
                 receiver_uid: receiverId,
-                content: content, // Store the decrypted content locally
+                content: messageContent, // Store the structured content locally
                 nonce: '', // Will be filled in after server response
                 timestamp: new Date()
             };
@@ -335,7 +351,7 @@ export const useMessageStore = defineStore('messages', () => {
             const newMessage = await apiService.sendMessage(
                 currentUserId.value,
                 receiverId,
-                content,
+                messageContent, // Send the JSON stringified content
                 token.value
             );
             
@@ -345,7 +361,7 @@ export const useMessageStore = defineStore('messages', () => {
             // Create the actual message to store locally
             const storedMessage = {
                 ...processedMessage,
-                content: content // Store the decrypted content
+                content: messageContent // Store the decrypted content as JSON string
             };
             
             // Find and replace the temporary message

@@ -7,6 +7,24 @@ export interface IMessage {
     timestamp: Date;
 }
 
+export type MessageContentType = "text" | "image";
+
+export interface IMessageContent {
+    type: MessageContentType;
+    content: string;
+}
+
+export interface IImageMessageContent extends IMessageContent {
+    type: "image";
+    format: string; 
+    content: string; 
+}
+
+export interface ITextMessageContent extends IMessageContent {
+    type: "text";
+    content: string;
+}
+
 export interface IConversationStore {
     lastUpdated: string;
     messages: IMessage[];
