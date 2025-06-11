@@ -102,7 +102,9 @@ function handleImageUpload(event: Event) {
       const messageContent: IImageMessageContent = {
         type: 'image',
         format: format,
-        content: base64Data
+        content: base64Data,
+        name: file.name,
+        size: file.size
       }
       
       emit('send', messageContent)

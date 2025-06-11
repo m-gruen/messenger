@@ -29,35 +29,26 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
-// Contact store
 const contactStore = useContactStore()
-
-// Message store
 const messageStore = useMessageStore()
 
-// UI state
 const showContactDetails = ref(false)
-const showChat = ref(props.visible) // Initialize with visible prop
+const showChat = ref(props.visible)
 
-// Image preview state
 const showImagePreview = ref(false)
 const previewImageSrc = ref<string | null>(null)
 
-// Function to handle image preview
 function handleViewImage(src: string | null) {
   if (src) {
     previewImageSrc.value = src;
     showImagePreview.value = true;
   }
 }
-
-// Function to close image preview
 function closeImagePreview() {
   showImagePreview.value = false;
   previewImageSrc.value = null;
 }
 
-// Contact action states
 const isRemovingContact = ref(false)
 const isBlockingContact = ref(false)
 const isUnblockingContact = ref(false)
@@ -66,27 +57,19 @@ const removalSuccess = ref(false)
 const blockSuccess = ref(false)
 const unblockSuccess = ref(false)
 
-// Contact details panel width in pixels - fixed value for consistency
-const contactDetailsWidth = 320 // 320px (w-80)
-
-// Dynamic chat width when contact details are shown
+const contactDetailsWidth = 320
 const chatWidth = computed(() => {
   if (showContactDetails.value) {
-    // When contact details are shown, subtract their width from the total available width
     return `calc(${props.width} - ${contactDetailsWidth}px)`
   }
-  // Otherwise use full width as provided by parent
   return props.width
 })
 
-// Load messages immediately when component is mounted if visible and has contact
 onMounted(() => {
   if (showChat.value && props.contact && props.contact.contactUserId) {
     loadMessages()
   }
 })
-
-// Watch for visibility changes
 watch(() => props.visible, (isVisible) => {
   showChat.value = isVisible
   if (isVisible && props.contact) {
@@ -94,20 +77,15 @@ watch(() => props.visible, (isVisible) => {
   }
 })
 
-// Watch for contact changes
 watch(() => props.contact, (newContact) => {
   if (newContact && showChat.value) {
     loadMessages()
   }
 })
-
-// Pagination variables for message loading
 const currentPage = ref(0)
 const messagesPerPage = ref(50)
 const totalPages = ref(0)
 const isLoadingMoreMessages = ref(false)
-
-// Method to load more messages when scrolling up
 const loadMoreMessages = async () => {
   const totalPages = messageStore.totalMessagePages;
   const currentPage = messageStore.currentMessagePage;
@@ -119,7 +97,6 @@ const loadMoreMessages = async () => {
   isLoadingMoreMessages.value = true;
   
   try {
-    // Load the next page of messages
     await messageStore.loadPaginatedMessages(
       props.contact.contactUserId, 
       currentPage + 1, 
@@ -131,14 +108,10 @@ const loadMoreMessages = async () => {
     isLoadingMoreMessages.value = false;
   }
 };
-
-// Reset pagination when contact changes
 watch(() => props.contact.contactUserId, () => {
   currentPage.value = 0;
   totalPages.value = 0;
 });
-
-// Method to initialize pagination data
 const initMessagePagination = () => {
   const userId = storageService.getUser()?.uid;
   if (!userId) return;
@@ -152,8 +125,6 @@ const initMessagePagination = () => {
   
   messageStore.setTotalMessagePages(paginationInfo.totalPages);
 };
-
-// Initialize pagination at mount time
 onMounted(() => {
   if (props.contact && props.contact.contactUserId) {
     initMessagePagination();
@@ -163,7 +134,6 @@ onMounted(() => {
 function loadMessages() {
   if (props.contact && props.contact.contactUserId) {
     messageStore.clearMessages();
-    // Use paginated loading instead of fetchMessages
     messageStore.loadPaginatedMessages(props.contact.contactUserId, 0, messagesPerPage.value);
     initMessagePagination();
   }
@@ -317,13 +287,15 @@ function isContactBlocked(): boolean {
     />
 
     <!-- Image Preview Modal -->
-    <div v-if="showImagePreview && previewImageSrc" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <span class="absolute top-4 right-4 cursor-pointer close-button" @click="closeImagePreview">
+    <div v-if="showImagePreview && previewImageSrc" 
+         class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+         @click="closeImagePreview">
+      <span class="absolute top-4 right-4 cursor-pointer close-button" @click.stop="closeImagePreview">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </span>
-      <img :src="previewImageSrc" class="max-w-full max-h-full object-contain" />
+      <img :src="previewImageSrc" class="max-w-full max-h-full object-contain" @click.stop />
     </div>
   </div>
 </template>

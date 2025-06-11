@@ -16,8 +16,10 @@ export interface IMessageContent {
 
 export interface IImageMessageContent extends IMessageContent {
     type: "image";
-    format: string; 
-    content: string; 
+    format: string;  // MIME type
+    content: string; // Base64 encoded content
+    name: string;    // Original filename
+    size: number;    // File size in bytes
 }
 
 export interface IDocumentMessageContent extends IMessageContent {

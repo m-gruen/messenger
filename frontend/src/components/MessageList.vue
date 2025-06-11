@@ -58,7 +58,7 @@ const handleScroll = () => {
   if (distanceFromTop < loadMoreThreshold && !isLoadingMore.value && !props.isLoading) {
     isLoadingMore.value = true;
     emit('load-more-messages');
-    
+
     // Reset after a reasonable timeout in case the load operation fails
     setTimeout(() => {
       isLoadingMore.value = false;
@@ -101,7 +101,7 @@ watch(() => props.messages, async (newMessages, oldMessages) => {
 watch(() => props.contactUsername, () => {
   isViewingOlderMessages.value = false;
   notificationOpacity.value = 0;
-  
+
   // Need to wait for DOM to update before scrolling to bottom
   nextTick(() => {
     scrollToLatest();
@@ -243,7 +243,7 @@ function countEmojis(text: string): number {
   // Count emojis in a string, accounting for skin tone modifiers and ZWJ sequences
   // This is a simplified approach - emoji counting can be complex due to ZWJ sequences
   // and variation selectors
-  
+
   // Match emoji characters or emoji sequences
   const emojiMatches = text.match(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\p{Emoji_Modifier}|\u200D\p{Emoji})*|\s+/gu);
   return emojiMatches ? emojiMatches.filter(match => match.trim().length > 0).length : 0;
@@ -253,9 +253,9 @@ function getEmojiMessageStyle(text: string): string | null {
   if (!text || !isEmojiOnly(text)) {
     return null; // Not an emoji-only message
   }
-  
+
   const count = countEmojis(text);
-  
+
   if (count === 1) {
     return 'emoji-only emoji-single'; // Single emoji, very large
   } else if (count <= 3) {
@@ -268,9 +268,9 @@ function getEmojiMessageStyle(text: string): string | null {
 }
 
 // Parse message content to detect JSON structure
-function parseMessageContent(content: string): { 
-  type: string, 
-  content: string, 
+function parseMessageContent(content: string): {
+  type: string,
+  content: string,
   format?: string,
   name?: string,
   size?: number,
@@ -300,7 +300,7 @@ function parseMessageContent(content: string): {
       // If all parsing fails, it's a regular text message or potential error
     }
   }
-  
+
   // Default to text if not valid JSON or missing type
   return { type: 'text', content: content };
 }
@@ -380,14 +380,14 @@ function getAudioExtension(message: IMessage): string {
   if (parsed.type === 'audio' && parsed.format) {
     // Extract extension from MIME type
     const format = parsed.format.toLowerCase();
-    
+
     // Common audio formats
     if (format.includes('mp3')) return 'mp3';
     if (format.includes('wav')) return 'wav';
     if (format.includes('ogg')) return 'ogg';
     if (format.includes('m4a') || format.includes('aac')) return 'aac';
     if (format.includes('flac')) return 'flac';
-    
+
     // Default to mp3 if format can't be determined
     return 'mp3';
   }
@@ -420,7 +420,7 @@ function getAudioElement(messageId: number): HTMLAudioElement | null {
 function toggleAudioPlayback(message: IMessage) {
   const audioElement = getAudioElement(message.mid);
   if (!audioElement) return;
-  
+
   // If we're selecting a different audio message
   if (audioState.value.messageId !== message.mid) {
     // Reset any previously playing audio
@@ -430,7 +430,7 @@ function toggleAudioPlayback(message: IMessage) {
       (previousAudio as HTMLAudioElement).currentTime = 0;
       previousAudio.removeAttribute('data-playing');
     }
-    
+
     // Setup the new audio element
     audioState.value = {
       isPlaying: true,
@@ -438,7 +438,7 @@ function toggleAudioPlayback(message: IMessage) {
       duration: audioElement.duration || 0,
       messageId: message.mid
     };
-    
+
     audioElement.dataset.playing = "true";
     audioElement.play();
   } else {
@@ -456,7 +456,7 @@ function toggleAudioPlayback(message: IMessage) {
 // Update time display as audio plays
 function handleTimeUpdate(message: IMessage, event: Event) {
   if (audioState.value.messageId !== message.mid) return;
-  
+
   const audioElement = event.target as HTMLAudioElement;
   audioState.value.currentTime = audioElement.currentTime;
 }
@@ -472,7 +472,7 @@ function handleAudioMetadata(message: IMessage, event: Event) {
 // When audio playback ends
 function handleAudioEnded(message: IMessage) {
   if (audioState.value.messageId !== message.mid) return;
-  
+
   audioState.value = {
     ...audioState.value,
     isPlaying: false,
@@ -491,11 +491,11 @@ function formatAudioTime(seconds: number): string {
 function setAudioPosition(event: MouseEvent, message: IMessage) {
   const audioElement = getAudioElement(message.mid);
   if (!audioElement || audioState.value.messageId !== message.mid) return;
-  
+
   const progressBar = event.currentTarget as HTMLElement;
   const rect = progressBar.getBoundingClientRect();
   const clickPosition = (event.clientX - rect.left) / rect.width;
-  
+
   // Set the new position
   const newTime = clickPosition * audioState.value.duration;
   audioElement.currentTime = newTime;
@@ -509,6 +509,24 @@ function getImageSource(message: IMessage): string | null {
     return `data:${parsed.format};base64,${parsed.content}`;
   }
   return null;
+}
+
+// Get image name
+function getImageName(message: IMessage): string {
+  const parsed = parseMessageContent(message.content);
+  if (parsed.type === 'image' && parsed.name) {
+    return parsed.name;
+  }
+  return `image-${message.mid}.jpg`;
+}
+
+// Get image size
+function getImageSize(message: IMessage): string {
+  const parsed = parseMessageContent(message.content);
+  if (parsed.type === 'image' && parsed.size) {
+    return getFormattedFileSize(parsed.size);
+  }
+  return '';
 }
 
 // File icon functionality
@@ -588,59 +606,59 @@ function getFileIcon(format: string, fileName: string = ''): string {
 
             <!-- Messages in this minute group - reduced width from 80% to 75% -->
             <div class="flex flex-col" style="max-width: 75%;">
-              <div v-for="(message, messageIndex) in minuteGroup.messages" :key="message.mid"
-                :class="[
-                  // Check if this is an emoji-only message
-                  getEmojiMessageStyle(getMessageContent(message)) || 'px-3 py-2 shadow-sm inline-block',
-                  
-                  // Base styling
-                  {
-                    // Sender styles (you) - only if not emoji-only message
-                    'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
-                    // Receiver styles (other person) - only if not emoji-only message
-                    'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
+              <div v-for="(message, messageIndex) in minuteGroup.messages" :key="message.mid" :class="[
+                // Check if this is an emoji-only message
+                getEmojiMessageStyle(getMessageContent(message)) || 'px-3 py-2 shadow-sm inline-block',
 
-                    // Spacing between messages in the same group
-                    'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
+                // Base styling
+                {
+                  // Sender styles (you) - only if not emoji-only message
+                  'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
+                  // Receiver styles (other person) - only if not emoji-only message
+                  'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
 
-                    // Self-align each message
-                    'self-end': message.sender_uid === currentUserId,
-                    'self-start': message.sender_uid !== currentUserId,
+                  // Spacing between messages in the same group
+                  'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
 
-                    // Maximum width for messages
-                    'max-w-message': true
-                  },
-                  // Only apply bubble styling for non-emoji messages
-                  !getEmojiMessageStyle(getMessageContent(message)) ? [
-                    // Single message (completely rounded)
-                    getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
+                  // Self-align each message
+                  'self-end': message.sender_uid === currentUserId,
+                  'self-start': message.sender_uid !== currentUserId,
 
-                    // First message in group
-                    getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
-                      'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
-                    getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ?
-                      'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
+                  // Maximum width for messages
+                  'max-w-message': true
+                },
+                // Only apply bubble styling for non-emoji messages
+                !getEmojiMessageStyle(getMessageContent(message)) ? [
+                  // Single message (completely rounded)
+                  getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
 
-                    // Middle messages in group
-                    getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ?
-                      'message-bubble-rounded-left' : '',
-                    getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ?
-                      'message-bubble-rounded-right' : '',
+                  // First message in group
+                  getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
+                    'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
+                  getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ?
+                    'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
 
-                    // Last message in group
-                    getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ?
-                      'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
-                    getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ?
-                      'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
-                  ] : []
-                ]">
+                  // Middle messages in group
+                  getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ?
+                    'message-bubble-rounded-left' : '',
+                  getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ?
+                    'message-bubble-rounded-right' : '',
+
+                  // Last message in group
+                  getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ?
+                    'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
+                  getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ?
+                    'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
+                ] : []
+              ]">
                 <!-- Fixed message layout with only last line having padding for timestamp -->
                 <div class="relative message-content">
                   <!-- Parse the message content -->
-                  <template v-if="!isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content)">
+                  <template
+                    v-if="!isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content)">
                     <!-- Text message content -->
                     <p :class="[
-                      'message-text', 
+                      'message-text',
                       (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '',
                       // Apply emoji styling classes directly to text element if it's an emoji-only message
                       getEmojiMessageStyle(getMessageContent(message))
@@ -648,18 +666,26 @@ function getFileIcon(format: string, fileName: string = ''): string {
                       {{ getMessageContent(message) }}
                     </p>
                   </template>
-                  
+
                   <!-- Image message content -->
                   <div v-else-if="isImageMessage(message.content)" class="image-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
-                    <template v-if="getImageSource(message)">
-                      <img 
-                        :src="getImageSource(message) || ''" 
-                        alt="Image message" 
-                        class="rounded-lg max-w-full"
-                        style="max-height: 300px;" 
-                        @click="emit('view-image', getImageSource(message))"
-                      />
+                    <template v-if="getImageSource(message)">                        <div class="image-wrapper">
+                        <img :src="getImageSource(message) || ''" alt="Image message" class="rounded-lg max-w-full"
+                          style="max-height: 300px;" @click="emit('view-image', getImageSource(message))" />
+                        <div class="image-info-overlay">
+                          <div class="image-name font-medium truncate">
+                            {{ getImageName(message) }}
+                          </div>
+                          <div class="image-size text-xs opacity-70">
+                            {{ getImageSize(message) }}
+                          </div>
+                        </div>
+                        <a :href="getImageSource(message) || undefined" :download="getImageName(message)"
+                          class="image-download-button" title="Download image" @click.stop>
+                          <Download class="h-5 w-5" />
+                        </a>
+                      </div>
                       <!-- Timestamp included directly in the image container for better positioning -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
@@ -671,15 +697,15 @@ function getFileIcon(format: string, fileName: string = ''): string {
                       Image data could not be loaded
                     </div>
                   </div>
-                  
+
                   <!-- Document message content -->
                   <div v-else-if="isDocumentMessage(message.content)" class="document-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     <div class="document-preview">
-                      <a :href="getFileSource(message)" 
-                         :download="getDocumentName(message)"
-                         class="flex items-start p-2 rounded-lg document-link">
-                        <div class="document-icon mr-2" :class="getFileIcon(parseMessageContent(message.content).format || '', getDocumentName(message))">
+                      <a :href="getFileSource(message)" :download="getDocumentName(message)"
+                        class="flex items-start p-2 rounded-lg document-link">
+                        <div class="document-icon mr-2"
+                          :class="getFileIcon(parseMessageContent(message.content).format || '', getDocumentName(message))">
                           <FileText class="h-8 w-8" />
                         </div>
                         <div class="flex-1 min-w-0">
@@ -702,78 +728,60 @@ function getFileIcon(format: string, fileName: string = ''): string {
                       </span>
                     </div>
                   </div>
-                  
+
                   <!-- Audio message content -->
                   <div v-else-if="isAudioMessage(message.content)" class="audio-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     <div class="audio-player p-3 pb-4">
                       <!-- Hidden audio element without controls -->
-                      <audio 
-                        :src="getAudioSource(message)" 
-                        :data-message-id="message.mid"
-                        preload="metadata"
-                        class="hidden"
-                        @timeupdate="handleTimeUpdate(message, $event)"
-                        @loadedmetadata="handleAudioMetadata(message, $event)"
-                        @ended="handleAudioEnded(message)">
+                      <audio :src="getAudioSource(message)" :data-message-id="message.mid" preload="metadata"
+                        class="hidden" @timeupdate="handleTimeUpdate(message, $event)"
+                        @loadedmetadata="handleAudioMetadata(message, $event)" @ended="handleAudioEnded(message)">
                       </audio>
-                      
+
                       <!-- Custom audio player UI -->
                       <div class="custom-audio-player">
                         <!-- Play/Pause button -->
-                        <button 
-                          @click="toggleAudioPlayback(message)"
-                          class="audio-control-button flex-shrink-0"
-                          :class="{ 'is-playing': audioState.messageId === message.mid && audioState.isPlaying }"
-                        >
+                        <button @click="toggleAudioPlayback(message)" class="audio-control-button flex-shrink-0"
+                          :class="{ 'is-playing': audioState.messageId === message.mid && audioState.isPlaying }">
                           <Play v-if="audioState.messageId !== message.mid || !audioState.isPlaying" class="h-8 w-8" />
                           <Pause v-else class="h-8 w-8" />
                         </button>
 
                         <div class="audio-progress-container ml-2 flex-1">
                           <!-- Progress bar -->
-                          <div 
-                            class="audio-progress-bar-bg"
-                            @click="setAudioPosition($event, message)"
-                          >
-                            <div 
-                              class="audio-progress-bar" 
-                              :style="{ 
-                                width: audioState.messageId === message.mid 
+                          <div class="audio-progress-bar-bg" @click="setAudioPosition($event, message)">
+                            <div class="audio-progress-bar" :style="{
+                              width: audioState.messageId === message.mid 
                                   ? `${(audioState.currentTime / audioState.duration) * 100}%` 
                                   : '0%' 
-                              }"
-                            ></div>
+                              }"></div>
                           </div>
-                          
+
                           <!-- Time display -->
                           <div class="audio-time-display text-xs">
-                            <span>{{ 
-                              audioState.messageId === message.mid 
-                                ? formatAudioTime(audioState.currentTime) 
-                                : '0:00' 
-                            }}</span>
+                            <span>{{
+                              audioState.messageId === message.mid
+                                ? formatAudioTime(audioState.currentTime)
+                              : '0:00'
+                              }}</span>
                             <span class="mx-1">/</span>
-                            <span>{{ 
-                              audioState.messageId === message.mid && audioState.duration 
-                                ? formatAudioTime(audioState.duration) 
-                                : '0:00' 
-                            }}</span>
+                            <span>{{
+                              audioState.messageId === message.mid && audioState.duration
+                              ? formatAudioTime(audioState.duration)
+                              : '0:00'
+                              }}</span>
                           </div>
                         </div>
-                        
+
                         <!-- Download button -->
-                        <a 
-                          :href="getAudioSource(message)" 
+                        <a :href="getAudioSource(message)"
                           :download="`audio-${message.mid}.${getAudioExtension(message)}`"
-                          class="audio-download-button ml-2" 
-                          title="Download audio"
-                          @click.stop
-                        >
+                          class="audio-download-button ml-2" title="Download audio" @click.stop>
                           <Download class="h-5 w-5" />
                         </a>
                       </div>
-                      
+
                       <!-- Timestamp below audio (similar to document timestamp) -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
@@ -907,7 +915,8 @@ function getFileIcon(format: string, fileName: string = ''): string {
 .message-text.has-timestamp::after {
   content: '';
   display: inline-block;
-  width: 40px; /* Space for timestamp */
+  width: 40px;
+  /* Space for timestamp */
 }
 
 /* Remove the extra space for emoji-only messages with timestamps */
@@ -974,7 +983,8 @@ function getFileIcon(format: string, fileName: string = ''): string {
   transition: transform 0.2s;
   margin: 2px 0;
   position: relative;
-  padding-bottom: 18px; /* Add padding for timestamp */
+  padding-bottom: 18px;
+  /* Add padding for timestamp */
 }
 
 .image-container img {
@@ -1001,6 +1011,60 @@ function getFileIcon(format: string, fileName: string = ''): string {
   font-size: 0.85rem;
 }
 
+.image-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+.image-info-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.image-wrapper:hover .image-info-overlay {
+  opacity: 1;
+}
+
+.image-download-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.image-wrapper:hover .image-download-button {
+  opacity: 0.8;
+}
+
+.image-download-button:hover {
+  opacity: 1 !important;
+  transform: scale(1.1);
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.image-name {
+  color: white;
+  max-width: 200px;
+}
+
 /* Viewing older messages notification styling */
 .older-messages-notification {
   animation: fadeIn 0.3s ease-in-out;
@@ -1023,7 +1087,8 @@ function getFileIcon(format: string, fileName: string = ''): string {
 .document-container {
   margin: 2px 0;
   position: relative;
-  padding-bottom: 18px; /* For timestamp */
+  padding-bottom: 18px;
+  /* For timestamp */
 }
 
 .document-preview {
@@ -1056,27 +1121,33 @@ function getFileIcon(format: string, fileName: string = ''): string {
 
 /* Document icon styling */
 .document-icon.pdf svg {
-  color: #e53935; /* Red */
+  color: #e53935;
+  /* Red */
 }
 
 .document-icon.doc svg {
-  color: #1565c0; /* Blue */
+  color: #1565c0;
+  /* Blue */
 }
 
 .document-icon.sheet svg {
-  color: #2e7d32; /* Green */
+  color: #2e7d32;
+  /* Green */
 }
 
 .document-icon.presentation svg {
-  color: #ff8f00; /* Orange/Amber */
+  color: #ff8f00;
+  /* Orange/Amber */
 }
 
 .document-icon.text svg {
-  color: #78909c; /* Blue Grey */
+  color: #78909c;
+  /* Blue Grey */
 }
 
 .document-icon.zip svg {
-  color: #7b1fa2; /* Purple */
+  color: #7b1fa2;
+  /* Purple */
 }
 
 .document-timestamp {
@@ -1091,14 +1162,16 @@ function getFileIcon(format: string, fileName: string = ''): string {
 .audio-container {
   margin: 2px 0;
   position: relative;
-  padding-bottom: 16px; /* Reduced padding for timestamp */
+  padding-bottom: 16px;
+  /* Reduced padding for timestamp */
 }
 
 .audio-player {
   position: relative;
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  overflow: visible; /* Keep visible to show timestamp outside container */
+  overflow: visible;
+  /* Keep visible to show timestamp outside container */
 }
 
 .custom-audio-player {
@@ -1127,15 +1200,15 @@ function getFileIcon(format: string, fileName: string = ''): string {
 }
 
 .audio-control-button.is-playing {
-  color: #3b82f6; /* blue-500 */
+  color: #3b82f6;
+  /* blue-500 */
 }
 
 .audio-download-button {
   display: flex;
   justify-content: center;
   align-items: center;
-  color: inherit;
-  opacity: 0.7;
+  color: inherit;opacity: 0.7;
   transition: all 0.2s ease;
   padding: 4px;
   border-radius: 50%;
