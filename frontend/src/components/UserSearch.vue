@@ -22,9 +22,19 @@
     
     <div v-else-if="searchResults.length > 0" class="search-results">
       <div v-for="user in searchResults" :key="user.uid" class="search-result-item">
-        <div class="user-info">
-          <h4>{{ user.display_name || user.username }}</h4>
-          <p class="username">@{{ user.username }}</p>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
+            <template v-if="user.profile_picture">
+              <img :src="'data:image/jpeg;base64,' + user.profile_picture" class="w-10 h-10 object-cover rounded-full" alt="Profile Picture" />
+            </template>
+            <template v-else>
+              {{ (user.display_name || user.username).charAt(0).toUpperCase() }}
+            </template>
+          </div>
+          <div class="user-info">
+            <h4>{{ user.display_name || user.username }}</h4>
+            <p class="username">@{{ user.username }}</p>
+          </div>
         </div>
         <Button 
           @click="handleUserAction(user.uid)" 

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue'
-import { X, Shield } from "lucide-vue-next"
-import type { Contact } from '@/models/contact-model'
-import { ContactStatus } from '@/models/contact-model'
-import { DateFormatService } from '@/services/date-format.service'
+import { ref, computed, onMounted, watch, defineProps, defineEmits } from 'vue';
+import { X, Shield } from "lucide-vue-next";
+import type { Contact } from '@/models/contact-model';
+import { ContactStatus } from '@/models/contact-model';
+import { DateFormatService } from '@/services/date-format.service';
+import { useAuthStore } from '@/stores/AuthStore';
+import { apiService } from '@/services/api.service';
+import type { User } from '@/models/user-model';
 
-defineProps({
+const props = defineProps({
   contact: {
     type: Object as () => Contact,
     required: true
@@ -46,13 +49,34 @@ defineProps({
     type: Boolean,
     default: false
   }
-})
+});
 
-const emit = defineEmits(['close', 'remove', 'cancel-remove', 'block', 'unblock'])
+const emit = defineEmits(['close', 'remove', 'cancel-remove', 'block', 'unblock']);
 
-const showRemoveConfirmation = ref(false)
-const showBlockConfirmation = ref(false)
-const showUnblockConfirmation = ref(false)
+const authStore = useAuthStore();
+const user = ref<User | null>(null);
+
+// Reintroduced refs for confirmation dialogs
+const showRemoveConfirmation = ref(false);
+const showBlockConfirmation = ref(false);
+const showUnblockConfirmation = ref(false);
+
+// Fetch the user info for the contact
+async function fetchContactUser() {
+  if (props.contact && props.contact.contactUserId && authStore.user?.token) {
+    try {
+      user.value = await apiService.getUserById(props.contact.contactUserId, authStore.user.token);
+    } catch (e) {
+      user.value = null;
+    }
+  }
+}
+
+onMounted(fetchContactUser);
+watch(() => props.contact?.contactUserId, fetchContactUser);
+
+const displayName = computed(() => user.value?.display_name || props.contact.display_name || props.contact.username);
+const profilePicture = computed(() => user.value?.profile_picture || null);
 
 function removeContact() {
   if (showRemoveConfirmation.value) {
@@ -145,13 +169,18 @@ function formatStatusText(status: ContactStatus | string): string {
     <div class="flex flex-col items-center py-6 px-4">
       <!-- Avatar Circle -->
       <div
-        class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4">
-        {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
+        class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4 overflow-hidden">
+        <template v-if="profilePicture">
+          <img :src="'data:image/jpeg;base64,' + profilePicture" class="w-32 h-32 object-cover rounded-full" alt="Profile Picture" />
+        </template>
+        <template v-else>
+          {{ displayName.charAt(0).toUpperCase() }}
+        </template>
       </div>
 
       <!-- Username and Display Name -->
-      <h3 class="text-2xl font-medium text-white mt-2">{{ contact.display_name || contact.username }}</h3>
-      <p class="text-sm text-muted-foreground mt-1" v-if="contact.display_name">@{{ contact.username }}</p>
+      <h3 class="text-2xl font-medium text-white mt-2">{{ displayName }}</h3>
+      <p class="text-sm text-muted-foreground mt-1" v-if="user?.username || contact.display_name">@{{ user?.username || contact.username }}</p>
 
       <!-- Status -->
       <div class="mt-2 flex items-center">

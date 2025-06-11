@@ -32,13 +32,18 @@
           class="p-3 rounded-md bg-accent/30">
           <div class="flex items-center justify-between">
             <div class="flex items-center">
-              <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                {{ (request.display_name || request.username).charAt(0).toUpperCase() }}
+              <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
+                <template v-if="contactStore.getUserInfo(request.contactUserId)?.profile_picture">
+                  <img :src="'data:image/jpeg;base64,' + contactStore.getUserInfo(request.contactUserId)?.profile_picture" class="w-8 h-8 object-cover rounded-full" alt="Profile Picture" />
+                </template>
+                <template v-else>
+                  {{ (contactStore.getUserInfo(request.contactUserId)?.display_name || request.display_name || request.username).charAt(0).toUpperCase() }}
+                </template>
               </div>
               <div class="ml-3">
-                <div class="font-medium">{{ request.display_name || request.username }}</div>
-                <div class="text-xs text-muted-foreground" v-if="request.display_name">
-                  <span class="opacity-70">@{{ request.username }}</span>
+                <div class="font-medium">{{ contactStore.getUserInfo(request.contactUserId)?.display_name || request.display_name || request.username }}</div>
+                <div class="text-xs text-muted-foreground" v-if="contactStore.getUserInfo(request.contactUserId)?.display_name || request.display_name">
+                  <span class="opacity-70">@{{ contactStore.getUserInfo(request.contactUserId)?.username || request.username }}</span>
                 </div>
                 <div class="text-xs text-muted-foreground">
                   Requested: {{ formatDate(request.createdAt) }}
@@ -80,13 +85,18 @@
           class="p-3 rounded-md bg-accent/30">
           <div class="flex items-center justify-between">
             <div class="flex items-center">
-              <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                {{ (request.display_name || request.username).charAt(0).toUpperCase() }}
+              <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
+                <template v-if="contactStore.getUserInfo(request.contactUserId)?.profile_picture">
+                  <img :src="'data:image/jpeg;base64,' + contactStore.getUserInfo(request.contactUserId)?.profile_picture" class="w-8 h-8 object-cover rounded-full" alt="Profile Picture" />
+                </template>
+                <template v-else>
+                  {{ (contactStore.getUserInfo(request.contactUserId)?.display_name || request.display_name || request.username).charAt(0).toUpperCase() }}
+                </template>
               </div>
               <div class="ml-3">
-                <div class="font-medium">{{ request.display_name || request.username }}</div>
-                <div class="text-xs text-muted-foreground" v-if="request.display_name">
-                  <span class="opacity-70">@{{ request.username }}</span>
+                <div class="font-medium">{{ contactStore.getUserInfo(request.contactUserId)?.display_name || request.display_name || request.username }}</div>
+                <div class="text-xs text-muted-foreground" v-if="contactStore.getUserInfo(request.contactUserId)?.display_name || request.display_name">
+                  <span class="opacity-70">@{{ contactStore.getUserInfo(request.contactUserId)?.username || request.username }}</span>
                 </div>
                 <div class="text-xs text-muted-foreground">
                   Sent: {{ formatDate(request.createdAt) }}

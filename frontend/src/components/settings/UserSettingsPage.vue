@@ -33,6 +33,9 @@ const showDeleteConfirmation = ref(false);
 const showClearMessagesConfirmation = ref(false);
 const isDownloadingMessages = ref(false);
 const isDeletingMessages = ref(false);
+const profilePicture = ref(user.value?.profile_picture || null);
+const profilePicturePreview = ref<string | null>(null);
+const isUploadingPicture = ref(false);
 
 // Track original values to detect changes
 const originalValues = ref({
@@ -40,10 +43,20 @@ const originalValues = ref({
     displayName: user.value?.display_name || '',
 });
 
+// --- PATCH: Robust profile picture update and removal logic ---
+
 // Calculate if there are unsaved changes
 const hasUnsavedChanges = computed(() => {
-    return username.value !== originalValues.value.username ||
-        DisplayName.value !== originalValues.value.displayName;
+    // If a new picture is selected, or the picture was removed, allow save
+    const pictureChanged = (
+        (profilePicturePreview.value !== null) ||
+        (profilePicture.value === null && user.value?.profile_picture)
+    );
+    return (
+        username.value !== originalValues.value.username ||
+        DisplayName.value !== originalValues.value.displayName ||
+        pictureChanged
+    );
 });
 
 // Get the profile initial (first letter of username or display name)
@@ -89,6 +102,9 @@ function resetForm() {
     isEditingUsername.value = false;
     isEditingDisplayName.value = false;
     showPasswordModal.value = false;
+    // Reset picture preview and value to match original user
+    profilePicturePreview.value = null;
+    profilePicture.value = user.value?.profile_picture || null;
 }
 
 // Update when user data changes
@@ -104,58 +120,61 @@ watch(user, (newUser) => {
     }
 }, { deep: true });
 
+// Watch for user changes to update profile picture
+watch(user, (newUser) => {
+    if (newUser) {
+        profilePicture.value = newUser.profile_picture || null;
+    }
+}, { deep: true });
+
 async function updateProfile(): Promise<void> {
     try {
         isUpdating.value = true;
         updateError.value = null;
         updateSuccess.value = null;
-
-        // Handle other profile updates
-        if (hasProfileChanges()) {
-            const userData: any = {};
-
-            if (username.value && username.value !== user.value?.username) {
-                userData.username = username.value;
-            }
-
-            if (DisplayName.value !== user.value?.display_name) {
-                userData.displayName = DisplayName.value;
-            }
-
-            try {
-                const response = await apiService.updateUser(UserId, userData, token);
-
-                // Ensure we preserve the original token when updating storage
-                const updatedUser = {
-                    ...response,
-                    token: token // Make sure token is included in the user object
-                };
-
-                // Update both in-memory user reference and storage
-                storageService.storeUser(updatedUser);
-                user.value = updatedUser;
-
-                // Update original values
-                originalValues.value = {
-                    username: updatedUser.username || '',
-                    displayName: updatedUser.display_name || '',
-                };
-
-                updateSuccess.value = "Profile updated successfully";
-            } catch (error: any) {
-                updateError.value = error.message || "Failed to update profile";
-                isUpdating.value = false;
-                return;
-            }
-        } else if (!updateSuccess.value) {
-            updateSuccess.value = "No changes to update";
+        const userData: any = {};
+        if (username.value && username.value !== user.value?.username) {
+            userData.username = username.value;
         }
-
+        if (DisplayName.value !== user.value?.display_name) {
+            userData.displayName = DisplayName.value;
+        }
+        // Handle profile picture update
+        if (profilePicturePreview.value !== null) {
+            // If preview is set, use it (remove data:... prefix for backend)
+            userData.profilePicture = profilePicturePreview.value.split(',')[1];
+        } else if (profilePicture.value === null && user.value?.profile_picture) {
+            // If removed
+            userData.profilePicture = null;
+        }
+        if (Object.keys(userData).length === 0) {
+            updateSuccess.value = 'No changes to update';
+            isUpdating.value = false;
+            return;
+        }
+        try {
+            const response = await apiService.updateUser(UserId, userData, token);
+            const updatedUser = { ...response, token: token };
+            storageService.storeUser(updatedUser);
+            user.value = updatedUser;
+            // Update local state
+            profilePicture.value = updatedUser.profile_picture || null;
+            profilePicturePreview.value = null; // Always clear preview after save
+            originalValues.value = {
+                username: updatedUser.username || '',
+                displayName: updatedUser.display_name || '',
+            };
+            updateSuccess.value = 'Profile updated successfully';
+        } catch (error: any) {
+            updateError.value = error.message || 'Failed to update profile';
+            isUpdating.value = false;
+            return;
+        }
         isUpdating.value = false;
         isEditingUsername.value = false;
         isEditingDisplayName.value = false;
     } catch (error: any) {
-        updateError.value = error.message || "An unexpected error occurred";
+        updateError.value = error.message || 'An unexpected error occurred';
         isUpdating.value = false;
     }
 }
@@ -213,17 +232,17 @@ async function deleteUserAccount(): Promise<void> {
 
         try {
             await apiService.deleteUser(UserId, token);
-            
+
             updateSuccess.value = "Account deleted successfully. Redirecting...";
-            
+
             // Use setTimeout to allow the user to see the success message
             setTimeout(() => {
                 // Delete all local messages
                 messageStore.deleteAllMessages();
-                
+
                 // Clear authentication data
                 storageService.clearAllUserData();
-                
+
                 // Redirect to login page
                 router.push({ name: 'login' });
             }, 1500);
@@ -235,14 +254,6 @@ async function deleteUserAccount(): Promise<void> {
         updateError.value = error.message || "An unexpected error occurred";
         isDeleting.value = false;
     }
-}
-
-// Helper function to check if there are profile changes to update
-function hasProfileChanges(): boolean {
-    return (
-        (username.value && username.value !== originalValues.value.username) ||
-        DisplayName.value !== originalValues.value.displayName
-    );
 }
 
 function openPasswordModal() {
@@ -271,14 +282,14 @@ function openClearMessagesConfirmation() {
 // Backup all messages to a JSON file
 async function backupMessages() {
     if (isDownloadingMessages.value) return;
-    
+
     isDownloadingMessages.value = true;
     updateError.value = null;
 
     try {
         // First make sure we have all messages from the server
         await messageStore.storeAllContactMessages(UserId);
-        
+
         // Create a backup object with metadata
         const backup = {
             version: 1,
@@ -286,7 +297,7 @@ async function backupMessages() {
             timestamp: new Date().toISOString(),
             data: {} as Record<string, any>
         };
-        
+
         // Find all message storage keys in localStorage
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -299,7 +310,7 @@ async function backupMessages() {
                 }
             }
         }
-        
+
         // Create a downloadable file
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -308,13 +319,13 @@ async function backupMessages() {
         a.download = `messenger_backup_${new Date().toISOString().slice(0, 10)}.json`;
         document.body.appendChild(a);
         a.click();
-        
+
         // Clean up
         setTimeout(() => {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }, 100);
-        
+
         updateSuccess.value = "Messages backed up successfully";
     } catch (error: any) {
         updateError.value = error.message || "Failed to backup messages";
@@ -330,7 +341,7 @@ async function restoreMessages(event: Event) {
         console.log('Already processing, ignoring');
         return;
     }
-    
+
     const fileInput = event.target as HTMLInputElement;
     console.log('File input element:', fileInput);
     if (!fileInput.files || fileInput.files.length === 0) {
@@ -338,29 +349,29 @@ async function restoreMessages(event: Event) {
         return;
     }
     console.log('File selected:', fileInput.files[0].name);
-    
+
     isDownloadingMessages.value = true;
     updateError.value = null;
-    
+
     try {
         const file = fileInput.files[0];
         const text = await file.text();
         const backup = JSON.parse(text);
-        
+
         // Validate backup format
         if (!backup.version || !backup.data) {
             throw new Error("Invalid backup file format");
         }
-        
+
         // Restore data to localStorage
         let restoredCount = 0;
         for (const [key, value] of Object.entries(backup.data)) {
             localStorage.setItem(key, JSON.stringify(value));
             restoredCount++;
         }
-        
+
         updateSuccess.value = `Successfully restored backup with ${restoredCount} conversation(s)`;
-        
+
         // Reset the file input
         fileInput.value = '';
     } catch (error: any) {
@@ -373,7 +384,7 @@ async function restoreMessages(event: Event) {
 // Clear all locally stored messages
 async function clearLocalMessages() {
     if (isDeletingMessages.value) return;
-    
+
     isDeletingMessages.value = true;
     updateError.value = null;
     showClearMessagesConfirmation.value = false;
@@ -381,7 +392,7 @@ async function clearLocalMessages() {
     try {
         // Use our deleteAllMessages method from the MessageStore
         messageStore.deleteAllMessages();
-        
+
         updateSuccess.value = "All local messages deleted successfully";
     } catch (error: any) {
         updateError.value = error.message || "Failed to delete messages";
@@ -392,6 +403,7 @@ async function clearLocalMessages() {
 
 // Add this after the other refs at the top of your script
 const fileInputRef = ref<HTMLInputElement | null>(null);
+const pictureInputRef = ref<HTMLInputElement | null>(null);
 
 // Function to open the file browser dialog for message restore
 function openFileDialog() {
@@ -403,6 +415,82 @@ function openFileDialog() {
         console.log('File dialog could not be opened');
     }
 }
+
+function openPictureDialog() {
+    if (pictureInputRef.value && !isUploadingPicture.value) {
+        pictureInputRef.value.value = '';
+        pictureInputRef.value.click();
+    }
+}
+
+function handlePictureChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || !input.files.length) return;
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+        updateError.value = 'Please select an image file';
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        updateError.value = 'Image size should not exceed 5MB';
+        return;
+    }
+    isUploadingPicture.value = true;
+    compressImage(file)
+        .then((dataUrl) => {
+            profilePicturePreview.value = dataUrl;
+        })
+        .catch(() => {
+            updateError.value = 'Failed to process image. Try a smaller image.';
+        })
+        .finally(() => {
+            isUploadingPicture.value = false;
+        });
+}
+
+function removeProfilePicture() {
+    // If a new picture is selected but not saved, just clear the preview
+    if (profilePicturePreview.value !== null) {
+        profilePicturePreview.value = null;
+    }
+    // If a picture is set (from backend), mark for removal
+    if (profilePicture.value !== null) {
+        profilePicture.value = null;
+    }
+}
+
+// Compress image logic (from MessageInput.vue)
+function compressImage(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                const MAX_WIDTH = 512;
+                if (width > MAX_WIDTH) {
+                    const ratio = MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                    height = height * ratio;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return reject(new Error('No canvas context'));
+                ctx.drawImage(img, 0, 0, width, height);
+                const quality = 0.7;
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = event.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+    });
+}
 </script>
 
 <template>
@@ -412,8 +500,8 @@ function openFileDialog() {
             class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
             <div class="bg-card rounded-lg max-w-md w-full relative border border-border shadow-xl">
                 <!-- Close button -->
-                <button @click="closePasswordModal" class="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-                    aria-label="Close">
+                <button @click="closePasswordModal"
+                    class="absolute top-4 right-4 text-muted-foreground hover:text-foreground" aria-label="Close">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                         class="h-5 w-5">
@@ -421,14 +509,15 @@ function openFileDialog() {
                         <path d="m6 6 12 12"></path>
                     </svg>
                 </button>
-                
+
                 <div class="p-6">
                     <h2 class="text-xl font-bold text-center">Update your password</h2>
                     <p class="text-muted-foreground text-center mb-6">Enter your current password and a new password.
                     </p>
 
                     <!-- Error message -->
-                    <div v-if="updateError" class="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm border-l-4 border-destructive">
+                    <div v-if="updateError"
+                        class="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm border-l-4 border-destructive">
                         {{ updateError }}
                     </div>
 
@@ -468,24 +557,14 @@ function openFileDialog() {
         </div>
 
         <!-- Delete Confirmation Dialog -->
-        <ConfirmDialog
-            v-model:show="showDeleteConfirmation"
-            title="Delete Account"
+        <ConfirmDialog v-model:show="showDeleteConfirmation" title="Delete Account"
             message="Are you sure you want to delete your account? This action cannot be undone."
-            confirmLabel="Delete Account"
-            confirmVariant="destructive"
-            @confirm="deleteUserAccount"
-        />
-        
+            confirmLabel="Delete Account" confirmVariant="destructive" @confirm="deleteUserAccount" />
+
         <!-- Clear Messages Confirmation Dialog -->
-        <ConfirmDialog
-            v-model:show="showClearMessagesConfirmation"
-            title="Clear Messages"
+        <ConfirmDialog v-model:show="showClearMessagesConfirmation" title="Clear Messages"
             message="Are you sure you want to delete all locally stored messages? This action cannot be undone."
-            confirmLabel="Delete Messages"
-            confirmVariant="destructive"
-            @confirm="clearLocalMessages"
-        />
+            confirmLabel="Delete Messages" confirmVariant="destructive" @confirm="clearLocalMessages" />
 
         <!-- Main content -->
         <div class="bg-card rounded-lg shadow-md">
@@ -501,12 +580,40 @@ function openFileDialog() {
             <!-- User Profile Header -->
             <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">
                 <div class="flex items-center gap-5">
-                    <!-- User avatar -->
-                    <div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-                        :style="{ backgroundColor: avatarBackground }">
-                        {{ userInitial }}
+                    <!-- User avatar or profile picture -->
+                    <div class="relative h-20 w-20">
+                        <template v-if="profilePicturePreview || profilePicture">
+                            <img :src="profilePicturePreview || (profilePicture ? 'data:image/jpeg;base64,' + profilePicture : undefined)"
+                                class="h-20 w-20 rounded-full object-cover border-4 border-white shadow"
+                                alt="Profile Picture" />
+                            <button @click="removeProfilePicture"
+                                class="absolute top-0 right-0 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
+                                title="Remove picture">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
+                                    viewBox="0 0 24 24">
+                                    <path stroke="currentColor" stroke-width="2" d="M18 6 6 18m0-12 12 12" />
+                                </svg>
+                            </button>
+                        </template>
+                        <template v-else>
+                            <div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
+                                :style="{ backgroundColor: avatarBackground }">
+                                {{ userInitial }}
+                            </div>
+                        </template>
+                        <!-- Upload button -->
+                        <button @click="openPictureDialog"
+                            class="absolute bottom-0 right-0 bg-indigo-700 text-white rounded-full p-1.5 hover:bg-indigo-800 border-2 border-white shadow"
+                            title="Change picture">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+                                viewBox="0 0 24 24">
+                                <path stroke="currentColor" stroke-width="2"
+                                    d="M12 16v-4m0 0V8m0 4h4m-4 0H8m12 4v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4" />
+                            </svg>
+                        </button>
+                        <input ref="pictureInputRef" type="file" accept="image/*" class="hidden"
+                            @change="handlePictureChange" />
                     </div>
-
                     <!-- User info -->
                     <div class="flex-1">
                         <h1 class="text-2xl font-bold text-white">{{ DisplayName || username }}</h1>
@@ -569,7 +676,7 @@ function openFileDialog() {
                         </Button>
                     </div>
                 </div>
-                
+
                 <!-- Delete account section -->
                 <div class="mt-6">
                     <div class="flex justify-between items-start">
@@ -579,11 +686,7 @@ function openFileDialog() {
                                 Permanently delete your account. This action cannot be undone.
                             </p>
                         </div>
-                        <Button 
-                            variant="destructive" 
-                            @click="openDeleteConfirmation" 
-                            :disabled="isDeleting"
-                        >
+                        <Button variant="destructive" @click="openDeleteConfirmation" :disabled="isDeleting">
                             <span v-if="isDeleting">Deleting...</span>
                             <span v-else>Delete Account</span>
                         </Button>
@@ -593,12 +696,15 @@ function openFileDialog() {
                 <!-- Message Storage Management Section -->
                 <div class="mt-8 pt-6 border-t border-border">
                     <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MESSAGE STORAGE</h2>
-                    
+
                     <div class="space-y-6">
                         <!-- Message Storage Info -->
-                        <div class="bg-blue-50 dark:bg-blue-900/20 p-3 text-sm rounded-md text-blue-800 dark:text-blue-300">
+                        <div
+                            class="bg-blue-50 dark:bg-blue-900/20 p-3 text-sm rounded-md text-blue-800 dark:text-blue-300">
                             <p class="mb-1 font-medium">End-to-End Encrypted Messages</p>
-                            <p>Messages are encrypted end-to-end and stored on your device. Messages are only kept on the server until they are delivered to your contact.</p>
+                            <p>Messages are encrypted end-to-end and stored on your device. Messages are only kept on
+                                the server
+                                until they are delivered to your contact.</p>
                         </div>
 
                         <!-- Message Backup Button -->
@@ -609,11 +715,7 @@ function openFileDialog() {
                                     Export all your messages as a backup file that you can restore later.
                                 </p>
                             </div>
-                            <Button 
-                                variant="outline" 
-                                @click="backupMessages" 
-                                :disabled="isDownloadingMessages"
-                            >
+                            <Button variant="outline" @click="backupMessages" :disabled="isDownloadingMessages">
                                 <span v-if="isDownloadingMessages">Backing up...</span>
                                 <span v-else>Backup</span>
                             </Button>
@@ -628,20 +730,10 @@ function openFileDialog() {
                                 </p>
                             </div>
                             <label class="cursor-pointer">
-                                <input
-                                    type="file"
-                                    accept=".json"
-                                    class="hidden"
-                                    @change="restoreMessages"
-                                    :disabled="isDownloadingMessages"
-                                    ref="fileInputRef"
-                                />
-                                <Button 
-                                    variant="outline" 
-                                    type="button"
-                                    :disabled="isDownloadingMessages"
-                                    @click="openFileDialog"
-                                >
+                                <input type="file" accept=".json" class="hidden" @change="restoreMessages"
+                                    :disabled="isDownloadingMessages" ref="fileInputRef" />
+                                <Button variant="outline" type="button" :disabled="isDownloadingMessages"
+                                    @click="openFileDialog">
                                     Restore
                                 </Button>
                             </label>
@@ -655,11 +747,8 @@ function openFileDialog() {
                                     Permanently delete all message history from this device. This cannot be undone.
                                 </p>
                             </div>
-                            <Button 
-                                variant="destructive" 
-                                @click="openClearMessagesConfirmation" 
-                                :disabled="isDeletingMessages"
-                            >
+                            <Button variant="destructive" @click="openClearMessagesConfirmation"
+                                :disabled="isDeletingMessages">
                                 <span v-if="isDeletingMessages">Deleting...</span>
                                 <span v-else>Delete All</span>
                             </Button>
@@ -684,29 +773,29 @@ function openFileDialog() {
 
 <style scoped>
 .bg-green-500 {
-  background-color: #43B581;
-  /* Discord green */
+    background-color: #43B581;
+    /* Discord green */
 }
 
 /* Switch animation */
 .transform {
-  transition: transform 150ms ease-in-out;
+    transition: transform 150ms ease-in-out;
 }
 
 /* Input field styling */
 input,
 select {
-  border-width: 2px !important;
+    border-width: 2px !important;
 }
 
 .dark input,
 .dark select {
-  color: white !important;
-  background-color: #2D3748 !important;
+    color: white !important;
+    background-color: #2D3748 !important;
 }
 
 /* Remove extra margins to prevent unexpected spacing */
 .max-w-3xl {
-  margin-top: 0;
+    margin-top: 0;
 }
 </style>

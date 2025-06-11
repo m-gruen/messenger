@@ -39,11 +39,16 @@
           class="p-2 rounded-md hover:bg-accent flex items-center cursor-pointer"
           @click="selectContact(contact)"
         >
-          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-            {{ (contact.display_name || contact.username).charAt(0).toUpperCase() }}
+          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
+            <template v-if="contactStore.getUserInfo(contact.contactUserId)?.profile_picture">
+              <img :src="'data:image/jpeg;base64,' + contactStore.getUserInfo(contact.contactUserId)?.profile_picture" class="w-8 h-8 object-cover rounded-full" alt="Profile Picture" />
+            </template>
+            <template v-else>
+              {{ (contactStore.getUserInfo(contact.contactUserId)?.display_name || contact.display_name || contact.username).charAt(0).toUpperCase() }}
+            </template>
           </div>
           <div class="ml-3 flex-1 min-w-0">
-            <div class="font-medium truncate">{{ contact.display_name || contact.username }}</div>
+            <div class="font-medium truncate">{{ contactStore.getUserInfo(contact.contactUserId)?.display_name || contact.display_name || contact.username }}</div>
             <div class="text-xs text-muted-foreground flex items-center">
               <span class="inline-flex h-2 w-2 rounded-full mr-1" :class="getStatusColorClass(contact.status)"></span>
               <span class="truncate">{{ formatStatusText(contact.status) }}</span>

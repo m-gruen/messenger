@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { apiService } from '@/services/api.service';
 import type { Contact } from '@/models/contact-model';
 import { ContactStatus } from '@/models/contact-model';
 import { useAuthStore } from './AuthStore';
+import type { User } from '@/models/user-model';
 
 export const useContactStore = defineStore('contacts', () => {
     // State
@@ -16,6 +17,9 @@ export const useContactStore = defineStore('contacts', () => {
     const authStore = useAuthStore();
     const currentUserId = computed(() => authStore.user?.uid || 0);
     const token = computed(() => authStore.user?.token || '');
+
+    // User info cache
+    const userInfoCache = ref<{ [uid: number]: User }>({});
 
     // Computed properties
     const acceptedContacts = computed(() => contacts.value.filter(c => c.status === ContactStatus.ACCEPTED));
@@ -222,6 +226,34 @@ export const useContactStore = defineStore('contacts', () => {
         return Object.values(pendingOperations.value[contactUserId]).some(value => value);
     }
 
+    async function fetchUserInfo(userId: number, tokenOverride?: string): Promise<User | null> {
+        if (userInfoCache.value[userId]) {
+            return userInfoCache.value[userId];
+        }
+        try {
+            const tokenToUse = tokenOverride || token.value;
+            if (!tokenToUse) return null;
+            const user = await apiService.getUserById(userId, tokenToUse);
+            userInfoCache.value[userId] = user;
+            return user;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function getUserInfo(userId: number): User | null {
+        return userInfoCache.value[userId] || null;
+    }
+
+    // Optionally, prefetch all contact user info after fetching contacts
+    watch(contacts, async (newContacts) => {
+        for (const c of newContacts) {
+            if (c.contactUserId && !userInfoCache.value[c.contactUserId]) {
+                await fetchUserInfo(c.contactUserId);
+            }
+        }
+    });
+
     // Return the store
     return {
         contacts,
@@ -241,6 +273,8 @@ export const useContactStore = defineStore('contacts', () => {
         blockContact,
         unblockContact,
         isBlocked,
-        isPending
+        isPending,
+        fetchUserInfo,
+        getUserInfo
     };
 });
