@@ -32,6 +32,7 @@ Creates a new user account.
 {
   "username": "string", // Required
   "password": "string", // Required
+  "publicKey": "string", // Required - Base64 encoded public key
   "displayName": "string", // Optional
   "shadowMode": boolean,  // Optional (defaults to false)
   "fullNameSearch": boolean // Optional (defaults to false)
@@ -51,6 +52,7 @@ Creates a new user account.
     "is_deleted": boolean,
     "shadow_mode": boolean,
     "full_name_search": boolean,
+    "public_key": "string", // Base64 encoded public key
     "token": "string" // JWT token
 }
 ----
@@ -91,6 +93,8 @@ Authenticates a user and returns a JWT token.
     "is_deleted": boolean,
     "shadow_mode": boolean,
     "full_name_search": boolean,
+    "public_key": "string", // Base64 encoded public key
+    "profile_picture": "string", // Optional base64 encoded image
     "token": "string" // JWT token
 }
 ----
@@ -123,7 +127,10 @@ Requires authentication.
 {
   "uid": number,
   "username": "string",
-  "created_at": "timestamp"
+  "created_at": "timestamp",
+  "display_name": "string",
+  "public_key": "string", // Base64 encoded public key
+  "profile_picture": "string" // Optional base64 encoded image
 }
 ----
 
@@ -157,7 +164,10 @@ Requires authentication.
   {
     "uid": number,
     "username": "string",
-    "created_at": "timestamp"
+    "created_at": "timestamp",
+    "display_name": "string",
+    "public_key": "string", // Base64 encoded public key
+    "profile_picture": "string" // Optional base64 encoded image
   }
 ]
 ----
@@ -190,7 +200,8 @@ Requires authentication. Users can only update their own accounts.
   "username": "string", // Optional
   "displayName": "string", // Optional
   "shadowMode": boolean, // Optional
-  "fullNameSearch": boolean // Optional
+  "fullNameSearch": boolean, // Optional
+  "profilePicture": "string" // Optional - base64 encoded image
 }
 ----
 
@@ -210,6 +221,8 @@ At least one field must be provided.
     "is_deleted": boolean,
     "shadow_mode": boolean,
     "full_name_search": boolean,
+    "public_key": "string", // Base64 encoded public key
+    "profile_picture": "string", // Optional base64 encoded image
     "token": "string" // JWT token
 }
 ----
@@ -257,11 +270,61 @@ Requires authentication. Users can only update their own passwords.
     "is_deleted": boolean,
     "shadow_mode": boolean,
     "full_name_search": boolean,
+    "public_key": "string", // Base64 encoded public key
+    "profile_picture": "string", // Optional base64 encoded image
     "token": "string" // JWT token
 }
 ----
 
 .Error (400 Bad Request, 401 Unauthorized, 403 Forbidden, 500 Internal Server Error)
+[source,json]
+----
+{
+  "error": "string" // Error message
+}
+----
+
+=== Update Public Key
+`PUT /user/:uid/keys`
+
+Updates a user's public key for encryption.
+
+[NOTE]
+Requires authentication. Users can only update their own public keys.
+
+==== Parameters
+
+* `uid`: User ID (number)
+
+==== Request
+
+[source,json]
+----
+{
+  "publicKey": "string" // Required - Base64 encoded public key
+}
+----
+
+==== Response
+
+.Success (200 OK)
+[source,json]
+----
+{
+    "uid": number,
+    "username": "string",
+    "created_at": "timestamp",
+    "display_name": "string",
+    "is_deleted": boolean,
+    "shadow_mode": boolean,
+    "full_name_search": boolean,
+    "public_key": "string", // Base64 encoded public key
+    "profile_picture": "string", // Optional base64 encoded image
+    "token": "string" // JWT token
+}
+----
+
+.Error (400 Bad Request, 403 Forbidden, 404 Not Found, 500 Internal Server Error)
 [source,json]
 ----
 {
@@ -319,6 +382,7 @@ Requires authentication. Users can only access their own contacts.
     "userId": number,
     "contactUserId": number,
     "username": "string",
+    "display_name": "string", // Optional display name
     "createdAt": "timestamp",
     "status": "string"
   }
@@ -451,6 +515,7 @@ Requires authentication. Users can only access their own contact requests.
     "userId": number,
     "contactUserId": number,
     "username": "string",
+    "display_name": "string", // Optional display name
     "createdAt": "timestamp",
     "status": "string"
   }
@@ -488,6 +553,7 @@ Requires authentication. Users can only access their own contact requests.
     "userId": number,
     "contactUserId": number,
     "username": "string",
+    "display_name": "string", // Optional display name
     "createdAt": "timestamp",
     "status": "string"
   }
@@ -579,7 +645,8 @@ Requires authentication. Users can only access their own messages.
     "messageId": number,
     "senderId": number,
     "receiverId": number,
-    "content": "string",
+    "content": "string", // Encrypted message content
+    "nonce": "string", // Cryptographic nonce used for encryption
     "timestamp": "timestamp",
     "read": boolean
   }
@@ -597,7 +664,7 @@ Requires authentication. Users can only access their own messages.
 === Send Message
 `POST /message/:userId/:receiverId`
 
-Sends a message to a contact.
+Sends an encrypted message to a contact.
 
 [NOTE]
 Requires authentication. Users can only send messages as themselves.
@@ -612,7 +679,8 @@ Requires authentication. Users can only send messages as themselves.
 [source,json]
 ----
 {
-  "content": "string" // Required
+  "content": "string", // Required - Encrypted message content
+  "nonce": "string" // Required - Cryptographic nonce used for encryption
 }
 ----
 
@@ -625,11 +693,46 @@ Requires authentication. Users can only send messages as themselves.
   "messageId": number,
   "senderId": number,
   "receiverId": number,
-  "content": "string",
+  "content": "string", // Encrypted message content
+  "nonce": "string", // Cryptographic nonce used for encryption
   "timestamp": "timestamp",
   "read": boolean
 }
 ----
+
+.Error (400 Bad Request, 403 Forbidden, 404 Not Found, 500 Internal Server Error)
+[source,json]
+----
+{
+  "error": "string" // Error message
+}
+----
+
+=== Mark Messages Received
+`DELETE /message/:userId/received`
+
+Marks messages as received by the user and deletes them from the server.
+
+[NOTE]
+Requires authentication. Users can only mark their own messages as received.
+
+==== Parameters
+
+* `userId`: User ID (number)
+
+==== Request
+
+[source,json]
+----
+{
+  "messageIds": [number] // Required - Array of message IDs to mark as received
+}
+----
+
+==== Response
+
+.Success (200 OK)
+No content is returned.
 
 .Error (400 Bad Request, 403 Forbidden, 404 Not Found, 500 Internal Server Error)
 [source,json]
