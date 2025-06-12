@@ -1,4 +1,3 @@
-// filepath: /home/mark/projects/WMC/self-hosted-e2e-messenger/frontend/src/stores/MessageStore.ts
 import { defineStore } from 'pinia'
 import { ref, computed, onUnmounted, watchEffect } from 'vue'
 import type { IMessage } from '@/models/message-model'

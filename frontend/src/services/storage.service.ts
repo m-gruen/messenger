@@ -1,4 +1,3 @@
-// filepath: /home/mark/projects/WMC/self-hosted-e2e-messenger/frontend/src/services/storage.service.ts
 import type { AuthenticatedUser } from '@/models/user-model';
 import type { IMessage } from '@/models/message-model';
 
