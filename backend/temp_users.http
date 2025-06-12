@@ -9,7 +9,8 @@ Content-Type: application/json
 {
   "username": "alice_smith",
   "password": "test",
-  "displayName": "Alice Smith"
+  "displayName": "Alice Smith",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 2
@@ -19,7 +20,8 @@ Content-Type: application/json
 {
   "username": "bob_johnson",
   "password": "test",
-  "displayName": "Bob Johnson"
+  "displayName": "Bob Johnson",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 3
@@ -29,7 +31,8 @@ Content-Type: application/json
 {
   "username": "carol_davis",
   "password": "test",
-  "displayName": "Carol Davis"
+  "displayName": "Carol Davis",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 4
@@ -39,7 +42,8 @@ Content-Type: application/json
 {
   "username": "david_miller",
   "password": "test",
-  "displayName": "David Miller"
+  "displayName": "David Miller",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 5
@@ -49,7 +53,8 @@ Content-Type: application/json
 {
   "username": "emily_wilson",
   "password": "test",
-  "displayName": "Emily Wilson"
+  "displayName": "Emily Wilson",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 6
@@ -59,7 +64,8 @@ Content-Type: application/json
 {
   "username": "frank_thomas",
   "password": "test",
-  "displayName": "Frank Thomas"
+  "displayName": "Frank Thomas",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 7
@@ -69,7 +75,8 @@ Content-Type: application/json
 {
   "username": "grace_lee",
   "password": "test",
-  "displayName": "Grace Lee"
+  "displayName": "Grace Lee",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 8
@@ -79,7 +86,8 @@ Content-Type: application/json
 {
   "username": "henry_garcia",
   "password": "test",
-  "displayName": "Henry Garcia"
+  "displayName": "Henry Garcia",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 9
@@ -89,7 +97,8 @@ Content-Type: application/json
 {
   "username": "isabel_lopez",
   "password": "test",
-  "displayName": "Isabel Lopez"
+  "displayName": "Isabel Lopez",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 10
@@ -99,7 +108,8 @@ Content-Type: application/json
 {
   "username": "james_wright",
   "password": "test",
-  "displayName": "James Wright"
+  "displayName": "James Wright",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 11
@@ -109,7 +119,8 @@ Content-Type: application/json
 {
   "username": "kate_brown",
   "password": "test",
-  "displayName": "Kate Brown"
+  "displayName": "Kate Brown",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 12
@@ -119,7 +130,8 @@ Content-Type: application/json
 {
   "username": "liam_jones",
   "password": "test",
-  "displayName": "Liam Jones"
+  "displayName": "Liam Jones",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 13
@@ -129,7 +141,8 @@ Content-Type: application/json
 {
   "username": "mia_taylor",
   "password": "test",
-  "displayName": "Mia Taylor"
+  "displayName": "Mia Taylor",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 14
@@ -139,7 +152,8 @@ Content-Type: application/json
 {
   "username": "noah_martinez",
   "password": "test",
-  "displayName": "Noah Martinez"
+  "displayName": "Noah Martinez",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 15
@@ -149,7 +163,8 @@ Content-Type: application/json
 {
   "username": "olivia_anderson",
   "password": "test",
-  "displayName": "Olivia Anderson"
+  "displayName": "Olivia Anderson",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 16
@@ -159,7 +174,8 @@ Content-Type: application/json
 {
   "username": "parker_white",
   "password": "test",
-  "displayName": "Parker White"
+  "displayName": "Parker White",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 17
@@ -169,7 +185,8 @@ Content-Type: application/json
 {
   "username": "quinn_harris",
   "password": "test",
-  "displayName": "Quinn Harris"
+  "displayName": "Quinn Harris",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 18
@@ -179,7 +196,8 @@ Content-Type: application/json
 {
   "username": "ryan_clark",
   "password": "test",
-  "displayName": "Ryan Clark"
+  "displayName": "Ryan Clark",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 19
@@ -189,7 +207,8 @@ Content-Type: application/json
 {
   "username": "sophia_lewis",
   "password": "test",
-  "displayName": "Sophia Lewis"
+  "displayName": "Sophia Lewis",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User 20
@@ -199,7 +218,8 @@ Content-Type: application/json
 {
   "username": "tyler_walker",
   "password": "test",
-  "displayName": "Tyler Walker"
+  "displayName": "Tyler Walker",
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User with Shadow Mode
@@ -210,7 +230,8 @@ Content-Type: application/json
   "username": "private_user",
   "password": "test",
   "displayName": "Private User",
-  "shadowMode": true
+  "shadowMode": true,
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
 
 ### Create User with Full Name Search
@@ -221,5 +242,6 @@ Content-Type: application/json
   "username": "public_user",
   "password": "test",
   "displayName": "Public User",
-  "fullNameSearch": true
+  "fullNameSearch": true,
+  "publicKey": "cEpyfPZyNK4h0sWV0Qi8NJWTFCBxzpLbWoGZr/WxUAM="
 }
