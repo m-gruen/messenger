@@ -4,7 +4,7 @@ import type { IMessage } from '@/models/message-model'
 import { MessageSquare, ArrowDown, FileText, Download, Play, Pause, Code } from 'lucide-vue-next'
 import { DateFormatService } from '@/services/date-format.service'
 import hljs from 'highlight.js'
-import 'highlight.js/styles/atom-one-dark.css' // Import a theme for syntax highlighting
+import 'highlight.js/styles/atom-one-dark.css'
 
 const props = defineProps({
   messages: {
@@ -29,7 +29,6 @@ const props = defineProps({
   }
 })
 
-// Add emits for loading more messages, image viewing, and file downloads
 const emit = defineEmits<{
   'load-more-messages': [],
   'view-image': [src: string | null],
@@ -37,42 +36,27 @@ const emit = defineEmits<{
   'download-file': [src: string | null, filename: string]
 }>();
 
-// Scroll tracking refs
 const messageListRef = ref<HTMLElement | null>(null);
 const isViewingOlderMessages = ref(false);
-// Update scroll threshold to 300px as requested
 const scrollThreshold = 3000;
-// Add a new ref for smooth transitions
 const notificationOpacity = ref(0);
-
-// Track if we're at the top of the message list
 const isLoadingMore = ref(false);
-const loadMoreThreshold = 100; // px from top to trigger loading more
+const loadMoreThreshold = 100;
 
-// Enhanced scroll handler to create smooth transitions
 const handleScroll = () => {
   if (!messageListRef.value) return;
-
   const { scrollTop, scrollHeight, clientHeight } = messageListRef.value;
   const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
   const distanceFromTop = scrollTop;
-
-  // Check if we're at the top and should load more messages
   if (distanceFromTop < loadMoreThreshold && !isLoadingMore.value && !props.isLoading) {
     isLoadingMore.value = true;
     emit('load-more-messages');
-
-    // Reset after a reasonable timeout in case the load operation fails
     setTimeout(() => {
       isLoadingMore.value = false;
     }, 3000);
   }
-
-  // Check if we're viewing older messages
   if (distanceFromBottom > scrollThreshold) {
-    // If we're beyond the threshold, start showing the notification
     isViewingOlderMessages.value = true;
-    // Calculate opacity based on how far beyond threshold (with a max of 1)
     const extraScroll = distanceFromBottom - scrollThreshold;
     notificationOpacity.value = Math.min(1, extraScroll / 100);
   } else {
@@ -81,71 +65,51 @@ const handleScroll = () => {
   }
 };
 
-// Function to scroll to the latest messages
 const scrollToLatest = () => {
   if (!messageListRef.value) return;
-
   messageListRef.value.scrollTop = messageListRef.value.scrollHeight;
-  // Immediately reset notification state when manually scrolling to bottom
   isViewingOlderMessages.value = false;
   notificationOpacity.value = 0;
 };
 
-// Auto-scroll to bottom when new messages arrive
 watch(() => props.messages, async (newMessages, oldMessages) => {
-  // Only auto-scroll if we're already at the bottom or there are new messages
   if (!isViewingOlderMessages.value || (oldMessages && newMessages && newMessages.length > oldMessages.length)) {
     await nextTick();
     scrollToLatest();
   }
 }, { deep: true });
 
-// Reset scroll state when switching chats
 watch(() => props.contactUsername, () => {
   isViewingOlderMessages.value = false;
   notificationOpacity.value = 0;
-
-  // Need to wait for DOM to update before scrolling to bottom
   nextTick(() => {
     scrollToLatest();
   });
 });
 
-// Set up scroll event listener
 onMounted(() => {
   if (messageListRef.value) {
     messageListRef.value.addEventListener('scroll', handleScroll);
-    // Initial scroll to bottom
     scrollToLatest();
   }
 });
 
-// Group messages by date and by sender & minute
 const messageGroups = computed(() => {
   if (!props.messages.length) return []
-
   const groups: { dateLabel: string, dateValue: string, messages: IMessage[], minuteGroups: Array<{ sender: number, messages: IMessage[], minute: string }> }[] = []
   let currentDate: string | null = null
   let currentMessages: IMessage[] = []
-
-  // Create a copy of messages and sort by timestamp (oldest first)
-  // This is needed because the UI displays messages in reverse order (newest at bottom)
   const sortedMessages = [...props.messages].sort((a, b) => {
     const dateA = new Date(a.timestamp).getTime()
     const dateB = new Date(b.timestamp).getTime()
     return dateA - dateB
   })
-
-  // Process each message
   for (const message of sortedMessages) {
     const timestamp = new Date(message.timestamp)
     const messageDate = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate())
     const dateString = messageDate.toISOString().split('T')[0]
-
-    // Check if we need to start a new group
     if (currentDate !== dateString) {
       if (currentDate !== null) {
-        // Add the previous group to our list
         groups.push({
           dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
           dateValue: currentDate,
@@ -153,17 +117,12 @@ const messageGroups = computed(() => {
           minuteGroups: createMinuteGroups(currentMessages)
         })
       }
-
-      // Start a new group
       currentDate = dateString
       currentMessages = [message]
     } else {
-      // Add to the current group
       currentMessages.push(message)
     }
   }
-
-  // Don't forget to add the last group
   if (currentMessages.length > 0) {
     groups.push({
       dateLabel: currentMessages[0] ? DateFormatService.formatRelativeDate(new Date(currentMessages[0].timestamp)) : '',
@@ -172,43 +131,32 @@ const messageGroups = computed(() => {
       minuteGroups: createMinuteGroups(currentMessages)
     })
   }
-
   return groups
 })
 
-// Helper function to create minute-based message groups
 function createMinuteGroups(messages: IMessage[]) {
   const minuteGroups: Array<{ sender: number, messages: IMessage[], minute: string }> = []
   let currentSender: number | null = null
   let currentMinute: string | null = null
   let currentGroup: IMessage[] = []
-
   for (const message of messages) {
     const timestamp = new Date(message.timestamp)
     const minute = `${timestamp.getHours()}:${timestamp.getMinutes()}`
-
-    // Start a new group if the minute changes or the sender changes
     if (currentMinute !== minute || currentSender !== message.sender_uid) {
       if (currentMinute !== null) {
-        // Add the previous group to our list
         minuteGroups.push({
           sender: currentSender!,
           minute: currentMinute,
           messages: [...currentGroup]
         })
       }
-
-      // Start a new group
       currentMinute = minute
       currentSender = message.sender_uid
       currentGroup = [message]
     } else {
-      // Add to the current group
       currentGroup.push(message)
     }
   }
-
-  // Add the last group
   if (currentGroup.length > 0 && currentMinute !== null) {
     minuteGroups.push({
       sender: currentSender!,
@@ -216,61 +164,47 @@ function createMinuteGroups(messages: IMessage[]) {
       messages: [...currentGroup]
     })
   }
-
   return minuteGroups
 }
 
-// Determine message position in its minute-group
 function getMessagePosition(message: IMessage, group: { sender: number, messages: IMessage[], minute: string }) {
   if (group.messages.length === 1) return 'single'
-
   const index = group.messages.findIndex(m => m.mid === message.mid)
   if (index === 0) return 'first'
   if (index === group.messages.length - 1) return 'last'
   return 'middle'
 }
 
-// Format time for message timestamp display
 function formatTimeForMessage(dateString: string | Date | undefined): string {
   return DateFormatService.formatMessageTime(dateString) || '';
 }
 
-// Emoji detection and styling utilities
 function isEmojiOnly(text: string): boolean {
-  // Regex to detect emoji characters
   const emojiRegex = /^(\p{Emoji}|\p{Emoji_Presentation}|\p{Emoji_Modifier}|\p{Emoji_Component}|\s)+$/u;
   return emojiRegex.test(text);
 }
 
 function countEmojis(text: string): number {
-  // Count emojis in a string, accounting for skin tone modifiers and ZWJ sequences
-  // This is a simplified approach - emoji counting can be complex due to ZWJ sequences
-  // and variation selectors
-
-  // Match emoji characters or emoji sequences
   const emojiMatches = text.match(/(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\p{Emoji_Modifier}|\u200D\p{Emoji})*|\s+/gu);
   return emojiMatches ? emojiMatches.filter(match => match.trim().length > 0).length : 0;
 }
 
 function getEmojiMessageStyle(text: string): string | null {
   if (!text || !isEmojiOnly(text)) {
-    return null; // Not an emoji-only message
+    return null;
   }
-
   const count = countEmojis(text);
-
   if (count === 1) {
-    return 'emoji-only emoji-single'; // Single emoji, very large
+    return 'emoji-only emoji-single';
   } else if (count <= 3) {
-    return 'emoji-only emoji-few'; // 2-3 emojis, large
+    return 'emoji-only emoji-few';
   } else if (count <= 8) {
-    return 'emoji-only emoji-several'; // 4-8 emojis, medium
+    return 'emoji-only emoji-several';
   } else {
-    return null; // 9+ emojis, normal message styling
+    return null;
   }
 }
 
-// Parse message content to detect JSON structure
 function parseMessageContent(content: string): {
   type: string,
   content: string,
@@ -283,17 +217,13 @@ function parseMessageContent(content: string): {
   if (!content) {
     return { type: 'text', content: '' };
   }
-
   try {
-    // Try to parse as JSON
     const parsed = JSON.parse(content);
     if (parsed && typeof parsed === 'object' && 'type' in parsed) {
       return parsed;
     }
   } catch (e) {
-    // If parsing fails, make a second attempt with escaped JSON
     try {
-      // Some messages might be double-encoded JSON strings
       const doubleDecoded = JSON.parse(JSON.stringify(content));
       const parsed = JSON.parse(doubleDecoded);
       if (parsed && typeof parsed === 'object' && 'type' in parsed) {
@@ -303,12 +233,9 @@ function parseMessageContent(content: string): {
       console.log('Failed to parse message content as JSON:', e);
     }
   }
-
-  // If we can't parse as JSON, treat as plain text
   return { type: 'text', content };
 }
 
-// Get text content from a message
 function getMessageContent(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
@@ -318,7 +245,6 @@ function getMessageContent(message: IMessage): string {
   }
 }
 
-// Format file size for display
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + ' B';
   else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -326,7 +252,6 @@ function formatFileSize(bytes: number): string {
   else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
 }
 
-// Image message helpers
 function isImageMessage(content: string): boolean {
   try {
     const parsed = parseMessageContent(content);
@@ -369,7 +294,6 @@ function getImageSize(message: IMessage): string {
   }
 }
 
-// Document message helpers
 function isDocumentMessage(content: string): boolean {
   try {
     const parsed = parseMessageContent(content);
@@ -406,7 +330,6 @@ function getFileSource(message: IMessage): string {
     if ((parsed.type === 'document' || parsed.type === 'code') && parsed.content) {
       return `data:${parsed.format || 'application/octet-stream'};base64,${parsed.content}`;
     }
-    // For code files that are not base64 encoded
     if (parsed.type === 'code' && parsed.content) {
       return `data:text/plain;charset=utf-8,${encodeURIComponent(parsed.content)}`;
     }
@@ -416,7 +339,6 @@ function getFileSource(message: IMessage): string {
   }
 }
 
-// Audio message helpers
 function isAudioMessage(content: string): boolean {
   try {
     const parsed = parseMessageContent(content);
@@ -442,13 +364,12 @@ function getAudioExtension(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
     if (parsed.type === 'audio' && parsed.format) {
-      // Extract extension from MIME type
       const mimeType = parsed.format.toLowerCase();
       if (mimeType.includes('mp3')) return 'mp3';
       if (mimeType.includes('wav')) return 'wav';
       if (mimeType.includes('ogg')) return 'ogg';
       if (mimeType.includes('m4a')) return 'm4a';
-      return 'mp3'; // Default
+      return 'mp3';
     }
     return 'mp3';
   } catch (e) {
@@ -456,7 +377,6 @@ function getAudioExtension(message: IMessage): string {
   }
 }
 
-// Audio playback state
 const audioState = ref({
   messageId: 0,
   isPlaying: false,
@@ -464,28 +384,21 @@ const audioState = ref({
   duration: 0
 });
 
-// Format audio time in mm:ss format
 function formatAudioTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Audio playback controls
 function toggleAudioPlayback(message: IMessage): void {
   const audioElements = document.querySelectorAll('audio');
   const currentAudio = document.querySelector(`audio[data-message-id="${message.mid}"]`) as HTMLAudioElement;
-  
   if (!currentAudio) return;
-  
-  // Pause any other playing audio
   audioElements.forEach(audio => {
     if (audio !== currentAudio && !audio.paused) {
       audio.pause();
     }
   });
-  
-  // Toggle play/pause for current audio
   if (audioState.value.messageId === message.mid && audioState.value.isPlaying) {
     currentAudio.pause();
     audioState.value.isPlaying = false;
@@ -493,8 +406,6 @@ function toggleAudioPlayback(message: IMessage): void {
     currentAudio.play();
     audioState.value.messageId = message.mid;
     audioState.value.isPlaying = true;
-    
-    // Set duration if not already set
     if (!audioState.value.duration) {
       audioState.value.duration = currentAudio.duration;
     }
@@ -525,20 +436,14 @@ function handleAudioEnded(message: IMessage): void {
 function setAudioPosition(event: MouseEvent, message: IMessage): void {
   const target = event.currentTarget as HTMLElement;
   if (!target) return;
-  
   const audio = document.querySelector(`audio[data-message-id="${message.mid}"]`) as HTMLAudioElement;
   if (!audio) return;
-  
   const rect = target.getBoundingClientRect();
   const clickX = event.clientX - rect.left;
   const percentage = clickX / rect.width;
-  
-  // Set time based on percentage of progress bar clicked
   const newTime = percentage * audio.duration;
   audio.currentTime = newTime;
   audioState.value.currentTime = newTime;
-  
-  // If paused, start playing
   if (audio.paused) {
     audio.play();
     audioState.value.messageId = message.mid;
@@ -546,7 +451,6 @@ function setAudioPosition(event: MouseEvent, message: IMessage): void {
   }
 }
 
-// Code message helpers (continued)
 function isCodeMessage(content: string): boolean {
   try {
     const parsed = parseMessageContent(content);
@@ -558,19 +462,15 @@ function isCodeMessage(content: string): boolean {
 
 function formatCode(code: string, language: string): string {
   try {
-    // Sanitize code to prevent XSS
     const sanitizedCode = code
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
-
-    // Apply syntax highlighting
     if (language && hljs.getLanguage(language)) {
       return hljs.highlight(sanitizedCode, { language }).value;
     } else {
-      // Fallback to auto-detection
       return hljs.highlightAuto(sanitizedCode).value;
     }
   } catch (e) {
@@ -584,7 +484,6 @@ function formatCode(code: string, language: string): string {
   }
 }
 
-// Get code content from message
 function getCodeContent(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
@@ -594,7 +493,6 @@ function getCodeContent(message: IMessage): string {
   }
 }
 
-// Get code language from message
 function getCodeLanguage(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
@@ -604,7 +502,6 @@ function getCodeLanguage(message: IMessage): string {
   }
 }
 
-// Get code file name from message
 function getCodeName(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
@@ -614,7 +511,6 @@ function getCodeName(message: IMessage): string {
   }
 }
 
-// Get code file size for display
 function getCodeSize(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
@@ -632,7 +528,6 @@ function getCodeSize(message: IMessage): string {
   <div class="relative flex-1 overflow-y-auto p-4 bg-background/95 message-list-container custom-scrollbar"
     ref="messageListRef"
     style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');">
-    <!-- Viewing Older Messages Notification -->
     <div v-if="isViewingOlderMessages"
       class="fixed bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
       :style="{ opacity: notificationOpacity, bottom: '100px', left: '50%', transform: 'translateX(-50%)' }">
@@ -643,19 +538,16 @@ function getCodeSize(message: IMessage): string {
         <ArrowDown class="h-3 w-3 ml-1" />
       </button>
     </div>
-
     <div v-if="isLoading" class="flex items-center justify-center h-full">
       <div class="animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full"></div>
       <span class="ml-2">Loading messages...</span>
     </div>
-
     <div v-else-if="error" class="flex items-center justify-center h-full">
       <div class="bg-destructive/10 text-destructive p-4 rounded-md max-w-[80%] text-center">
         <p class="font-medium">Error loading messages</p>
         <p>{{ error }}</p>
       </div>
     </div>
-
     <div v-else-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-center">
       <div class="bg-card p-6 rounded-lg shadow-lg">
         <MessageSquare class="h-12 w-12 mx-auto text-muted-foreground" />
@@ -663,94 +555,61 @@ function getCodeSize(message: IMessage): string {
         <p class="mt-2 text-sm text-muted-foreground">Send a message to start the conversation</p>
       </div>
     </div>
-
     <div v-else class="flex flex-col space-y-6">
-      <!-- Iterate through date groups -->
       <div v-for="group in messageGroups" :key="group.dateValue">
-        <!-- Date header -->
         <div class="flex justify-center mb-4">
           <div class="bg-muted/70 text-muted-foreground text-xs px-4 py-1 rounded-full">
             {{ group.dateLabel }}
           </div>
         </div>
-
-        <!-- Messages grouped by minute -->
         <div class="flex flex-col space-y-4">
-          <!-- Each minute group -->
           <div v-for="(minuteGroup, groupIndex) in group.minuteGroups"
             :key="`${group.dateValue}-${minuteGroup.minute}-${groupIndex}`" class="flex flex-col" :class="{
               'items-end pr-2': minuteGroup.sender === currentUserId,
               'items-start pl-2': minuteGroup.sender !== currentUserId,
               'mb-1': true
             }">
-
-            <!-- Messages in this minute group - reduced width from 80% to 75% -->
             <div class="flex flex-col" style="max-width: 75%;">
               <div v-for="(message, messageIndex) in minuteGroup.messages" :key="message.mid" :class="[
-                // Check if this is an emoji-only message
                 getEmojiMessageStyle(getMessageContent(message)) || 'px-3 py-2 shadow-sm inline-block',
-
-                // Base styling
                 {
-                  // Sender styles (you) - only if not emoji-only message
                   'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
-                  // Receiver styles (other person) - only if not emoji-only message
                   'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
-
-                  // Spacing between messages in the same group
                   'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
-
-                  // Self-align each message
                   'self-end': message.sender_uid === currentUserId,
                   'self-start': message.sender_uid !== currentUserId,
-
-                  // Maximum width for messages
                   'max-w-message': true
                 },
-                // Only apply bubble styling for non-emoji messages
                 !getEmojiMessageStyle(getMessageContent(message)) ? [
-                  // Single message (completely rounded)
                   getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
-
-                  // First message in group
                   getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
                     'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
                   getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid !== currentUserId ?
                     'message-bubble-rounded-top message-bubble-rounded-right message-bubble-bottom-right' : '',
-
-                  // Middle messages in group
                   getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid === currentUserId ?
                     'message-bubble-rounded-left' : '',
                   getMessagePosition(message, minuteGroup) === 'middle' && message.sender_uid !== currentUserId ?
                     'message-bubble-rounded-right' : '',
-
-                  // Last message in group
                   getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid === currentUserId ?
                     'message-bubble-rounded-bottom message-bubble-rounded-left message-bubble-top-left' : '',
                   getMessagePosition(message, minuteGroup) === 'last' && message.sender_uid !== currentUserId ?
                     'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
                 ] : []
               ]">
-                <!-- Fixed message layout with only last line having padding for timestamp -->
                 <div class="relative message-content">
-                  <!-- Parse the message content -->
                   <template
                     v-if="!isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content) && !isCodeMessage(message.content)">
-                    <!-- Text message content -->
                     <p :class="[
                       'message-text',
                       (getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '',
-                      // Apply emoji styling classes directly to text element if it's an emoji-only message
                       getEmojiMessageStyle(getMessageContent(message))
                     ]">
                       {{ getMessageContent(message) }}
                     </p>
                   </template>
-
-                  <!-- Image message content -->
                   <div v-else-if="isImageMessage(message.content)" class="image-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
-                    <template v-if="getImageSource(message)">                        <div class="image-wrapper">
+                    <template v-if="getImageSource(message)"><div class="image-wrapper">
                         <img :src="getImageSource(message) || ''" alt="Image message" class="rounded-lg max-w-full"
                           style="max-height: 300px;" @click="emit('view-image', getImageSource(message))" />
                         <div class="image-info-overlay">
@@ -766,7 +625,6 @@ function getCodeSize(message: IMessage): string {
                           <Download class="h-5 w-5" />
                         </a>
                       </div>
-                      <!-- Timestamp included directly in the image container for better positioning -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
                         class="text-xs opacity-70 message-timestamp image-timestamp">
@@ -777,8 +635,6 @@ function getCodeSize(message: IMessage): string {
                       Image data could not be loaded
                     </div>
                   </div>
-
-                  <!-- Document message content -->
                   <div v-else-if="isDocumentMessage(message.content)" class="document-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     <div class="document-preview">
@@ -799,7 +655,6 @@ function getCodeSize(message: IMessage): string {
                           <Download class="h-5 w-5" />
                         </div>
                       </a>
-                      <!-- Timestamp below document -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
                         class="text-xs opacity-70 message-timestamp document-timestamp">
@@ -807,8 +662,6 @@ function getCodeSize(message: IMessage): string {
                       </span>
                     </div>
                   </div>
-
-                  <!-- Code message content -->
                   <div v-else-if="isCodeMessage(message.content)" class="code-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     <div class="code-preview">
@@ -823,7 +676,6 @@ function getCodeSize(message: IMessage): string {
                           </div>
                         </div>
                         <div class="flex items-center gap-2">
-                          <!-- Expand button -->
                           <button
                             class="code-expand-button"
                             title="Expand code"
@@ -832,7 +684,6 @@ function getCodeSize(message: IMessage): string {
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
                             </svg>
                           </button>
-                          <!-- Download button -->
                           <a :href="`data:text/plain;charset=utf-8,${encodeURIComponent(getCodeContent(message))}`" 
                              :download="getCodeName(message)"
                              class="code-download-button" 
@@ -845,8 +696,6 @@ function getCodeSize(message: IMessage): string {
                       <div class="code-content p-0 overflow-x-auto">
                         <pre class="text-sm m-0 p-4 bg-zinc-900"><code v-html="formatCode(getCodeContent(message), getCodeLanguage(message))"></code></pre>
                       </div>
-                      
-                      <!-- Timestamp below code block -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
                         class="text-xs opacity-70 message-timestamp code-timestamp">
@@ -854,28 +703,20 @@ function getCodeSize(message: IMessage): string {
                       </span>
                     </div>
                   </div>
-
-                  <!-- Audio message content -->
                   <div v-else-if="isAudioMessage(message.content)" class="audio-container"
                     :class="[(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') ? 'has-timestamp' : '']">
                     <div class="audio-player p-3 pb-4">
-                      <!-- Hidden audio element without controls -->
                       <audio :src="getAudioSource(message) || ''" :data-message-id="message.mid" preload="metadata"
                         class="hidden" @timeupdate="handleTimeUpdate(message, $event)"
                         @loadedmetadata="handleAudioMetadata(message, $event)" @ended="handleAudioEnded(message)">
                       </audio>
-
-                      <!-- Custom audio player UI -->
                       <div class="custom-audio-player">
-                        <!-- Play/Pause button -->
                         <button @click="toggleAudioPlayback(message)" class="audio-control-button flex-shrink-0"
                           :class="{ 'is-playing': audioState.messageId === message.mid && audioState.isPlaying }">
                           <Play v-if="audioState.messageId !== message.mid || !audioState.isPlaying" class="h-8 w-8" />
                           <Pause v-else class="h-8 w-8" />
                         </button>
-
                         <div class="audio-progress-container ml-2 flex-1">
-                          <!-- Progress bar -->
                           <div class="audio-progress-bar-bg" @click="setAudioPosition($event, message)">
                             <div class="audio-progress-bar" :style="{
                               width: audioState.messageId === message.mid 
@@ -883,8 +724,6 @@ function getCodeSize(message: IMessage): string {
                                   : '0%' 
                               }"></div>
                           </div>
-
-                          <!-- Time display -->
                           <div class="audio-time-display text-xs">
                             <span>{{
                               audioState.messageId === message.mid
@@ -899,16 +738,12 @@ function getCodeSize(message: IMessage): string {
                               }}</span>
                           </div>
                         </div>
-
-                        <!-- Download button -->
                         <a :href="getAudioSource(message) || ''"
                           :download="`audio-${message.mid}.${getAudioExtension(message)}`"
                           class="audio-download-button ml-2" title="Download audio" @click.stop>
                           <Download class="h-5 w-5" />
                         </a>
                       </div>
-
-                      <!-- Timestamp below audio (similar to document timestamp) -->
                       <span
                         v-if="getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last'"
                         class="text-xs opacity-70 message-timestamp document-timestamp">
@@ -916,8 +751,6 @@ function getCodeSize(message: IMessage): string {
                       </span>
                     </div>
                   </div>
-
-                  <!-- Show time only in single or last messages in a group (but not for images, documents, audio, or code) -->
                   <span
                     v-if="(getMessagePosition(message, minuteGroup) === 'single' || getMessagePosition(message, minuteGroup) === 'last') && !isImageMessage(message.content) && !isDocumentMessage(message.content) && !isAudioMessage(message.content) && !isCodeMessage(message.content)"
                     class="text-xs opacity-70 message-timestamp"
@@ -935,29 +768,23 @@ function getCodeSize(message: IMessage): string {
 </template>
 
 <style scoped>
-/* Custom scrollbar styling */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
-  /* Thin scrollbar */
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
-  /* Transparent background */
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(128, 128, 128, 0.4);
-  /* Semi-transparent gray */
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background-color: rgba(128, 128, 128, 0.6);
-  /* Slightly more visible on hover */
 }
 
-/* Hide scrollbar buttons (arrows) - multiple approaches for different browsers */
 .custom-scrollbar::-webkit-scrollbar-button {
   display: none;
   height: 0;
@@ -969,19 +796,16 @@ function getCodeSize(message: IMessage): string {
   display: none;
 }
 
-/* For Firefox */
 .custom-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
 }
 
-/* Additional override to ensure no buttons are shown */
 .custom-scrollbar * {
   -ms-overflow-style: none;
   scrollbar-width: thin;
 }
 
-/* Custom message bubble styles with increased roundness */
 .message-bubble-rounded {
   border-radius: 18px;
 }
@@ -1022,7 +846,6 @@ function getCodeSize(message: IMessage): string {
   border-bottom-right-radius: 18px;
 }
 
-/* Timestamp positioning */
 .message-content {
   min-width: 14px;
   position: relative;
@@ -1037,15 +860,12 @@ function getCodeSize(message: IMessage): string {
   padding: 0;
 }
 
-/* Only add space for timestamp in messages that have it */
 .message-text.has-timestamp::after {
   content: '';
   display: inline-block;
   width: 40px;
-  /* Space for timestamp */
 }
 
-/* Remove the extra space for emoji-only messages with timestamps */
 .emoji-only .message-text.has-timestamp::after {
   width: 0;
   display: none;
@@ -1061,40 +881,34 @@ function getCodeSize(message: IMessage): string {
   white-space: nowrap;
 }
 
-/* Control maximum width of messages */
 .max-w-message {
   max-width: 100%;
 }
 
-/* Emoji-only message styling */
 .emoji-only {
   background: transparent !important;
   box-shadow: none !important;
   padding: 2px !important;
 }
 
-/* Single emoji styling - very large */
 .emoji-single {
   font-size: 4rem !important;
   line-height: 1.2;
   padding: 0.2rem !important;
 }
 
-/* Few emojis styling - large */
 .emoji-few {
   font-size: 3rem !important;
   line-height: 1.2;
   padding: 0.2rem !important;
 }
 
-/* Several emojis styling - medium */
 .emoji-several {
   font-size: 2rem !important;
   line-height: 1.3;
   padding: 0.2rem !important;
 }
 
-/* Emoji timestamp positioning */
 .emoji-timestamp {
   position: absolute;
   color: rgba(155, 155, 155, 0.8) !important;
@@ -1103,14 +917,12 @@ function getCodeSize(message: IMessage): string {
   font-size: 0.65rem;
 }
 
-/* Image styling */
 .image-container {
   cursor: pointer;
   transition: transform 0.2s;
   margin: 2px 0;
   position: relative;
   padding-bottom: 18px;
-  /* Add padding for timestamp */
 }
 
 .image-container img {
@@ -1191,7 +1003,6 @@ function getCodeSize(message: IMessage): string {
   max-width: 200px;
 }
 
-/* Viewing older messages notification styling */
 .older-messages-notification {
   animation: fadeIn 0.3s ease-in-out;
   transition: all 0.3s ease-in-out;
@@ -1209,12 +1020,10 @@ function getCodeSize(message: IMessage): string {
   }
 }
 
-/* Document styling */
 .document-container {
   margin: 2px 0;
   position: relative;
   padding-bottom: 18px;
-  /* For timestamp */
 }
 
 .document-preview {
@@ -1245,35 +1054,28 @@ function getCodeSize(message: IMessage): string {
   color: rgba(155, 155, 155, 0.8);
 }
 
-/* Document icon styling */
 .document-icon.pdf svg {
   color: #e53935;
-  /* Red */
 }
 
 .document-icon.doc svg {
   color: #1565c0;
-  /* Blue */
 }
 
 .document-icon.sheet svg {
   color: #2e7d32;
-  /* Green */
 }
 
 .document-icon.presentation svg {
   color: #ff8f00;
-  /* Orange/Amber */
 }
 
 .document-icon.text svg {
   color: #78909c;
-  /* Blue Grey */
 }
 
 .document-icon.zip svg {
   color: #7b1fa2;
-  /* Purple */
 }
 
 .document-timestamp {
@@ -1287,12 +1089,10 @@ function getCodeSize(message: IMessage): string {
   border-radius: 10px;
 }
 
-/* Audio message styling */
 .audio-container {
   margin: 2px 0;
   position: relative;
   padding-bottom: 16px;
-  /* Reduced padding for timestamp */
 }
 
 .audio-player {
@@ -1300,7 +1100,6 @@ function getCodeSize(message: IMessage): string {
   background-color: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   overflow: visible;
-  /* Keep visible to show timestamp outside container */
 }
 
 .custom-audio-player {
@@ -1330,7 +1129,6 @@ function getCodeSize(message: IMessage): string {
 
 .audio-control-button.is-playing {
   color: #3b82f6;
-  /* blue-500 */
 }
 
 .audio-download-button {
@@ -1378,18 +1176,14 @@ function getCodeSize(message: IMessage): string {
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Audio timestamp styling */
 .audio-player .document-timestamp {
-  bottom: -12px; /* Smaller bottom spacing than regular document timestamp */
+  bottom: -12px;
 }
 
-/* Audio timestamp now uses document-timestamp class for consistency */
-
-/* Code message styling */
 .code-container {
   margin: 2px 0;
   position: relative;
-  padding-bottom: 24px; /* Increased padding for timestamp at bottom: -16px */
+  padding-bottom: 24px;
   width: 100%;
 }
 
@@ -1401,7 +1195,7 @@ function getCodeSize(message: IMessage): string {
 
 .code-header {
   padding: 8px 12px;
-  background-color: #1f2937; /* gray-800 in Tailwind */
+  background-color: #1f2937;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: space-between;
@@ -1423,7 +1217,7 @@ function getCodeSize(message: IMessage): string {
 }
 
 .code-content {
-  max-height: 300px; /* Limit height in chat view */
+  max-height: 300px;
   position: relative;
 }
 
@@ -1461,7 +1255,6 @@ function getCodeSize(message: IMessage): string {
   border-radius: 10px;
 }
 
-/* Syntax highlighting enhancements */
 .hljs-comment {
   color: #8b949e;
   font-style: italic;
@@ -1517,7 +1310,7 @@ function getCodeSize(message: IMessage): string {
 }
 
 .code-content {
-  max-height: 300px; /* Limit height in chat view */
+  max-height: 300px;
   position: relative;
 }
 </style>
