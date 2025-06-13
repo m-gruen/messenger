@@ -217,20 +217,59 @@ function parseMessageContent(content: string): {
   if (!content) {
     return { type: 'text', content: '' };
   }
+  
   try {
+    // First try: direct parse
     const parsed = JSON.parse(content);
     if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+      // If this is a code message, make sure the content has all HTML entities decoded
+      if (parsed.type === 'code' && parsed.content) {
+        parsed.content = parsed.content
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&#034;/g, '"')
+          .replace(/&#x27;/g, "'")
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&');
+      }
       return parsed;
     }
   } catch (e) {
     try {
-      const doubleDecoded = JSON.parse(JSON.stringify(content));
-      const parsed = JSON.parse(doubleDecoded);
+      // Second try: handle possible HTML entity encoding
+      // Replace HTML entities that might interfere with JSON parsing
+      const preprocessed = content
+        .replace(/&quot;/g, '"')
+        .replace(/&#034;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&#x27;/g, "'");
+      
+      const parsed = JSON.parse(preprocessed);
       if (parsed && typeof parsed === 'object' && 'type' in parsed) {
         return parsed;
       }
-    } catch (nestedError) {
-      console.log('Failed to parse message content as JSON:', e);
+    } catch (preprocessError) {
+      try {
+        // Third try: double-decoding approach (last resort)
+        const doubleDecoded = JSON.parse(JSON.stringify(content));
+        const parsed = JSON.parse(doubleDecoded);
+        if (parsed && typeof parsed === 'object' && 'type' in parsed) {
+          if (parsed.type === 'code' && parsed.content) {
+            parsed.content = parsed.content
+              .replace(/&quot;/g, '"')
+              .replace(/&#039;/g, "'")
+              .replace(/&#034;/g, '"')
+              .replace(/&#x27;/g, "'")
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&amp;/g, '&');
+          }
+          return parsed;
+        }
+      } catch (nestedError) {
+        console.log('Failed to parse message content as JSON:', e);
+      }
     }
   }
   return { type: 'text', content };
@@ -462,12 +501,22 @@ function isCodeMessage(content: string): boolean {
 
 function formatCode(code: string, language: string): string {
   try {
-    const sanitizedCode = code
+    // First, replace any existing HTML entities with their actual characters
+    const decodedCode = code
+      .replace(/&quot;/g, '"')
+      .replace(/&#034;/g, '"')  
+      .replace(/&#039;/g, "'")
+      .replace(/&#x27;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    
+    // Then sanitize for HTML display (but don't escape quotes unnecessarily)
+    const sanitizedCode = decodedCode
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/>/g, '&gt;');
+    
     if (language && hljs.getLanguage(language)) {
       return hljs.highlight(sanitizedCode, { language }).value;
     } else {
@@ -475,19 +524,29 @@ function formatCode(code: string, language: string): string {
     }
   } catch (e) {
     console.error('Error highlighting code:', e);
+    // Minimal sanitization for safety
     return code
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/>/g, '&gt;');
   }
 }
 
 function getCodeContent(message: IMessage): string {
   try {
     const parsed = parseMessageContent(message.content);
-    return parsed.type === 'code' ? parsed.content || '' : '';
+    if (parsed.type === 'code' && parsed.content) {
+      // Ensure all HTML entities are decoded for proper display of quotes and other characters
+      return parsed.content
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&#034;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&');
+    }
+    return '';
   } catch (e) {
     return '';
   }

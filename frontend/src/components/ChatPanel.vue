@@ -57,10 +57,23 @@ function closeImagePreview() {
   previewImageSrc.value = null;
 }
 
+// Function to decode HTML entities for better code display
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&#034;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
 // Handler for code snippet previews
 function handleViewCode(codeContent: string, language: string, name: string) {
   if (codeContent) {
-    previewCodeContent.value = codeContent;
+    // Decode HTML entities to ensure quotes display properly
+    previewCodeContent.value = decodeHtmlEntities(codeContent);
     previewCodeLanguage.value = language;
     previewCodeName.value = name;
     showCodePreview.value = true;
@@ -275,13 +288,21 @@ function isContactBlocked(): boolean {
 // Code formatting function (same as in MessageList)
 function formatCode(code: string, language: string): string {
   try {
-    // Sanitize code to prevent XSS
-    const sanitizedCode = code
+    // First, decode any HTML entities to display real quotes and other characters
+    const decodedCode = code
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&#034;/g, '"')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    
+    // Sanitize code to prevent XSS, but don't escape quotes unnecessarily
+    const sanitizedCode = decodedCode
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/>/g, '&gt;');
+      // No longer converting quotes to HTML entities
 
     // Apply syntax highlighting
     if (language && hljs.getLanguage(language)) {
@@ -292,12 +313,11 @@ function formatCode(code: string, language: string): string {
     }
   } catch (e) {
     console.error('Error highlighting code:', e);
+    // Minimal sanitization for safety (but no quote escaping)
     return code
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+      .replace(/>/g, '&gt;');
   }
 }
 </script>
