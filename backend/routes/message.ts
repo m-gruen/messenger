@@ -78,18 +78,17 @@ msgRouter.post('/:userId/:receiverId', authenticateToken, async (req: Authentica
     }
 });
 
-// New endpoint to mark messages as received and delete them from the server
 msgRouter.delete('/:userId/received', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
     const userId = parseInt(req.params.userId);
     const { messageIds } = req.body;
-    
+
     if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
         res.status(StatusCodes.BAD_REQUEST).send({
             error: 'messageIds must be a non-empty array of message IDs'
         });
         return;
     }
-    
+
     if (userId !== req.user?.uid) {
         res.status(StatusCodes.FORBIDDEN).send({
             error: 'You can only mark your own messages as received'
@@ -102,7 +101,7 @@ msgRouter.delete('/:userId/received', authenticateToken, async (req: Authenticat
         const msgUtils = new MessageUtils(dbSession);
 
         const response = await msgUtils.deleteReceivedMessages(userId, messageIds);
-        
+
         await dbSession.complete(response.statusCode === StatusCodes.OK);
 
         res.status(response.statusCode).json(

@@ -46,14 +46,13 @@ io.on('connection', (socket) => {
 // Export io so it can be used in other files
 export { io };
 
-// Increase JSON payload size limit to handle image data (10MB)
 app.use(express.json({ limit: '10mb' }));
-// Configure CORS with explicit origin
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true
+    origin: process.env.FRONTEND_URL || 'http://localhost:8080',
+    credentials: true
 }));
-// Increase URL-encoded payload size limit
+
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use('/user', userRouter);

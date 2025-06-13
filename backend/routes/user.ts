@@ -14,7 +14,7 @@ userRouter.post('/', async (req: Request, res: Response) => {
         const userUtils = new UserUtils(dbSession);
 
         const response: UserResponse = await userUtils.createUser(
-            username, 
+            username,
             password,
             publicKey,
             displayName,
@@ -153,9 +153,9 @@ userRouter.put('/:uid', authenticateToken, async (req: AuthenticatedRequest, res
         return;
     }
 
-    if (username === undefined && 
-        displayName === undefined && 
-        shadowMode === undefined && 
+    if (username === undefined &&
+        displayName === undefined &&
+        shadowMode === undefined &&
         fullNameSearch === undefined
         && profilePicture === undefined) {
         res.status(StatusCodes.BAD_REQUEST).json({
@@ -250,7 +250,7 @@ userRouter.put('/:uid/keys', authenticateToken, async (req: AuthenticatedRequest
         const response: UserResponse = await userUtils.updatePublicKey(uid, publicKey);
 
         await dbSession.complete(response.statusCode === StatusCodes.OK);
-        
+
         res.status(response.statusCode).json(
             response.data !== null ? response.data : { error: response.error }
         );

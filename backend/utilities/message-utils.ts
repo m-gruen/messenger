@@ -42,10 +42,8 @@ export class MessageUtils extends Utils {
             );
         }
 
-        // Check if the user can send messages and get specific reason if not
         const messagePermission = await this.canSendMessage(sender_uid, receiver_uid);
         if (!messagePermission.canSend) {
-            // Provide more specific error messages based on the reason
             if (messagePermission.reason === 'you_blocked') {
                 return this.createErrorResponse(
                     StatusCodes.FORBIDDEN,
@@ -57,7 +55,6 @@ export class MessageUtils extends Utils {
                     'Cannot message user, user has blocked you'
                 );
             } else {
-                // Default message for other cases
                 return this.createErrorResponse(
                     StatusCodes.FORBIDDEN,
                     'Cannot send message to this user'
@@ -155,7 +152,7 @@ export class MessageUtils extends Utils {
             );
         }
     }
-    
+
     /**
      * Deletes messages from the server after they have been received and stored locally
      * @param receiver_uid The ID of the user who received the messages
@@ -183,14 +180,14 @@ export class MessageUtils extends Utils {
                 .filter(id => id !== null && id !== undefined)
                 .map(id => parseInt(id as any))
                 .filter(id => !isNaN(id));
-            
+
             if (validMessageIds.length === 0) {
                 return this.createErrorResponse(
                     StatusCodes.BAD_REQUEST,
                     'No valid message IDs provided'
                 );
             }
-            
+
             // Only delete messages where the current user is the receiver
             const result = await this.dbSession.query(`
             DELETE FROM message 
@@ -200,8 +197,8 @@ export class MessageUtils extends Utils {
                 [receiver_uid, validMessageIds]
             );
 
-            return this.createSuccessResponse({ 
-                deleted: result.rowCount || 0 
+            return this.createSuccessResponse({
+                deleted: result.rowCount || 0
             });
         } catch (error) {
             console.error('Error deleting received messages:', error);
