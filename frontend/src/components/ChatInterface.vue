@@ -48,6 +48,7 @@ const emit = defineEmits<{
   'clear-send-error': [],
   'load-more-messages': [],
   'view-image': [src: string | null],
+  'view-code': [content: string, language: string, name: string],
   'download-file': [src: string | null, filename: string]
 }>()
 
@@ -90,6 +91,7 @@ watch(() => props.sendError, (error) => {
       :contact-username="contact.username" 
       @load-more-messages="emit('load-more-messages')"
       @view-image="src => emit('view-image', src)"
+      @view-code="(content, language, name) => emit('view-code', content, language, name)"
     />
 
     <!-- Message Input -->

@@ -33,6 +33,7 @@ const props = defineProps({
 const emit = defineEmits<{
   'load-more-messages': [],
   'view-image': [src: string | null],
+  'view-code': [content: string, language: string, name: string],
   'download-file': [src: string | null, filename: string]
 }>();
 
@@ -821,13 +822,25 @@ function getCodeSize(message: IMessage): string {
                             {{ getCodeSize(message) }}
                           </div>
                         </div>
-                        <a :href="`data:text/plain;charset=utf-8,${encodeURIComponent(getCodeContent(message))}`" 
-                           :download="getCodeName(message)"
-                           class="code-download-button" 
-                           title="Download code file" 
-                           @click.stop>
-                          <Download class="h-5 w-5" />
-                        </a>
+                        <div class="flex items-center gap-2">
+                          <!-- Expand button -->
+                          <button
+                            class="code-expand-button"
+                            title="Expand code"
+                            @click.stop="emit('view-code', getCodeContent(message), getCodeLanguage(message), getCodeName(message))">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5v-4m0 4h-4m4 0l-5-5" />
+                            </svg>
+                          </button>
+                          <!-- Download button -->
+                          <a :href="`data:text/plain;charset=utf-8,${encodeURIComponent(getCodeContent(message))}`" 
+                             :download="getCodeName(message)"
+                             class="code-download-button" 
+                             title="Download code file" 
+                             @click.stop>
+                            <Download class="h-5 w-5" />
+                          </a>
+                        </div>
                       </div>
                       <div class="code-content p-0 overflow-x-auto">
                         <pre class="text-sm m-0 p-4 bg-zinc-900"><code v-html="formatCode(getCodeContent(message), getCodeLanguage(message))"></code></pre>
@@ -1410,9 +1423,8 @@ function getCodeSize(message: IMessage): string {
 }
 
 .code-content {
-  max-height: 300px;
-  overflow-y: auto;
-  background-color: #0d1117; /* GitHub dark theme background */
+  max-height: 300px; /* Limit height in chat view */
+  position: relative;
 }
 
 .code-content pre {
@@ -1482,5 +1494,30 @@ function getCodeSize(message: IMessage): string {
 
 .hljs-built_in {
   color: #ffa657;
+}
+
+.code-container .code-expand-button,
+.code-container .code-download-button {
+  padding: 0.25rem;
+  border-radius: 0.375rem;
+  color: rgba(255, 255, 255, 0.8);
+  transition-property: color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.code-container .code-expand-button:hover,
+.code-container .code-download-button:hover {
+  color: rgba(255, 255, 255, 1);
+  background-color: rgba(63, 63, 70, 1);
+}
+
+.code-container .code-expand-button svg {
+  stroke: currentColor;
+}
+
+.code-content {
+  max-height: 300px; /* Limit height in chat view */
+  position: relative;
 }
 </style>

@@ -7,6 +7,9 @@ import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
 import { useContactStore } from '@/stores/ContactStore'
 import { storageService } from '@/services/storage.service.ts'
+import { Code } from 'lucide-vue-next'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css' // Import the same theme used in MessageList
 
 const props = defineProps({
   contact: {
@@ -38,6 +41,11 @@ const showChat = ref(props.visible)
 const showImagePreview = ref(false)
 const previewImageSrc = ref<string | null>(null)
 
+const showCodePreview = ref(false)
+const previewCodeContent = ref<string | null>(null)
+const previewCodeLanguage = ref<string | null>(null)
+const previewCodeName = ref<string | null>(null)
+
 function handleViewImage(src: string | null) {
   if (src) {
     previewImageSrc.value = src;
@@ -47,6 +55,24 @@ function handleViewImage(src: string | null) {
 function closeImagePreview() {
   showImagePreview.value = false;
   previewImageSrc.value = null;
+}
+
+// Handler for code snippet previews
+function handleViewCode(codeContent: string, language: string, name: string) {
+  if (codeContent) {
+    previewCodeContent.value = codeContent;
+    previewCodeLanguage.value = language;
+    previewCodeName.value = name;
+    showCodePreview.value = true;
+  }
+}
+
+// Close code snippet preview
+function closeCodePreview() {
+  showCodePreview.value = false;
+  previewCodeContent.value = null;
+  previewCodeLanguage.value = null;
+  previewCodeName.value = null;
 }
 
 const isRemovingContact = ref(false)
@@ -245,6 +271,35 @@ function goBack() {
 function isContactBlocked(): boolean {
   return props.contact?.status === ContactStatus.BLOCKED;
 }
+
+// Code formatting function (same as in MessageList)
+function formatCode(code: string, language: string): string {
+  try {
+    // Sanitize code to prevent XSS
+    const sanitizedCode = code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    // Apply syntax highlighting
+    if (language && hljs.getLanguage(language)) {
+      return hljs.highlight(sanitizedCode, { language }).value;
+    } else {
+      // Fallback to auto-detection
+      return hljs.highlightAuto(sanitizedCode).value;
+    }
+  } catch (e) {
+    console.error('Error highlighting code:', e);
+    return code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+}
 </script>
 
 <template>
@@ -265,6 +320,7 @@ function isContactBlocked(): boolean {
       @clear-send-error="messageStore.clearSendError"
       @load-more-messages="loadMoreMessages"
       @view-image="handleViewImage"
+      @view-code="handleViewCode"
     />
 
     <!-- Contact Details (positioned adjacent to chat instead of on top) -->
@@ -297,6 +353,31 @@ function isContactBlocked(): boolean {
       </span>
       <img :src="previewImageSrc" class="max-w-full max-h-full object-contain" @click.stop />
     </div>
+
+    <!-- Code Preview Modal -->
+    <div v-if="showCodePreview && previewCodeContent" 
+         class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+         @click="closeCodePreview">
+      <span class="absolute top-4 right-4 cursor-pointer close-button" @click.stop="closeCodePreview">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </span>
+      <div class="w-4/5 max-h-[90vh] flex flex-col bg-zinc-900 overflow-auto" @click.stop>
+        <!-- Code info bar (optional) -->
+        <div class="bg-zinc-800 p-3 flex items-center">
+          <Code class="h-5 w-5 mr-2 text-blue-400" />
+          <div class="code-name font-medium truncate text-white">
+            {{ previewCodeName }}
+          </div>
+          <div class="code-language text-xs opacity-70 ml-2 text-white">
+            {{ previewCodeLanguage }}
+          </div>
+        </div>
+        <!-- Code content -->
+        <pre class="m-0 p-6 bg-zinc-900 overflow-x-auto"><code v-html="previewCodeContent ? formatCode(previewCodeContent, previewCodeLanguage || '') : ''"></code></pre>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -312,10 +393,25 @@ function isContactBlocked(): boolean {
 }
 
 .close-button {
-  transition: transform 0.2s;
+  transition: transform 0.2s, opacity 0.2s;
 }
 
 .close-button:hover {
   transform: scale(1.1);
+  opacity: 0.9;
 }
+
+/* Code preview modal styles */
+.code-name {
+  max-width: 60%;
+}
+
+/* Ensure the header stays on top when scrolling */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+
 </style>
