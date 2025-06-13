@@ -6,10 +6,11 @@ import { storageService } from '@/services/storage.service';
 import UserSettingsPage from '@/components/settings/UserSettingsPage.vue';
 import PrivacySettingsPage from '@/components/settings/PrivacySettingsPage.vue';
 import KeyManagementPage from '@/components/settings/KeyManagementPage.vue';
+import MessageStoragePage from '@/components/settings/MessageStoragePage.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const router = useRouter();
-const activeSection = ref('user'); // 'user', 'privacy', 'keys'
+const activeSection = ref('user'); // 'user', 'privacy', 'keys', 'messages'
 const showLogoutConfirm = ref(false);
 
 // Function to handle navigation between sections
@@ -54,6 +55,15 @@ function confirmLogout() {
           <div class="font-medium">Privacy Settings</div>
         </button>
 
+        <!-- Message Storage -->
+        <button 
+          @click="navigateTo('messages')" 
+          class="w-full text-left p-2 px-4 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors mb-1"
+          :class="{ 'bg-accent text-accent-foreground': activeSection === 'messages' }"
+        >
+          <div class="font-medium">Message Storage</div>
+        </button>
+
         <!-- Key Management -->
         <button 
           @click="navigateTo('keys')" 
@@ -77,6 +87,7 @@ function confirmLogout() {
       <!-- Render the appropriate component based on activeSection -->
       <UserSettingsPage v-if="activeSection === 'user'" />
       <PrivacySettingsPage v-if="activeSection === 'privacy'" />
+      <MessageStoragePage v-if="activeSection === 'messages'" />
       <div v-if="activeSection === 'keys'">
         <KeyManagementPage />
       </div>
