@@ -10,11 +10,16 @@ import { onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { websocketService } from './services/websocket.service';
 import { storageService } from './services/storage.service';
+import { indexedDBService } from './services/indexeddb.service';
 
 const router = useRouter();
 
-// Initialize WebSocket connection if user is logged in
-onMounted(() => {
+// Initialize database and WebSocket connection if user is logged in
+onMounted(async () => {
+  // First initialize IndexedDB
+  await indexedDBService.initDatabase();
+
+  // Setup WebSocket if user is logged in
   const user = storageService.getUser();
   const token = storageService.getToken();
 

@@ -73,7 +73,7 @@ export const useMessageStore = defineStore('messages', () => {
                             };
 
                             // Store locally for future access
-                            storageService.addMessageToContact(
+                            await storageService.addMessageToContact(
                                 currentUserId.value,
                                 message.sender_uid,
                                 decryptedMessage
@@ -117,7 +117,7 @@ export const useMessageStore = defineStore('messages', () => {
                             };
 
                             // Store the message anyway so it doesn't get lost
-                            storageService.addMessageToContact(
+                            await storageService.addMessageToContact(
                                 currentUserId.value,
                                 message.sender_uid,
                                 errorMessage
@@ -271,7 +271,7 @@ export const useMessageStore = defineStore('messages', () => {
                             .map(msg => msg.mid);
 
                         // Store fetched messages locally
-                        storageService.storeMessagesForContact(
+                        await storageService.storeMessagesForContact(
                             currentUserId.value,
                             contactUserId,
                             processedMessages
@@ -301,7 +301,7 @@ export const useMessageStore = defineStore('messages', () => {
             }
 
             // Now load all messages from local storage (including any we just received)
-            const localMessages = storageService.getMessagesForContact(
+            const localMessages = await storageService.getMessagesForContact(
                 currentUserId.value,
                 contactUserId
             );
@@ -414,7 +414,7 @@ export const useMessageStore = defineStore('messages', () => {
             }
 
             // Store the message locally
-            storageService.addMessageToContact(
+            await storageService.addMessageToContact(
                 currentUserId.value,
                 receiverId,
                 storedMessage
@@ -445,7 +445,7 @@ export const useMessageStore = defineStore('messages', () => {
 
                     if (contactMessages && contactMessages.length > 0) {
                         // Store messages using our new method
-                        storageService.storeMessagesForContact(userId, contactId, contactMessages);
+                        await storageService.storeMessagesForContact(userId, contactId, contactMessages);
                         console.log(`Stored ${contactMessages.length} messages for contact ${contactId}`);
                     }
                 } catch (contactError) {
@@ -463,13 +463,13 @@ export const useMessageStore = defineStore('messages', () => {
     /**
      * Delete messages for a specific contact
      */
-    function deleteContactMessages(contactId: number): boolean {
+    async function deleteContactMessages(contactId: number): Promise<boolean> {
         try {
             if (!currentUserId.value) {
                 throw new Error("Current user ID not available");
             }
 
-            const result = storageService.deleteMessagesForContact(currentUserId.value, contactId);
+            const result = await storageService.deleteMessagesForContact(currentUserId.value, contactId);
 
             // If deleting the active contact's messages, clear the displayed messages
             if (activeContactId.value === contactId) {
@@ -486,9 +486,9 @@ export const useMessageStore = defineStore('messages', () => {
     /**
      * Delete all stored messages for all contacts
      */
-    function deleteAllMessages(): boolean {
+    async function deleteAllMessages(): Promise<boolean> {
         try {
-            storageService.deleteAllMessages();
+            await storageService.deleteAllMessages();
 
             // Clear displayed messages
             messages.value = [];
@@ -541,7 +541,7 @@ export const useMessageStore = defineStore('messages', () => {
             }
 
             // Get paginated messages from local storage
-            const paginatedData = storageService.getMessagesForContactPaginated(
+            const paginatedData = await storageService.getMessagesForContactPaginated(
                 currentUserId.value,
                 contactId,
                 page,
@@ -575,10 +575,10 @@ export const useMessageStore = defineStore('messages', () => {
      * Optimize message storage to remove duplicates and improve performance
      * @param userId Current user ID
      * @param contactId Optional contact ID to optimize specific conversation
-     * @returns Result of optimization
+     * @returns Promise resolving to result of optimization
      */
-    function optimizeMessageStorage(userId: number, contactId?: number) {
-        return storageService.optimizeMessageStorage(userId, contactId);
+    async function optimizeMessageStorage(userId: number, contactId?: number) {
+        return await storageService.optimizeMessageStorage(userId, contactId);
     }
 
     return {

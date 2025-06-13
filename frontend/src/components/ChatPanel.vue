@@ -91,21 +91,21 @@ const chatWidth = computed(() => {
   return props.width
 })
 
-onMounted(() => {
+onMounted(async () => {
   if (showChat.value && props.contact && props.contact.contactUserId) {
-    loadMessages()
+    await loadMessages()
   }
 })
-watch(() => props.visible, (isVisible) => {
+watch(() => props.visible, async (isVisible) => {
   showChat.value = isVisible
   if (isVisible && props.contact) {
-    loadMessages()
+    await loadMessages()
   }
 })
 
-watch(() => props.contact, (newContact) => {
+watch(() => props.contact, async (newContact) => {
   if (newContact && showChat.value) {
-    loadMessages()
+    await loadMessages()
   }
 })
 const currentPage = ref(0)
@@ -138,11 +138,11 @@ watch(() => props.contact.contactUserId, () => {
   currentPage.value = 0;
   totalPages.value = 0;
 });
-const initMessagePagination = () => {
+const initMessagePagination = async () => {
   const userId = storageService.getUser()?.uid;
   if (!userId) return;
   
-  const paginationInfo = storageService.getMessagesForContactPaginated(
+  const paginationInfo = await storageService.getMessagesForContactPaginated(
     userId,
     props.contact.contactUserId,
     0,
@@ -151,17 +151,17 @@ const initMessagePagination = () => {
   
   messageStore.setTotalMessagePages(paginationInfo.totalPages);
 };
-onMounted(() => {
+onMounted(async () => {
   if (props.contact && props.contact.contactUserId) {
-    initMessagePagination();
+    await initMessagePagination();
   }
 });
 
-function loadMessages() {
+async function loadMessages() {
   if (props.contact && props.contact.contactUserId) {
     messageStore.clearMessages();
-    messageStore.loadPaginatedMessages(props.contact.contactUserId, 0, messagesPerPage.value);
-    initMessagePagination();
+    await messageStore.loadPaginatedMessages(props.contact.contactUserId, 0, messagesPerPage.value);
+    await initMessagePagination();
   }
 }
 

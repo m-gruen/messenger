@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import { storageService } from '@/services/storage.service';
+import { indexedDBService } from '@/services/indexeddb.service';
 import { useMessageStore } from '@/stores/MessageStore';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
@@ -47,24 +48,14 @@ async function backupMessages() {
 
         // Create a backup object with metadata
         const backup = {
-            version: 1,
+            version: 2,
             userId: UserId,
             timestamp: new Date().toISOString(),
             data: {} as Record<string, any>
         };
 
-        // Find all message storage keys in localStorage
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('messages_')) {
-                try {
-                    const data = JSON.parse(localStorage.getItem(key) || '{}');
-                    backup.data[key] = data;
-                } catch (e) {
-                    console.error(`Failed to parse data for key ${key}`, e);
-                }
-            }
-        }
+        // Get all message data from IndexedDB
+        backup.data = await indexedDBService.exportAllMessages();
 
         // Create a downloadable file
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -118,11 +109,23 @@ async function restoreMessages(event: Event) {
             throw new Error("Invalid backup file format");
         }
 
-        // Restore data to localStorage
         let restoredCount = 0;
-        for (const [key, value] of Object.entries(backup.data)) {
-            localStorage.setItem(key, JSON.stringify(value));
-            restoredCount++;
+        
+        if (backup.version === 1) {
+            // Handle old backup format (localStorage)
+            // Convert and import to IndexedDB
+            const convertedData: Record<string, any> = {};
+            
+            for (const [key, value] of Object.entries(backup.data)) {
+                if (key.startsWith('messages_')) {
+                    convertedData[key] = value;
+                }
+            }
+            
+            restoredCount = await indexedDBService.importMessages(convertedData);
+        } else {
+            // Handle new backup format (directly from IndexedDB)
+            restoredCount = await indexedDBService.importMessages(backup.data);
         }
 
         updateSuccess.value = `Successfully restored backup with ${restoredCount} conversation(s)`;
@@ -146,7 +149,7 @@ async function clearLocalMessages() {
 
     try {
         // Use our deleteAllMessages method from the MessageStore
-        messageStore.deleteAllMessages();
+        await messageStore.deleteAllMessages();
 
         updateSuccess.value = "All local messages deleted successfully";
     } catch (error: any) {
