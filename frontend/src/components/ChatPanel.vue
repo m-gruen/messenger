@@ -7,8 +7,8 @@ import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
 import { useContactStore } from '@/stores/ContactStore'
 import { storageService } from '@/services/storage.service.ts'
+import { messageContentService } from '@/services/message-content.service'
 import { Code } from 'lucide-vue-next'
-import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css' // Import the same theme used in MessageList
 
 const props = defineProps({
@@ -57,16 +57,9 @@ function closeImagePreview() {
   previewImageSrc.value = null;
 }
 
-// Function to decode HTML entities for better code display
+// Using message content service for decoding HTML entities
 function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&quot;/g, '"')
-    .replace(/&#034;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
+  return messageContentService.decodeHtmlEntities(text);
 }
 
 // Handler for code snippet previews
@@ -285,40 +278,9 @@ function isContactBlocked(): boolean {
   return props.contact?.status === ContactStatus.BLOCKED;
 }
 
-// Code formatting function (same as in MessageList)
+// Use the formatCode method from our service
 function formatCode(code: string, language: string): string {
-  try {
-    // First, decode any HTML entities to display real quotes and other characters
-    const decodedCode = code
-      .replace(/&quot;/g, '"')
-      .replace(/&#039;/g, "'")
-      .replace(/&#034;/g, '"')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&');
-    
-    // Sanitize code to prevent XSS, but don't escape quotes unnecessarily
-    const sanitizedCode = decodedCode
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-      // No longer converting quotes to HTML entities
-
-    // Apply syntax highlighting
-    if (language && hljs.getLanguage(language)) {
-      return hljs.highlight(sanitizedCode, { language }).value;
-    } else {
-      // Fallback to auto-detection
-      return hljs.highlightAuto(sanitizedCode).value;
-    }
-  } catch (e) {
-    console.error('Error highlighting code:', e);
-    // Minimal sanitization for safety (but no quote escaping)
-    return code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
+  return messageContentService.formatCode(code, language);
 }
 </script>
 

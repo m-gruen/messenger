@@ -3,7 +3,7 @@ import { defineProps, computed, ref, onMounted, nextTick, watch } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { MessageSquare, ArrowDown, FileText, Download, Play, Pause, Code } from 'lucide-vue-next'
 import { DateFormatService } from '@/services/date-format.service'
-import hljs from 'highlight.js'
+import { messageContentService } from '@/services/message-content.service'
 import 'highlight.js/styles/atom-one-dark.css'
 
 const props = defineProps({
@@ -205,211 +205,19 @@ function getEmojiMessageStyle(text: string): string | null {
   }
 }
 
-function parseMessageContent(content: string): {
-  type: string,
-  content: string,
-  format?: string,
-  name?: string,
-  size?: number,
-  duration?: number,
-  language?: string
-} {
-  if (!content) {
-    return { type: 'text', content: '' };
-  }
-  
-  try {
-    const parsed = JSON.parse(content);
-    if (parsed && typeof parsed === 'object' && 'type' in parsed) {
-      if (parsed.type === 'code' && parsed.content) {
-        parsed.content = parsed.content
-          .replace(/&quot;/g, '"')
-          .replace(/&#039;/g, "'")
-          .replace(/&#034;/g, '"')
-          .replace(/&#x27;/g, "'")
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&amp;/g, '&');
-      }
-      return parsed;
-    }
-  } catch (e) {
-    try {
-      const preprocessed = content
-        .replace(/&quot;/g, '"')
-        .replace(/&#034;/g, '"')
-        .replace(/&#039;/g, "'")
-        .replace(/&#x27;/g, "'");
-      
-      const parsed = JSON.parse(preprocessed);
-      if (parsed && typeof parsed === 'object' && 'type' in parsed) {
-        return parsed;
-      }
-    } catch (preprocessError) {
-      try {
-        const doubleDecoded = JSON.parse(JSON.stringify(content));
-        const parsed = JSON.parse(doubleDecoded);
-        if (parsed && typeof parsed === 'object' && 'type' in parsed) {
-          if (parsed.type === 'code' && parsed.content) {
-            parsed.content = parsed.content
-              .replace(/&quot;/g, '"')
-              .replace(/&#039;/g, "'")
-              .replace(/&#034;/g, '"')
-              .replace(/&#x27;/g, "'")
-              .replace(/&lt;/g, '<')
-              .replace(/&gt;/g, '>')
-              .replace(/&amp;/g, '&');
-          }
-          return parsed;
-        }
-      } catch (nestedError) {
-        console.log('Failed to parse message content as JSON:', e);
-      }
-    }
-  }
-  return { type: 'text', content };
-}
-
-function getMessageContent(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    return parsed.type === 'text' ? parsed.content : '';
-  } catch (e) {
-    return message.content;
-  }
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + ' B';
-  else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
-}
-
-function isImageMessage(content: string): boolean {
-  try {
-    const parsed = parseMessageContent(content);
-    return parsed.type === 'image';
-  } catch (e) {
-    return false;
-  }
-}
-
-function getImageSource(message: IMessage): string | null {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'image' && parsed.content && parsed.format) {
-      return `data:${parsed.format};base64,${parsed.content}`;
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
-}
-
-function getImageName(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    return parsed.type === 'image' && parsed.name ? parsed.name : 'image.jpg';
-  } catch (e) {
-    return 'image.jpg';
-  }
-}
-
-function getImageSize(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'image' && parsed.size) {
-      return formatFileSize(parsed.size);
-    }
-    return '';
-  } catch (e) {
-    return '';
-  }
-}
-
-function isDocumentMessage(content: string): boolean {
-  try {
-    const parsed = parseMessageContent(content);
-    return parsed.type === 'document';
-  } catch (e) {
-    return false;
-  }
-}
-
-function getDocumentName(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    return parsed.type === 'document' && parsed.name ? parsed.name : 'document.pdf';
-  } catch (e) {
-    return 'document.pdf';
-  }
-}
-
-function getDocumentSize(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'document' && parsed.size) {
-      return formatFileSize(parsed.size);
-    }
-    return '';
-  } catch (e) {
-    return '';
-  }
-}
-
-function getFileSource(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if ((parsed.type === 'document' || parsed.type === 'code') && parsed.content) {
-      return `data:${parsed.format || 'application/octet-stream'};base64,${parsed.content}`;
-    }
-    if (parsed.type === 'code' && parsed.content) {
-      return `data:text/plain;charset=utf-8,${encodeURIComponent(parsed.content)}`;
-    }
-    return '';
-  } catch (e) {
-    return '';
-  }
-}
-
-function isAudioMessage(content: string): boolean {
-  try {
-    const parsed = parseMessageContent(content);
-    return parsed.type === 'audio';
-  } catch (e) {
-    return false;
-  }
-}
-
-function getAudioSource(message: IMessage): string | null {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'audio' && parsed.content && parsed.format) {
-      return `data:${parsed.format};base64,${parsed.content}`;
-    }
-    return null;
-  } catch (e) {
-    return null;
-  }
-}
-
-function getAudioExtension(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'audio' && parsed.format) {
-      const mimeType = parsed.format.toLowerCase();
-      if (mimeType.includes('mp3')) return 'mp3';
-      if (mimeType.includes('wav')) return 'wav';
-      if (mimeType.includes('ogg')) return 'ogg';
-      if (mimeType.includes('m4a')) return 'm4a';
-      return 'mp3';
-    }
-    return 'mp3';
-  } catch (e) {
-    return 'mp3';
-  }
-}
+// Using messageContentService for message content handling
+const getMessageContent = messageContentService.getMessageContent.bind(messageContentService);
+const isImageMessage = messageContentService.isImageMessage.bind(messageContentService);
+const getImageSource = messageContentService.getImageSource.bind(messageContentService);
+const getImageName = messageContentService.getImageName.bind(messageContentService);
+const getImageSize = messageContentService.getImageSize.bind(messageContentService);
+const isDocumentMessage = messageContentService.isDocumentMessage.bind(messageContentService);
+const getDocumentName = messageContentService.getDocumentName.bind(messageContentService);
+const getDocumentSize = messageContentService.getDocumentSize.bind(messageContentService);
+const getFileSource = messageContentService.getFileSource.bind(messageContentService);
+const isAudioMessage = messageContentService.isAudioMessage.bind(messageContentService);
+const getAudioSource = messageContentService.getAudioSource.bind(messageContentService);
+const getAudioExtension = messageContentService.getAudioExtension.bind(messageContentService);
 
 const audioState = ref({
   messageId: 0,
@@ -418,11 +226,7 @@ const audioState = ref({
   duration: 0
 });
 
-function formatAudioTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
+const formatAudioTime = messageContentService.formatAudioTime.bind(messageContentService);
 
 function toggleAudioPlayback(message: IMessage): void {
   const audioElements = document.querySelectorAll('audio');
@@ -485,93 +289,13 @@ function setAudioPosition(event: MouseEvent, message: IMessage): void {
   }
 }
 
-function isCodeMessage(content: string): boolean {
-  try {
-    const parsed = parseMessageContent(content);
-    return parsed.type === 'code';
-  } catch (e) {
-    return false;
-  }
-}
+const isCodeMessage = messageContentService.isCodeMessage.bind(messageContentService);
+const formatCode = messageContentService.formatCode.bind(messageContentService);
+const getCodeContent = messageContentService.getCodeContent.bind(messageContentService);
+const getCodeLanguage = messageContentService.getCodeLanguage.bind(messageContentService);
 
-function formatCode(code: string, language: string): string {
-  try {
-    const decodedCode = code
-      .replace(/&quot;/g, '"')
-      .replace(/&#034;/g, '"')  
-      .replace(/&#039;/g, "'")
-      .replace(/&#x27;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&');
-    
-    const sanitizedCode = decodedCode
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    
-    if (language && hljs.getLanguage(language)) {
-      return hljs.highlight(sanitizedCode, { language }).value;
-    } else {
-      return hljs.highlightAuto(sanitizedCode).value;
-    }
-  } catch (e) {
-    console.error('Error highlighting code:', e);
-    return code
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-}
-
-function getCodeContent(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'code' && parsed.content) {
-      return parsed.content
-        .replace(/&quot;/g, '"')
-        .replace(/&#039;/g, "'")
-        .replace(/&#034;/g, '"')
-        .replace(/&#x27;/g, "'")
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&');
-    }
-    return '';
-  } catch (e) {
-    return '';
-  }
-}
-
-function getCodeLanguage(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    return parsed.type === 'code' && parsed.language ? parsed.language : 'plaintext';
-  } catch (e) {
-    return 'plaintext';
-  }
-}
-
-function getCodeName(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    return parsed.type === 'code' && parsed.name ? parsed.name : 'code.txt';
-  } catch (e) {
-    return 'code.txt';
-  }
-}
-
-function getCodeSize(message: IMessage): string {
-  try {
-    const parsed = parseMessageContent(message.content);
-    if (parsed.type === 'code' && parsed.size) {
-      return formatFileSize(parsed.size);
-    }
-    return '';
-  } catch (e) {
-    return '';
-  }
-}
+const getCodeName = messageContentService.getCodeName.bind(messageContentService);
+const getCodeSize = messageContentService.getCodeSize.bind(messageContentService);
 </script>
 
 <template>
