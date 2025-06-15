@@ -14,6 +14,7 @@ export interface IParsedMessageContent {
 export class MessageContentService {
     /**
      * Parse raw message content string into structured message content
+     * Simplified to handle the most common cases without nested try-catch blocks
      */
     parseMessageContent(content: string): IParsedMessageContent {
         if (!content) {
@@ -29,28 +30,18 @@ export class MessageContentService {
                 return parsed;
             }
         } catch (e) {
+            const preprocessed = this.decodeHtmlEntities(content);
+            
             try {
-                const preprocessed = this.decodeHtmlEntities(content);
-
                 const parsed = JSON.parse(preprocessed);
                 if (parsed && typeof parsed === 'object' && 'type' in parsed) {
                     return parsed;
                 }
             } catch (preprocessError) {
-                try {
-                    const doubleDecoded = JSON.parse(JSON.stringify(content));
-                    const parsed = JSON.parse(doubleDecoded);
-                    if (parsed && typeof parsed === 'object' && 'type' in parsed) {
-                        if (parsed.type === 'code' && parsed.content) {
-                            parsed.content = this.decodeHtmlEntities(parsed.content);
-                        }
-                        return parsed;
-                    }
-                } catch (nestedError) {
-                    console.log('Failed to parse message content as JSON:', e);
-                }
+                console.log('Failed to parse message content as JSON:', e);
             }
         }
+        
         return { type: 'text', content };
     }
 
