@@ -286,6 +286,22 @@ export class StorageService {
             };
         }
     }
+
+    /**
+     * Delete a single message from a conversation
+     * @param userId Current user ID
+     * @param contactId Contact user ID
+     * @param messageId The ID of the message to delete
+     * @returns Promise resolving to true if successful, false otherwise
+     */
+    public async deleteMessage(userId: number, contactId: number, messageId: number): Promise<boolean> {
+        try {
+            return await indexedDBService.deleteMessage(userId, contactId, messageId);
+        } catch (e) {
+            console.error('Error deleting message:', e);
+            return false;
+        }
+    }
 }
 
 export const storageService = new StorageService();

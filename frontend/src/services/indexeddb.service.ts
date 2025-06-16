@@ -564,6 +564,75 @@ export class IndexedDBService {
             return 0;
         }
     }
+
+    /**
+     * Delete a single message from a conversation
+     * @param userId Current user ID
+     * @param contactId Contact user ID
+     * @param messageId The ID of the message to delete
+     * @returns Promise resolving to true if successful, false otherwise
+     */
+    public async deleteMessage(userId: number, contactId: number, messageId: number): Promise<boolean> {
+        try {
+            const db = await this.initDatabase();
+            const key = this.getConversationKey(userId, contactId);
+            
+            // Start a transaction
+            const transaction = db.transaction([MESSAGES_STORE], 'readwrite');
+            const store = transaction.objectStore(MESSAGES_STORE);
+            
+            // Get existing data
+            const request = store.get(key);
+            
+            return new Promise((resolve, reject) => {
+                request.onsuccess = (event) => {
+                    const existingData = (event.target as IDBRequest).result as ConversationData;
+                    
+                    if (!existingData || !existingData.messages || existingData.messages.length === 0) {
+                        console.log(`No messages found for conversation between ${userId} and ${contactId}`);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Find the index of the message to delete
+                    const messageIndex = existingData.messages.findIndex(m => m.mid === messageId);
+                    
+                    if (messageIndex === -1) {
+                        console.log(`Message with ID ${messageId} not found in conversation`);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    // Remove the message from the array
+                    existingData.messages.splice(messageIndex, 1);
+                    
+                    // Update timestamp
+                    existingData.lastUpdated = Date.now().toString();
+                    
+                    // Save the updated data
+                    const updateRequest = store.put(existingData, key);
+                    
+                    updateRequest.onsuccess = () => {
+                        console.log(`Deleted message ${messageId} from conversation between ${userId} and ${contactId}`);
+                        resolve(true);
+                    };
+                    
+                    updateRequest.onerror = (error) => {
+                        console.error('Error updating conversation data:', error);
+                        reject(false);
+                    };
+                };
+                
+                request.onerror = (error) => {
+                    console.error('Error retrieving conversation data:', error);
+                    reject(false);
+                };
+            });
+        } catch (e) {
+            console.error('Error deleting message:', e);
+            return false;
+        }
+    }
 }
 
 export const indexedDBService = new IndexedDBService();
