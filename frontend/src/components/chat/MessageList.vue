@@ -3,8 +3,8 @@ import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { MessageSquare, ArrowDown } from 'lucide-vue-next'
 import { DateFormatService } from '@/services/date-format.service'
-import { createMinuteGroups } from '../message/MessageUtils'
-import MessageGroup from '../message/MessageGroup.vue'
+import { createMinuteGroups } from './message/MessageUtils'
+import MessageGroup from './message/MessageGroup.vue'
 
 const props = defineProps({
   messages: {
