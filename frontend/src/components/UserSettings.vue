@@ -3,10 +3,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
 import { storageService } from '@/services/storage.service';
-import UserSettingsPage from '@/components/settings/UserSettingsPage.vue';
-import PrivacySettingsPage from '@/components/settings/PrivacySettingsPage.vue';
-import KeyManagementPage from '@/components/settings/KeyManagementPage.vue';
-import MessageStoragePage from '@/components/settings/MessageStoragePage.vue';
+import UserSettingsTab from '@/components/settings/UserSettingsTab.vue';
+import PrivacySettingsTab from '@/components/settings/PrivacySettingsTab.vue';
+import KeyManagementTab from '@/components/settings/KeyManagementTab.vue';
+import MessageStorageTab from '@/components/settings/MessageStorageTab.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const router = useRouter();
@@ -85,11 +85,11 @@ function confirmLogout() {
     <!-- Main content area -->
     <div class="flex-1 overflow-auto p-6">
       <!-- Render the appropriate component based on activeSection -->
-      <UserSettingsPage v-if="activeSection === 'user'" />
-      <PrivacySettingsPage v-if="activeSection === 'privacy'" />
-      <MessageStoragePage v-if="activeSection === 'messages'" />
+      <UserSettingsTab v-if="activeSection === 'user'" />
+      <PrivacySettingsTab v-if="activeSection === 'privacy'" />
+      <MessageStorageTab v-if="activeSection === 'messages'" />
       <div v-if="activeSection === 'keys'">
-        <KeyManagementPage />
+        <KeyManagementTab />
       </div>
     </div>
   </div>
