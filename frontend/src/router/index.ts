@@ -4,7 +4,7 @@ import { storageService } from '@/services/storage.service';
 
 import LoginPage from '../LoginPage.vue';
 import RegisterPage from '../RegisterPage.vue';
-import AppSidebar from '../components/AppSidebar.vue';
+import AppSidebar from '../components/navigation/AppSidebar.vue';
 
 const routes: RouteRecordRaw[] = [
     {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import KeyRecovery from '@/components/KeyRecovery.vue';
+import KeyRecovery from '@/components/settings/KeyRecovery.vue';
 
 // UI state
 const updateError = ref<string | null>(null);

@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import SidebarNavigation from '@/components/SidebarNavigation.vue'
+import SidebarNavigation from '@/components/navigation/SidebarNavigation.vue'
 import UserSearch from '@/components/UserSearch.vue'
-import ContactRequests from '@/components/ContactRequests.vue'
-import ContactList from '@/components/ContactList.vue'
+import ContactRequests from '@/components/contact/ContactRequests.vue'
+import ContactList from '@/components/contact/ContactList.vue'
 import UserSettings from '@/components/UserSettings.vue'
 import type { Contact } from '@/models/contact-model';
 import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
-import ChatPanel from '@/components/ChatPanel.vue'
+import ChatPanel from '@/components/chat/ChatPanel.vue'
 import { ArrowLeft } from 'lucide-vue-next'
 
 // Get user ID from storage service

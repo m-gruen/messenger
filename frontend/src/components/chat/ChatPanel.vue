@@ -2,7 +2,7 @@
 import { defineProps, defineEmits, ref, watch, onMounted, computed } from 'vue'
 import { useMessageStore } from '@/stores/MessageStore'
 import ChatInterface from './ChatInterface.vue'
-import ContactDetails from './ContactDetails.vue'
+import ContactDetails from '../contact/ContactDetails.vue'
 import type { Contact } from '@/models/contact-model'
 import { ContactStatus } from '@/models/contact-model'
 import { useContactStore } from '@/stores/ContactStore'
@@ -394,6 +394,4 @@ function formatCode(code: string, language: string): string {
   top: 0;
   z-index: 10;
 }
-
-
 </style>
