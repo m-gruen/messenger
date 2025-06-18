@@ -23,6 +23,31 @@ export const useMessageStore = defineStore('messages', () => {
     const currentUserId = computed(() => user?.uid || 0)
     const token = computed(() => storageService.getToken() || '')
 
+    // Function to delete a message locally (for current user only)
+    const deleteLocalMessage = async (messageId: number) => {
+        try {
+            if (activeContactId.value) {
+                const success = await storageService.deleteMessage(
+                    currentUserId.value,
+                    activeContactId.value,
+                    messageId
+                );
+                
+                if (!success) {
+                    console.error('Failed to delete message:', messageId);
+                    return false;
+                }
+            }
+            
+            messages.value = messages.value.filter(msg => msg.mid !== messageId);
+            
+            return true;
+        } catch (error) {
+            console.error('Error deleting local message:', error);
+            return false;
+        }
+    }
+
     // Connect to WebSocket when store is created
     if (currentUserId.value && token.value) {
         websocketService.connect(currentUserId.value, token.value)
@@ -599,6 +624,7 @@ export const useMessageStore = defineStore('messages', () => {
         setTotalMessagePages,
         totalMessagePages,
         currentMessagePage,
-        optimizeMessageStorage
+        optimizeMessageStorage,
+        deleteLocalMessage
     };
 });
