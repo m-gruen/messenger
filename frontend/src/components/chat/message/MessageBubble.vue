@@ -44,9 +44,7 @@ const messageType = computed(() => {
       'own-message': isOwnMessage,
       'other-message': !isOwnMessage
     }">
-    <MessageActions :is-own-message="isOwnMessage" />
-    
-    <div class="message-bubble" :class="[
+    <div class="message-bubble relative" :class="[
       getEmojiMessageStyle(getMessageContent(message)) || 'px-3 py-2 shadow-sm',
       {
         'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
@@ -98,6 +96,9 @@ const messageType = computed(() => {
         :showTimestamp="showTimestamp" 
         @view-code="(content, language, name) => emit('view-code', content, language, name)" 
       />
+
+      <!-- Message actions positioned relative to each bubble -->
+      <MessageActions :is-own-message="isOwnMessage" />
     </div>
   </div>
 </template>
@@ -121,9 +122,10 @@ const messageType = computed(() => {
 .message-bubble {
   display: inline-block;
   max-width: 100%;
+  position: relative; /* Ensure position: relative is here for absolute positioning of children */
 }
 
-.message-wrapper:hover .message-actions {
+.message-bubble:hover .message-actions {
   opacity: 1;
 }
 
