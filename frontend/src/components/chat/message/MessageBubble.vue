@@ -98,7 +98,11 @@ const messageType = computed(() => {
       />
 
       <!-- Message actions positioned relative to each bubble -->
-      <MessageActions :is-own-message="isOwnMessage" />
+      <MessageActions 
+        :is-own-message="isOwnMessage" 
+        :message="message"
+        :is-text-message="messageType === 'text'" 
+      />
     </div>
   </div>
 </template>
