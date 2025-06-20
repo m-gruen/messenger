@@ -480,9 +480,14 @@ export const useMessageStore = defineStore('messages', () => {
             if (typeof content === 'object' && content !== null) {
                 // Create reply structure from object
                 const contentType = content.type || 'text';
+                // Ensure content is a string as expected by createReplyContent
+                const contentStr = typeof content.content === 'string' 
+                    ? content.content 
+                    : JSON.stringify(content.content);
+                
                 messageContent = messageContentService.createReplyContent(
                     originalMessage,
-                    JSON.stringify(content),
+                    contentStr,
                     contentType
                 );
             } else {
@@ -517,6 +522,9 @@ export const useMessageStore = defineStore('messages', () => {
             // Smoothly scroll to show the new message
             smoothScrollToRecentMessages();
 
+            // Debug the message content structure
+            console.log('Reply message content:', messageContent);
+            
             // Now send the encrypted message to the server
             const newMessage = await apiService.sendMessage(
                 currentUserId.value,
