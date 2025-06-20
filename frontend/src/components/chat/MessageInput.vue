@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Send, Smile, Paperclip, X, Image as ImageIcon, File as FileIcon, Mic, Code } from "lucide-vue-next"
+import { Send, Smile } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
 import ReplyIndicator from './ReplyIndicator.vue'
 import NotificationToast from '@/components/ui/NotificationToast.vue'
+import AttachmentMenu from './AttachmentMenu.vue'
 
 import { useNotification, type NotificationType } from '@/composables/useNotification'
 import { useFileUpload } from '@/composables/useFileUpload'
@@ -39,7 +40,6 @@ const { isUploading, handleImageUpload, handleDocumentUpload, handleAudioUpload,
 
 // Local state
 const showEmojiPicker = ref(false)
-const showAttachmentMenu = ref(false)
 
 // Send message on form submit
 function sendMessage() {
@@ -71,40 +71,27 @@ function insertEmoji(emoji: string) {
 }
 
 // Attachment menu handlers
-function triggerFileUpload() {
+function handleAttachment(type: 'image' | 'document' | 'audio' | 'code') {
   // Prevent file uploads during replies
   if (props.replyTo) {
     showNotification('Attachments are disabled when replying to a message', 'info')
     return
   }
-  if (fileInputRef.value) fileInputRef.value.click()
-}
-
-function triggerDocumentUpload() {
-  // Prevent file uploads during replies
-  if (props.replyTo) {
-    showNotification('Attachments are disabled when replying to a message', 'info')
-    return
+  
+  switch (type) {
+    case 'image':
+      if (fileInputRef.value) fileInputRef.value.click()
+      break
+    case 'document':
+      if (documentInputRef.value) documentInputRef.value.click()
+      break
+    case 'audio':
+      if (audioInputRef.value) audioInputRef.value.click()
+      break
+    case 'code':
+      if (codeInputRef.value) codeInputRef.value.click()
+      break
   }
-  if (documentInputRef.value) documentInputRef.value.click()
-}
-
-function triggerAudioUpload() {
-  // Prevent file uploads during replies
-  if (props.replyTo) {
-    showNotification('Attachments are disabled when replying to a message', 'info')
-    return
-  }
-  if (audioInputRef.value) audioInputRef.value.click()
-}
-
-function triggerCodeUpload() {
-  // Prevent file uploads during replies
-  if (props.replyTo) {
-    showNotification('Attachments are disabled when replying to a message', 'info')
-    return
-  }
-  if (codeInputRef.value) codeInputRef.value.click()
 }
 
 // Initialize textarea height on mount
@@ -186,74 +173,11 @@ onMounted(() => {
         <Smile class="h-5 w-5" />
       </button>
       
-      <!-- Attachment Menu Button -->
-      <div class="relative">
-        <button 
-          type="button" 
-          @click="!props.replyTo && (showAttachmentMenu = !showAttachmentMenu)"
-          class="p-2 text-muted-foreground rounded-full transition-colors"
-          :class="props.replyTo ? 'opacity-40 cursor-not-allowed' : 'hover:text-foreground hover:bg-muted'"
-          :title="props.replyTo ? 'Attachments are disabled when replying' : 'Add attachment'"
-          aria-label="Add attachment"
-          :disabled="isUploading || !!props.replyTo"
-        >
-          <Paperclip class="h-5 w-5" />
-        </button>
-        
-        <!-- Attachment Menu Popup -->
-        <div v-if="showAttachmentMenu" 
-          class="absolute bottom-full mb-2 left-0 bg-card border rounded-lg shadow-lg py-1 min-w-[160px]"
-        >
-          <!-- Close button -->
-          <button 
-            @click="showAttachmentMenu = false" 
-            class="absolute top-1 right-1 p-1 rounded-full hover:bg-muted"
-            aria-label="Close attachment menu"
-          >
-            <X class="h-3 w-3" />
-          </button>
-          
-          <!-- Image Upload Option -->
-          <button 
-            @click="triggerFileUpload(); showAttachmentMenu = false"
-            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading || !!props.replyTo"
-          >
-            <ImageIcon class="h-4 w-4" />
-            <span>Image</span>
-          </button>
-          
-          <!-- Document Upload Option -->
-          <button 
-            @click="triggerDocumentUpload(); showAttachmentMenu = false"
-            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading || !!props.replyTo"
-          >
-            <FileIcon class="h-4 w-4" />
-            <span>Document</span>
-          </button>
-          
-          <!-- Audio Upload Option -->
-          <button 
-            @click="triggerAudioUpload(); showAttachmentMenu = false"
-            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading || !!props.replyTo"
-          >
-            <Mic class="h-4 w-4" />
-            <span>Audio</span>
-          </button>
-          
-          <!-- Code Upload Option -->
-          <button 
-            @click="triggerCodeUpload(); showAttachmentMenu = false"
-            class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading || !!props.replyTo"
-          >
-            <Code class="h-4 w-4" />
-            <span>Code</span>
-          </button>
-        </div>
-      </div>
+      <!-- Attachment Menu -->
+      <AttachmentMenu 
+        :disabled="isUploading || !!props.replyTo" 
+        @select="handleAttachment"
+      />
       
       <!-- Emoji Picker -->
       <EmojiPicker :is-open="showEmojiPicker" @select="insertEmoji" @close="showEmojiPicker = false" />

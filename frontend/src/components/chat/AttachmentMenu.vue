@@ -12,7 +12,7 @@
     
     <!-- Attachment Menu Popup -->
     <div v-if="showAttachmentMenu" 
-      class="absolute bottom-full mb-2 left-0 bg-card border rounded-lg shadow-lg py-1 min-w-[160px]"
+      class="absolute bottom-full mb-2 left-0 bg-card border rounded-lg shadow-lg py-1 min-w-[160px] z-50"
     >
       <!-- Close button -->
       <button 
