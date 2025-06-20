@@ -61,7 +61,7 @@ defineProps<{
 .message-text-container {
   display: flex;
   align-items: flex-end;
-  gap: 6px;
+  gap: 10px;
 }
 
 .message-text {
@@ -75,7 +75,7 @@ defineProps<{
   align-self: flex-end;
   margin-bottom: 1px;
   white-space: nowrap;
-  z-index: 2;
+  z-index: 1;
 }
 
 .emoji-timestamp {
@@ -83,7 +83,7 @@ defineProps<{
   text-align: right;
   margin-top: 4px;
   padding-right: 4px;
-  z-index: 2;
+  z-index: 1;
 }
 
 .emoji-wrapper {
