@@ -5,6 +5,7 @@ import { apiService } from '@/services/api.service'
 import { storageService } from '@/services/storage.service'
 import { websocketService } from '@/services/websocket.service'
 import { encryptionService } from '@/services/encryption.service'
+import { messageContentService } from '@/services/message-content.service'
 
 export const useMessageStore = defineStore('messages', () => {
     // State
@@ -454,6 +455,114 @@ export const useMessageStore = defineStore('messages', () => {
     }
 
     /**
+     * Send a reply to a message
+     * @param receiverId User ID of the message recipient
+     * @param originalMessage The message being replied to
+     * @param content Reply content (can be text or structured object for media)
+     */
+    async function replyToMessage(receiverId: number, originalMessage: IMessage, content: any) {
+        // Clear any previous send errors
+        sendError.value = undefined;
+
+        try {
+            // Get the contact user data for encryption keys
+            const contactUser = await apiService.getUserById(receiverId, token.value);
+            const currentUser = storageService.getUser();
+
+            if (!contactUser || !currentUser) {
+                throw new Error('Could not get user information needed for encryption');
+            }
+
+            // Format content based on message type
+            let messageContent: string;
+
+            // Check if content is a structured object (from image or other media upload)
+            if (typeof content === 'object' && content !== null) {
+                // Create reply structure from object
+                const contentType = content.type || 'text';
+                messageContent = messageContentService.createReplyContent(
+                    originalMessage,
+                    JSON.stringify(content),
+                    contentType
+                );
+            } else {
+                // It's a plain text message, create reply structure
+                messageContent = messageContentService.createReplyContent(
+                    originalMessage,
+                    content,
+                    'text'
+                );
+            }
+
+            // First prepare local representation with placeholders for ID and timestamp
+            const tempMessage: IMessage = {
+                mid: -1, // Temporary ID that will be replaced
+                sender_uid: currentUserId.value,
+                receiver_uid: receiverId,
+                content: messageContent, // Store the structured content with reply info
+                nonce: '', // Will be filled in after server response
+                timestamp: new Date() // Add timestamp to avoid type errors
+            };
+
+            // Add the unencrypted message to the displayed messages immediately
+            const processedTempMessage = ensureValidDate(tempMessage);
+
+            // Add to the list and re-sort
+            messages.value = [...messages.value, processedTempMessage].sort((a, b) => {
+                const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+                const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+                return timeB - timeA;
+            });
+
+            // Smoothly scroll to show the new message
+            smoothScrollToRecentMessages();
+
+            // Now send the encrypted message to the server
+            const newMessage = await apiService.sendMessage(
+                currentUserId.value,
+                receiverId,
+                messageContent, // Send the JSON stringified content with reply info
+                token.value
+            );
+
+            // Process the message to ensure valid date
+            const processedMessage = ensureValidDate({ ...newMessage });
+
+            // Create the actual message to store locally
+            const storedMessage = {
+                ...processedMessage,
+                content: messageContent // Store the decrypted content as JSON string
+            };
+
+            // Find and replace the temporary message
+            const tempIndex = messages.value.findIndex(m => 
+                m.mid === -1 && 
+                m.sender_uid === currentUserId.value && 
+                m.receiver_uid === receiverId
+            );
+            
+            if (tempIndex !== -1) {
+                messages.value[tempIndex] = storedMessage;
+            }
+
+            // Save the message locally for offline access
+            if (activeContactId.value) {
+                await storageService.addMessageToContact(
+                    currentUserId.value, 
+                    receiverId,
+                    storedMessage
+                );
+            }
+
+            return storedMessage;
+        } catch (err: any) {
+            sendError.value = `Failed to send reply: ${err.message || 'Unknown error'}`;
+            console.error('Error sending reply:', err);
+            throw err;
+        }
+    }
+
+    /**
      * Store messages for all contacts on the device for offline access
      */
     async function storeAllContactMessages(userId: number): Promise<boolean> {
@@ -613,6 +722,7 @@ export const useMessageStore = defineStore('messages', () => {
         sendError,
         fetchMessages,
         sendMessage,
+        replyToMessage,
         clearMessages,
         clearSendError,
         storeAllContactMessages,

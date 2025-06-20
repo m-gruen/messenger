@@ -1,4 +1,4 @@
-import type { IMessage } from '@/models/message-model';
+import type { IMessage, IReplyInfo, MessageContentType } from '@/models/message-model';
 import hljs from 'highlight.js';
 
 export interface IParsedMessageContent {
@@ -9,6 +9,7 @@ export interface IParsedMessageContent {
     size?: number;
     duration?: number;
     language?: string;
+    replyTo?: IReplyInfo;
 }
 
 export class MessageContentService {
@@ -331,6 +332,116 @@ export class MessageContentService {
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&amp;/g, '&');
+    }
+
+    /**
+     * Check if message is a reply
+     */
+    isReply(message: IMessage): boolean {
+        try {
+            const parsed = this.parseMessageContent(message.content);
+            return !!parsed.replyTo;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get reply information from message
+     */
+    getReplyInfo(message: IMessage): IReplyInfo | null {
+        try {
+            const parsed = this.parseMessageContent(message.content);
+            return parsed.replyTo || null;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * Create reply message content
+     */
+    createReplyContent(originalMessage: IMessage, newContent: string, contentType: 'text' | 'image' | 'document' | 'audio' | 'code' = 'text'): string {
+        try {
+            // Extract sender info and message ID
+            const { mid, sender_uid } = originalMessage;
+            
+            // Generate preview from original message
+            let preview = '';
+            let type: 'text' | 'image' | 'document' | 'audio' | 'code' = 'text';
+            
+            const parsed = this.parseMessageContent(originalMessage.content);
+            type = parsed.type as 'text' | 'image' | 'document' | 'audio' | 'code';
+            
+            // Create preview based on message type
+            switch (parsed.type) {
+                case 'text':
+                    preview = parsed.content.substring(0, 50) + (parsed.content.length > 50 ? '...' : '');
+                    break;
+                case 'image':
+                    preview = '[Image]';
+                    break;
+                case 'document':
+                    preview = `[Document: ${parsed.name || 'file'}]`;
+                    break;
+                case 'audio':
+                    preview = '[Audio]';
+                    break;
+                case 'code':
+                    preview = `[Code: ${parsed.language || 'code'}]`;
+                    break;
+                default:
+                    preview = '[Message]';
+            }
+            
+            // Create reply structure
+            const replyInfo: IReplyInfo = {
+                mid,
+                sender_uid,
+                preview,
+                type
+            };
+            
+            // Create message content with reply info
+            const messageContent: IParsedMessageContent = {
+                type: contentType,
+                content: newContent,
+                replyTo: replyInfo
+            };
+            
+            return JSON.stringify(messageContent);
+        } catch (e) {
+            console.error('Error creating reply content:', e);
+            const messageContent: IParsedMessageContent = {
+                type: contentType,
+                content: newContent
+            };
+            return JSON.stringify(messageContent);
+        }
+    }
+
+    /**
+     * Format reply preview for display
+     */
+    formatReplyPreview(replyInfo: IReplyInfo): string {
+        if (!replyInfo || !replyInfo.preview) {
+            return '[Message]';
+        }
+        
+        switch (replyInfo.type) {
+            case 'text':
+                return replyInfo.preview;
+            case 'image':
+                return '[Image]';
+            case 'document':
+                return `[Document] ${replyInfo.preview}`;
+            case 'audio':
+                return '[Audio]';
+            case 'code':
+                return `[Code] ${replyInfo.preview}`;
+            default:
+                return replyInfo.preview;
+        }
     }
 }
 
