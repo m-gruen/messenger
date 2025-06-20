@@ -9,9 +9,17 @@ export interface IMessage {
 
 export type MessageContentType = "text" | "image" | "document" | "audio" | "code";
 
+export interface IReplyInfo {
+    mid: number;
+    preview: string;
+    sender_uid: number;
+    type: MessageContentType;
+}
+
 export interface IMessageContent {
     type: MessageContentType;
     content: string;
+    replyTo?: IReplyInfo;
 }
 
 export interface IImageMessageContent extends IMessageContent {
