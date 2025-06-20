@@ -128,7 +128,7 @@ export function useFileHandler(showNotification: (message: string, type: string)
   }
 
   // Handle audio upload
-  function handleAudioUpload(
+  async function handleAudioUpload(
     event: Event,
     onSend: (content: IAudioMessageContent) => void,
     resetInput: () => void
@@ -151,7 +151,7 @@ export function useFileHandler(showNotification: (message: string, type: string)
     
     const reader = new FileReader()
     
-    reader.onload = () => {
+    reader.onload = async () => {
       const base64Data = reader.result?.toString().split(',')[1] // Get base64 data
       
       if (!base64Data) {
@@ -160,12 +160,39 @@ export function useFileHandler(showNotification: (message: string, type: string)
         return
       }
       
+      // Get audio duration if possible
+      const getAudioDuration = () => {
+        return new Promise<number>((resolve) => {
+          try {
+            const audio = new Audio()
+            audio.src = URL.createObjectURL(file)
+            
+            audio.addEventListener('loadedmetadata', () => {
+              const duration = audio.duration
+              URL.revokeObjectURL(audio.src) // Clean up
+              resolve(isNaN(duration) ? 0 : duration)
+            })
+            
+            // Handle errors or timeouts
+            audio.addEventListener('error', () => resolve(0))
+            setTimeout(() => resolve(0), 3000) // Timeout after 3 seconds
+          } catch (err) {
+            console.error('Error getting audio duration:', err)
+            resolve(0)
+          }
+        })
+      }
+      
+      // Get duration and create message
+      const audioDuration = await getAudioDuration()
+      
       // Create an audio message content object
       const messageContent: IAudioMessageContent = {
         type: 'audio',
         format: file.type,
         content: base64Data,
-        name: file.name
+        name: file.name,
+        duration: audioDuration
       }
       
       onSend(messageContent)

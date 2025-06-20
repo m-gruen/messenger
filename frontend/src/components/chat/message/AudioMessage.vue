@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Play, Pause, Download } from 'lucide-vue-next'
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import type { IMessage } from '@/models/message-model'
-import { formatTimeForMessage, getAudioSource, getAudioExtension, formatAudioTime } from './MessageUtils'
+import { formatTimeForMessage, getAudioSource, getAudioName, getAudioDuration, formatAudioTime } from './MessageUtils'
 
 const props = defineProps<{
   message: IMessage
@@ -10,10 +10,23 @@ const props = defineProps<{
 }>()
 
 const audioState = ref({
-  messageId: 0, // Changed from string to number to match IMessage.mid type
+  messageId: 0,
   isPlaying: false,
   currentTime: 0,
   duration: 0
+})
+
+// Extract audio metadata from message content if available
+function getAudioDurationFromMessage(): number {
+  return getAudioDuration(props.message)
+}
+
+// Initial setup for audio duration
+onMounted(() => {
+  const initialDuration = getAudioDurationFromMessage()
+  if (initialDuration > 0) {
+    audioState.value.duration = initialDuration
+  }
 })
 
 function toggleAudioPlayback(): void {
@@ -33,16 +46,22 @@ function toggleAudioPlayback(): void {
 }
 
 function handleTimeUpdate(event: Event): void {
-  if (audioState.value.messageId === props.message.mid) {
-    const audio = event.target as HTMLAudioElement
+  const audio = event.target as HTMLAudioElement
+  if (audio && props.message.mid === audioState.value.messageId) {
     audioState.value.currentTime = audio.currentTime
   }
 }
 
 function handleAudioMetadata(event: Event): void {
   const audio = event.target as HTMLAudioElement
-  if (audio && audio.duration && audioState.value.messageId === props.message.mid) {
+  if (audio && audio.duration) {
+    // Always update duration for the current message's audio element
     audioState.value.duration = audio.duration
+    
+    // If this is the active audio, update the message state
+    if (props.message.mid === audioState.value.messageId) {
+      audioState.value.currentTime = audio.currentTime
+    }
   }
 }
 
@@ -87,6 +106,11 @@ watch(() => props.message.mid, () => {
     audioState.value.duration = 0
   }
 })
+
+// Get the original filename for download if available
+function getAudioFilename(message: IMessage): string {
+  return getAudioName(message)
+}
 </script>
 
 <template>
@@ -128,16 +152,12 @@ watch(() => props.message.mid, () => {
                 : '0:00'
             }}</span>
             <span class="mx-1">/</span>
-            <span>{{
-              audioState.messageId === props.message.mid && audioState.duration
-                ? formatAudioTime(audioState.duration)
-                : '0:00'
-            }}</span>
+            <span>{{ formatAudioTime(audioState.duration) }}</span>
           </div>
         </div>
         <a 
           :href="getAudioSource(message) || ''"
-          :download="`audio-${message.mid}.${getAudioExtension(message)}`"
+          :download="getAudioFilename(message)"
           class="audio-download-button ml-2" 
           title="Download audio" 
           @click.stop

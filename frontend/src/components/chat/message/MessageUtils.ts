@@ -137,6 +137,20 @@ export function getAudioExtension(message: IMessage): string {
 }
 
 /**
+ * Get audio name from message
+ */
+export function getAudioName(message: IMessage): string {
+  return messageContentService.getAudioName(message)
+}
+
+/**
+ * Get audio duration from message
+ */
+export function getAudioDuration(message: IMessage): number {
+  return messageContentService.getAudioDuration(message)
+}
+
+/**
  * Determine if a message is code
  */
 export function isCodeMessage(content: string): boolean {

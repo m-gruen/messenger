@@ -206,25 +206,49 @@ export class MessageContentService {
         }
     }
 
-    /**
-     * Get audio file extension from format
-     */
-    getAudioExtension(message: IMessage): string {
-        try {
-            const parsed = this.parseMessageContent(message.content);
-            if (parsed.type === 'audio' && parsed.format) {
-                const mimeType = parsed.format.toLowerCase();
-                if (mimeType.includes('mp3')) return 'mp3';
-                if (mimeType.includes('wav')) return 'wav';
-                if (mimeType.includes('ogg')) return 'ogg';
-                if (mimeType.includes('m4a')) return 'm4a';
-                return 'mp3';
-            }
-            return 'mp3';
-        } catch (e) {
-            return 'mp3';
-        }
-    }
+  /**
+   * Get audio file extension from format
+   */
+  getAudioExtension(message: IMessage): string {
+      try {
+          const parsed = this.parseMessageContent(message.content);
+          if (parsed.type === 'audio' && parsed.format) {
+              const mimeType = parsed.format.toLowerCase();
+              if (mimeType.includes('mp3')) return 'mp3';
+              if (mimeType.includes('wav')) return 'wav';
+              if (mimeType.includes('ogg')) return 'ogg';
+              if (mimeType.includes('m4a')) return 'm4a';
+              return 'mp3';
+          }
+          return 'mp3';
+      } catch (e) {
+          return 'mp3';
+      }
+  }
+  
+  /**
+   * Get audio name from message
+   */
+  getAudioName(message: IMessage): string {
+      try {
+          const parsed = this.parseMessageContent(message.content);
+          return parsed.type === 'audio' && parsed.name ? parsed.name : `audio-${message.mid}.mp3`;
+      } catch (e) {
+          return `audio-${message.mid}.mp3`;
+      }
+  }
+  
+  /**
+   * Get audio duration from message
+   */
+  getAudioDuration(message: IMessage): number {
+      try {
+          const parsed = this.parseMessageContent(message.content);
+          return parsed.type === 'audio' && parsed.duration ? parsed.duration : 0;
+      } catch (e) {
+          return 0;
+      }
+  }
 
     /**
      * Format audio time display
