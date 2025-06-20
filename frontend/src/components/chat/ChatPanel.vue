@@ -38,6 +38,7 @@ const messageStore = useMessageStore()
 const showContactDetails = ref(false)
 const showChat = ref(props.visible)
 
+// Message preview/viewing states
 const showImagePreview = ref(false)
 const previewImageSrc = ref<string | null>(null)
 
@@ -45,6 +46,9 @@ const showCodePreview = ref(false)
 const previewCodeContent = ref<string | null>(null)
 const previewCodeLanguage = ref<string | null>(null)
 const previewCodeName = ref<string | null>(null)
+
+// Reply state
+const replyToMessage = ref<null | {message: any}>(null)
 
 function handleViewImage(src: string | null) {
   if (src) {
@@ -171,11 +175,23 @@ async function loadMessages() {
   }
 }
 
-async function sendMessage(content: string) {
+async function sendMessage(content: any) {
   if (!props.contact || !props.contact.contactUserId) return
   
   try {
-    await messageStore.sendMessage(props.contact.contactUserId, content)
+    // If replying to a message, use replyToMessage instead of regular sendMessage
+    if (replyToMessage.value) {
+      await messageStore.replyToMessage(
+        props.contact.contactUserId,
+        replyToMessage.value.message,
+        content
+      )
+      // Clear reply state after sending
+      replyToMessage.value = null
+    } else {
+      // Regular message
+      await messageStore.sendMessage(props.contact.contactUserId, content)
+    }
   } catch (err) {
     console.error('Error sending message:', err)
   }
@@ -282,6 +298,11 @@ function isContactBlocked(): boolean {
 function formatCode(code: string, language: string): string {
   return messageContentService.formatCode(code, language);
 }
+
+// New reply handling function
+function handleReply(message: any) {
+  replyToMessage.value = { message }
+}
 </script>
 
 <template>
@@ -303,6 +324,7 @@ function formatCode(code: string, language: string): string {
       @load-more-messages="loadMoreMessages"
       @view-image="handleViewImage"
       @view-code="handleViewCode"
+      @reply="handleReply"
     />
 
     <!-- Contact Details (positioned adjacent to chat instead of on top) -->

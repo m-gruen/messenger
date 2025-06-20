@@ -10,7 +10,8 @@ defineProps<{
 const emit = defineEmits<{
   'view-image': [src: string | null],
   'view-code': [content: string, language: string, name: string],
-  'download-file': [src: string | null, filename: string]
+  'download-file': [src: string | null, filename: string],
+  'reply': [message: IMessage]
 }>()
 </script>
 
@@ -30,6 +31,7 @@ const emit = defineEmits<{
         @view-image="src => emit('view-image', src)"
         @view-code="(content, language, name) => emit('view-code', content, language, name)"
         @download-file="(src, filename) => emit('download-file', src, filename)"
+        @reply="message => emit('reply', message)"
       />
     </div>
   </div>

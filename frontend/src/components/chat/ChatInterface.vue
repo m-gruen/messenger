@@ -49,7 +49,8 @@ const emit = defineEmits<{
   'load-more-messages': [],
   'view-image': [src: string | null],
   'view-code': [content: string, language: string, name: string],
-  'download-file': [src: string | null, filename: string]
+  'download-file': [src: string | null, filename: string],
+  'reply': [message: IMessage]
 }>()
 
 // Automatically dismiss send error after 5 seconds
@@ -92,6 +93,7 @@ watch(() => props.sendError, (error) => {
       @load-more-messages="emit('load-more-messages')"
       @view-image="src => emit('view-image', src)"
       @view-code="(content, language, name) => emit('view-code', content, language, name)"
+      @reply="message => emit('reply', message)"
     />
 
     <!-- Message Input -->

@@ -19,7 +19,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'view-image': [src: string | null],
   'view-code': [content: string, language: string, name: string],
-  'download-file': [src: string | null, filename: string]
+  'download-file': [src: string | null, filename: string],
+  'reply': [message: IMessage]
 }>()
 
 const isOwnMessage = computed(() => props.message.sender_uid === props.currentUserId)
@@ -101,7 +102,8 @@ const messageType = computed(() => {
       <MessageActions 
         :is-own-message="isOwnMessage" 
         :message="message"
-        :is-text-message="messageType === 'text'" 
+        :is-text-message="messageType === 'text'"
+        @reply="message => emit('reply', message)" 
       />
     </div>
   </div>

@@ -10,6 +10,10 @@ const { isOwnMessage, message, isTextMessage } = defineProps<{
   isTextMessage: boolean
 }>()
 
+const emit = defineEmits<{
+  'reply': [message: IMessage]
+}>()
+
 const showOptionsMenu = ref(false)
 const optionsButtonRef = ref<HTMLElement | null>(null)
 const buttonRect = ref<DOMRect | null>(null)
@@ -28,6 +32,11 @@ const toggleOptionsMenu = (event: Event) => {
 const closeOptionsMenu = () => {
   showOptionsMenu.value = false
 }
+
+const handleReply = (event: Event) => {
+  event.stopPropagation()
+  emit('reply', message)
+}
 </script>
 
 <template>
@@ -43,14 +52,18 @@ const closeOptionsMenu = () => {
         @click="toggleOptionsMenu">
         <MoreHorizontal class="h-4 w-4" />
       </button>
-      <button class="message-action-button">
+      <button 
+        class="message-action-button"
+        @click="handleReply">
         <Reply class="h-4 w-4" />
       </button>
     </template>
     
     <!-- For other users' messages: Reply first, then Options (original order) -->
     <template v-else>
-      <button class="message-action-button">
+      <button 
+        class="message-action-button"
+        @click="handleReply">
         <Reply class="h-4 w-4" />
       </button>
       <button 
