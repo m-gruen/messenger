@@ -2,6 +2,9 @@
   <div class="w-full h-screen overflow-hidden">
     <!-- Router view will display the current route component -->
     <router-view />
+    
+    <!-- Portal target for floating menus and modals -->
+    <div id="portal-target"></div>
   </div>
 </template>
 
