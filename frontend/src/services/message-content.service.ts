@@ -361,17 +361,17 @@ export class MessageContentService {
     /**
      * Create reply message content
      */
-    createReplyContent(originalMessage: IMessage, newContent: string, contentType: 'text' | 'image' | 'document' | 'audio' | 'code' = 'text'): string {
+    createReplyContent(originalMessage: IMessage, newContent: string, contentType: MessageContentType = 'text'): string {
         try {
             // Extract sender info and message ID
             const { mid, sender_uid } = originalMessage;
             
             // Generate preview from original message
             let preview = '';
-            let type: 'text' | 'image' | 'document' | 'audio' | 'code' = 'text';
-            
+            let type: MessageContentType = 'text';
+
             const parsed = this.parseMessageContent(originalMessage.content);
-            type = parsed.type as 'text' | 'image' | 'document' | 'audio' | 'code';
+            type = parsed.type as MessageContentType;
             
             // Create preview based on message type
             switch (parsed.type) {
