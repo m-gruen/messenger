@@ -186,9 +186,7 @@ export const useMessageStore = defineStore('messages', () => {
     // Ensure websocket is connected when user and token change
     watchEffect(() => {
         if (currentUserId.value && token.value) {
-            if (!websocketService.isConnected()) {
-                websocketService.connect(currentUserId.value, token.value)
-            }
+            websocketService.connect(currentUserId.value, token.value)
         } else {
             websocketService.disconnect()
         }

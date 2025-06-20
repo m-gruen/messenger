@@ -7,6 +7,8 @@ import { DateFormatService } from './date-format.service';
 export class WebSocketService {
     private socket: Socket | null = null;
     private messageHandlers: ((message: IMessage) => void)[] = [];
+    private currentUserId: number | null = null;
+    private isConnecting: boolean = false;
 
     /**
      * Initialize and connect to the WebSocket server
@@ -14,11 +16,18 @@ export class WebSocketService {
      * @param token JWT authentication token
      */
     public connect(userId: number, token: string): void {
-        if (this.socket) {
+        // If we're already connected or connecting for the same user, don't reconnect
+        if (this.isConnecting || (this.socket?.connected && this.currentUserId === userId)) {
+            return;
+        }
+
+        if (this.socket && this.currentUserId !== userId) {
             this.disconnect();
         }
 
         const baseUrl = getBackendUrl();
+        this.currentUserId = userId;
+        this.isConnecting = true;
 
         this.socket = io(baseUrl, {
             auth: { token },
@@ -28,6 +37,7 @@ export class WebSocketService {
 
         this.socket.on('connect', () => {
             console.log('WebSocket connected');
+            this.isConnecting = false;
 
             // Join user's personal room
             if (this.socket) {
@@ -52,10 +62,12 @@ export class WebSocketService {
 
         this.socket.on('connect_error', (error) => {
             console.error('WebSocket connection error:', error);
+            this.isConnecting = false;
         });
 
         this.socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
+            this.isConnecting = false;
         });
     }
 
@@ -67,6 +79,8 @@ export class WebSocketService {
             this.socket.disconnect();
             this.socket = null;
         }
+        this.currentUserId = null;
+        this.isConnecting = false;
     }
 
     /**
