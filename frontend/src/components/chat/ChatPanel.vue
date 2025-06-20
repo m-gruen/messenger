@@ -303,6 +303,11 @@ function formatCode(code: string, language: string): string {
 function handleReply(message: any) {
   replyToMessage.value = { message }
 }
+
+// Function to cancel reply
+function cancelReply() {
+  replyToMessage.value = null
+}
 </script>
 
 <template>
@@ -317,6 +322,7 @@ function handleReply(message: any) {
       :current-user-id="messageStore.currentUserId"
       :left-position="leftPosition"
       :width="chatWidth"
+      :replyToMessage="replyToMessage"
       @back="goBack"
       @toggle-details="toggleContactDetails"
       @send-message="sendMessage"
@@ -325,6 +331,7 @@ function handleReply(message: any) {
       @view-image="handleViewImage"
       @view-code="handleViewCode"
       @reply="handleReply"
+      @cancel-reply="cancelReply"
     />
 
     <!-- Contact Details (positioned adjacent to chat instead of on top) -->

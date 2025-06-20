@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { Send, Smile, Paperclip, X, Image as ImageIcon, File as FileIcon, Mic, Code } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
+import ReplyIndicator from './ReplyIndicator.vue'
 import NotificationToast from '@/components/ui/NotificationToast.vue'
 
 import { useNotification, type NotificationType } from '@/composables/useNotification'
@@ -9,9 +10,25 @@ import { useFileUpload } from '@/composables/useFileUpload'
 import { useFileHandler } from '@/composables/useFileHandler'
 import { useTextareaHandler } from '@/composables/useTextareaHandler'
 
-import type { ITextMessageContent } from '@/models/message-model'
+import type { ITextMessageContent, IMessage } from '@/models/message-model'
+// messageContentService is now used in ReplyIndicator component
 
-const emit = defineEmits(['send'])
+const props = defineProps({
+  replyTo: {
+    type: Object as () => { message: IMessage } | null,
+    default: null
+  },
+  currentUserId: {
+    type: Number,
+    default: undefined
+  },
+  contact: {
+    type: Object,
+    required: true
+  }
+})
+
+const emit = defineEmits(['send', 'cancelReply'])
 
 // Use composables
 const { notification, showNotification, hideNotification } = useNotification()
@@ -36,6 +53,11 @@ function sendMessage() {
   
   emit('send', messageContent)
   resetTextarea()
+  
+  // If we were replying, cancel the reply after sending
+  if (props.replyTo) {
+    emit('cancelReply')
+  }
 }
 
 // Handle emoji picker
@@ -73,6 +95,15 @@ onMounted(() => {
 
 <template>
   <div class="p-4 border-t bg-card relative">
+    <!-- Reply Indicator - shown when replying to a message -->
+    <ReplyIndicator 
+      v-if="props.replyTo" 
+      :replyTo="props.replyTo" 
+      :currentUserId="props.currentUserId" 
+      :contactName="props.contact.display_name || props.contact.username"
+      @cancelReply="emit('cancelReply')" 
+    />
+    
     <!-- Hidden file inputs -->
     <input 
       type="file" 

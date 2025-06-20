@@ -38,6 +38,10 @@ const props = defineProps({
   width: {
     type: String,
     required: true
+  },
+  replyToMessage: {
+    type: Object as () => { message: IMessage } | null,
+    default: null
   }
 })
 
@@ -50,7 +54,8 @@ const emit = defineEmits<{
   'view-image': [src: string | null],
   'view-code': [content: string, language: string, name: string],
   'download-file': [src: string | null, filename: string],
-  'reply': [message: IMessage]
+  'reply': [message: IMessage],
+  'cancel-reply': []
 }>()
 
 // Automatically dismiss send error after 5 seconds
@@ -97,6 +102,12 @@ watch(() => props.sendError, (error) => {
     />
 
     <!-- Message Input -->
-    <MessageInput @send="content => emit('send-message', content)" />
+    <MessageInput 
+      :replyTo="replyToMessage"
+      :currentUserId="currentUserId"
+      :contact="contact"
+      @send="content => emit('send-message', content)"
+      @cancelReply="emit('cancel-reply')" 
+    />
   </div>
 </template>
