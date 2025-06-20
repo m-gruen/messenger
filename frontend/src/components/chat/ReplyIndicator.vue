@@ -51,7 +51,7 @@ function cancelReply() {
 </script>
 
 <template>
-  <div class="bg-blue-600 mb-2 rounded-md p-2 text-white text-sm relative">
+  <div class="bg-blue-800 mb-2 rounded-md p-2 text-white text-sm relative">
     <div class="flex items-start">
       <!-- Reply icon -->
       <div class="mt-0.5 mr-2">
