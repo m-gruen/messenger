@@ -72,18 +72,38 @@ function insertEmoji(emoji: string) {
 
 // Attachment menu handlers
 function triggerFileUpload() {
+  // Prevent file uploads during replies
+  if (props.replyTo) {
+    showNotification('Attachments are disabled when replying to a message', 'info')
+    return
+  }
   if (fileInputRef.value) fileInputRef.value.click()
 }
 
 function triggerDocumentUpload() {
+  // Prevent file uploads during replies
+  if (props.replyTo) {
+    showNotification('Attachments are disabled when replying to a message', 'info')
+    return
+  }
   if (documentInputRef.value) documentInputRef.value.click()
 }
 
 function triggerAudioUpload() {
+  // Prevent file uploads during replies
+  if (props.replyTo) {
+    showNotification('Attachments are disabled when replying to a message', 'info')
+    return
+  }
   if (audioInputRef.value) audioInputRef.value.click()
 }
 
 function triggerCodeUpload() {
+  // Prevent file uploads during replies
+  if (props.replyTo) {
+    showNotification('Attachments are disabled when replying to a message', 'info')
+    return
+  }
   if (codeInputRef.value) codeInputRef.value.click()
 }
 
@@ -170,10 +190,12 @@ onMounted(() => {
       <div class="relative">
         <button 
           type="button" 
-          @click="showAttachmentMenu = !showAttachmentMenu"
-          class="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
+          @click="!props.replyTo && (showAttachmentMenu = !showAttachmentMenu)"
+          class="p-2 text-muted-foreground rounded-full transition-colors"
+          :class="props.replyTo ? 'opacity-40 cursor-not-allowed' : 'hover:text-foreground hover:bg-muted'"
+          :title="props.replyTo ? 'Attachments are disabled when replying' : 'Add attachment'"
           aria-label="Add attachment"
-          :disabled="isUploading"
+          :disabled="isUploading || !!props.replyTo"
         >
           <Paperclip class="h-5 w-5" />
         </button>
@@ -195,7 +217,7 @@ onMounted(() => {
           <button 
             @click="triggerFileUpload(); showAttachmentMenu = false"
             class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading"
+            :disabled="isUploading || !!props.replyTo"
           >
             <ImageIcon class="h-4 w-4" />
             <span>Image</span>
@@ -205,7 +227,7 @@ onMounted(() => {
           <button 
             @click="triggerDocumentUpload(); showAttachmentMenu = false"
             class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading"
+            :disabled="isUploading || !!props.replyTo"
           >
             <FileIcon class="h-4 w-4" />
             <span>Document</span>
@@ -215,7 +237,7 @@ onMounted(() => {
           <button 
             @click="triggerAudioUpload(); showAttachmentMenu = false"
             class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading"
+            :disabled="isUploading || !!props.replyTo"
           >
             <Mic class="h-4 w-4" />
             <span>Audio</span>
@@ -225,7 +247,7 @@ onMounted(() => {
           <button 
             @click="triggerCodeUpload(); showAttachmentMenu = false"
             class="flex items-center gap-2 w-full px-3 py-2 hover:bg-muted text-left"
-            :disabled="isUploading"
+            :disabled="isUploading || !!props.replyTo"
           >
             <Code class="h-4 w-4" />
             <span>Code</span>
