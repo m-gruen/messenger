@@ -633,6 +633,119 @@ export class IndexedDBService {
             return false;
         }
     }
+
+    /**
+     * Calculate the total storage used by messages in IndexedDB
+     * @returns Promise resolving to total size in bytes
+     */
+    public async calculateTotalStorageUsage(): Promise<number> {
+        try {
+            const allData = await this.exportAllMessages();
+            
+            // Calculate size by converting to JSON string and measuring length
+            const jsonString = JSON.stringify(allData);
+            return new Blob([jsonString]).size;
+        } catch (error) {
+            console.error('Error calculating total storage:', error);
+            return 0;
+        }
+    }
+
+    /**
+     * Get storage usage per contact
+     * @param currentUserId The current user ID
+     * @returns Promise resolving to an array of objects with contactId and usage in bytes
+     */
+    public async getStorageUsageByContact(currentUserId: number): Promise<Array<{
+        contactId: number;
+        bytesUsed: number;
+        percentage: number;
+        messagesCount: number;
+    }>> {
+        try {
+            const allData = await this.exportAllMessages();
+            const totalSize = await this.calculateTotalStorageUsage();
+            const result: Array<{
+                contactId: number;
+                bytesUsed: number;
+                percentage: number;
+                messagesCount: number;
+            }> = [];
+
+            // Get all contacts by examining message keys
+            const contactIds = new Set<number>();
+            for (const key in allData) {
+                if (key.startsWith('messages_')) {
+                    const parts = key.split('_');
+                    if (parts.length === 3) {
+                        const userId1 = parseInt(parts[1], 10);
+                        const userId2 = parseInt(parts[2], 10);
+                        
+                        // One of these userIds is the current user, the other is the contact
+                        const contactId = userId1 === currentUserId ? userId2 : userId1;
+                        contactIds.add(contactId);
+                    }
+                }
+            }
+
+            // Calculate size for each contact
+            for (const contactId of contactIds) {
+                const contactKeys = Object.keys(allData).filter(key => {
+                    const parts = key.split('_');
+                    return (parts[1] === currentUserId.toString() && parts[2] === contactId.toString()) ||
+                           (parts[1] === contactId.toString() && parts[2] === currentUserId.toString());
+                });
+
+                const contactData: any = {};
+                let messagesCount = 0;
+                
+                for (const key of contactKeys) {
+                    contactData[key] = allData[key];
+                    // Count messages
+                    if (allData[key] && allData[key].messages) {
+                        messagesCount += allData[key].messages.length;
+                    }
+                }
+
+                const jsonString = JSON.stringify(contactData);
+                const bytesUsed = new Blob([jsonString]).size;
+                const percentage = totalSize > 0 ? (bytesUsed / totalSize) * 100 : 0;
+
+                result.push({
+                    contactId,
+                    bytesUsed,
+                    percentage,
+                    messagesCount
+                });
+            }
+
+            // Sort by size (largest first)
+            return result.sort((a, b) => b.bytesUsed - a.bytesUsed);
+        } catch (error) {
+            console.error('Error calculating storage by contact:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Format bytes to a human-readable string
+     * @param bytes The number of bytes
+     * @returns Formatted string (e.g. "1.23 MB")
+     */
+    public static formatBytes(bytes: number): string {
+        if (bytes === 0) return '0 Bytes';
+
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Non-static version for easier access
+    public formatBytes(bytes: number): string {
+        return IndexedDBService.formatBytes(bytes);
+    }
 }
 
 export const indexedDBService = new IndexedDBService();

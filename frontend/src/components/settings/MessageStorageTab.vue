@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
 import { storageService } from '@/services/storage.service';
 import { indexedDBService } from '@/services/indexeddb.service';
 import { useMessageStore } from '@/stores/MessageStore';
+import { useContactStore } from '@/stores/ContactStore';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const UserId = storageService.getUser()!.uid;
 const messageStore = useMessageStore();
+const contactStore = useContactStore();
 
 // UI state
 const updateError = ref<string | null>(null);
@@ -18,6 +20,55 @@ const isDeletingMessages = ref(false);
 
 // Add this for the file input reference
 const fileInputRef = ref<HTMLInputElement | null>(null);
+
+// Storage usage state
+const totalStorageUsage = ref<number>(0);
+const storageUsageByContact = ref<Array<{
+    contactId: number;
+    bytesUsed: number;
+    percentage: number;
+    messagesCount: number;
+    displayName: string;
+}>>([]);
+const isLoadingStorageData = ref<boolean>(false);
+
+// Load storage usage information
+async function loadStorageUsage() {
+    isLoadingStorageData.value = true;
+    
+    try {
+        // Get total storage size
+        totalStorageUsage.value = await indexedDBService.calculateTotalStorageUsage();
+        
+        // Get usage by contact
+        const contactUsage = await indexedDBService.getStorageUsageByContact(UserId);
+        
+        // Enrich with contact display names
+        const enrichedUsage = contactUsage.map(contact => {
+            const userInfo = contactStore.getUserInfo(contact.contactId);
+            const contactFromList = contactStore.contacts.find(c => c.contactUserId === contact.contactId);
+            
+            return {
+                ...contact,
+                displayName: userInfo?.display_name || 
+                    contactFromList?.display_name || 
+                    contactFromList?.username || 
+                    `User ${contact.contactId}`
+            };
+        });
+        
+        storageUsageByContact.value = enrichedUsage;
+    } catch (error) {
+        console.error('Failed to load storage usage:', error);
+    } finally {
+        isLoadingStorageData.value = false;
+    }
+}
+
+// Format bytes to human-readable format
+function formatBytes(bytes: number): string {
+    return indexedDBService.formatBytes(bytes);
+}
 
 // Function to open the file browser dialog for message restore
 function openFileDialog() {
@@ -73,6 +124,9 @@ async function backupMessages() {
         }, 100);
 
         updateSuccess.value = "Messages backed up successfully";
+        
+        // Refresh storage usage
+        await loadStorageUsage();
     } catch (error: any) {
         updateError.value = error.message || "Failed to backup messages";
     } finally {
@@ -132,6 +186,9 @@ async function restoreMessages(event: Event) {
 
         // Reset the file input
         fileInput.value = '';
+        
+        // Refresh storage usage
+        await loadStorageUsage();
     } catch (error: any) {
         updateError.value = error.message || "Failed to restore backup";
     } finally {
@@ -152,12 +209,20 @@ async function clearLocalMessages() {
         await messageStore.deleteAllMessages();
 
         updateSuccess.value = "All local messages deleted successfully";
+        
+        // Refresh storage usage
+        await loadStorageUsage();
     } catch (error: any) {
         updateError.value = error.message || "Failed to delete messages";
     } finally {
         isDeletingMessages.value = false;
     }
 }
+
+// Load storage usage data on component mount
+onMounted(async () => {
+    await loadStorageUsage();
+});
 </script>
 
 <template>
@@ -188,6 +253,54 @@ async function clearLocalMessages() {
                         <p class="mb-1 font-medium">End-to-End Encrypted Messages</p>
                         <p>Messages are encrypted end-to-end and stored on your device. Messages are only kept on
                             the server until they are delivered to your contact.</p>
+                    </div>
+                    
+                    <!-- Storage Usage Display -->
+                    <div class="bg-card/50 rounded-lg border p-4 mb-4">
+                        <h3 class="text-lg font-medium mb-2">Storage Usage</h3>
+                        
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="font-medium">Total Storage Used:</div>
+                            <div v-if="isLoadingStorageData" class="text-sm text-muted-foreground">Loading...</div>
+                            <div v-else class="text-lg font-bold">{{ formatBytes(totalStorageUsage) }}</div>
+                        </div>
+                        
+                        <div v-if="isLoadingStorageData" class="flex justify-center py-8">
+                            <div class="animate-spin rounded-full h-6 w-6 border-2 border-primary"></div>
+                        </div>
+                        
+                        <div v-else-if="storageUsageByContact.length === 0" class="text-center py-4 text-muted-foreground">
+                            No message storage data available
+                        </div>
+                        
+                        <div v-else class="space-y-4">
+                            <h4 class="text-sm font-medium text-muted-foreground mb-2">Storage by Contact</h4>
+                            
+                            <div v-for="contact in storageUsageByContact" :key="contact.contactId" class="mb-3">
+                                <div class="flex items-center justify-between text-sm mb-1">
+                                    <div class="font-medium truncate max-w-[60%]">
+                                        {{ contact.displayName }}
+                                    </div>
+                                    <div class="text-muted-foreground text-xs">
+                                        {{ formatBytes(contact.bytesUsed) }} ({{ contact.percentage.toFixed(1) }}%)
+                                    </div>
+                                </div>
+                                
+                                <!-- Bar chart -->
+                                <div class="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary" 
+                                         :style="{ width: `${contact.percentage}%` }"></div>
+                                </div>
+                                
+                                <div class="text-xs text-muted-foreground mt-1">
+                                    {{ contact.messagesCount }} messages
+                                </div>
+                            </div>
+                            
+                            <div class="text-xs text-right mt-2 text-muted-foreground">
+                                <button @click="loadStorageUsage" class="underline">Refresh</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Message Backup Button -->
@@ -250,5 +363,13 @@ async function clearLocalMessages() {
 /* Remove extra margins to prevent unexpected spacing */
 .max-w-3xl {
     margin-top: 0;
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.animate-spin {
+    animation: spin 1s linear infinite;
 }
 </style>
