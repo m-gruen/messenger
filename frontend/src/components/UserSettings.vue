@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
-import { storageService } from '@/services/storage.service';
+import { useAuthStore } from '@/stores/AuthStore';
 import UserSettingsTab from '@/components/settings/UserSettingsTab.vue';
 import PrivacySettingsTab from '@/components/settings/PrivacySettingsTab.vue';
 import KeyManagementTab from '@/components/settings/KeyManagementTab.vue';
@@ -10,6 +10,7 @@ import MessageStorageTab from '@/components/settings/MessageStorageTab.vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const activeSection = ref('user'); // 'user', 'privacy', 'keys', 'messages'
 const showLogoutConfirm = ref(false);
 
@@ -18,12 +19,14 @@ function navigateTo(section: string) {
   activeSection.value = section;
 }
 
-function logout() {
-  // Clear all data including messages
-  storageService.clearAuth();
-  localStorage.removeItem('local_message_storing');
-  localStorage.clear(); // Clear everything else
-  router.push('/login');
+async function logout() {
+  try {
+    await authStore.logout();
+    router.push('/login');
+  } catch (error) {
+    console.error('Error during logout:', error);
+    router.push('/login');
+  }
 }
 
 function confirmLogout() {
@@ -110,4 +113,3 @@ function confirmLogout() {
   margin-top: 0;
 }
 </style>
-

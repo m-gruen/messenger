@@ -26,10 +26,13 @@ export const useAuthStore = defineStore('auth', () => {
         storageService.storeUser(newUser);
     }
 
-    function logout() {
+    async function logout() {
         token.value = null;
         user.value = null;
+        
         storageService.clearAuth();
+        
+        await storageService.deleteAllMessages();
     }
 
     return {

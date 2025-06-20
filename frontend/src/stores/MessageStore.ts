@@ -342,11 +342,6 @@ export const useMessageStore = defineStore('messages', () => {
 
             // Position to recent messages
             positionToRecentMessages();
-
-            // Show a notification if we found new messages
-            if (newMessagesFound) {
-                console.log('New messages were found and added to local storage');
-            }
         } catch (err) {
             error.value = err instanceof Error ? err.message : 'Failed to load messages';
             console.error('Error fetching messages:', err);
@@ -521,9 +516,6 @@ export const useMessageStore = defineStore('messages', () => {
 
             // Smoothly scroll to show the new message
             smoothScrollToRecentMessages();
-
-            // Debug the message content structure
-            console.log('Reply message content:', messageContent);
             
             // Now send the encrypted message to the server
             const newMessage = await apiService.sendMessage(
@@ -576,11 +568,9 @@ export const useMessageStore = defineStore('messages', () => {
     async function storeAllContactMessages(userId: number): Promise<boolean> {
         try {
             const contacts = await apiService.getContacts(userId, token.value);
-            console.log('Storing messages for contacts:', contacts);
 
             for (const contact of contacts) {
                 const contactId = contact.contactUserId;
-                console.log(`Fetching messages for contact ${contactId}`);
 
                 try {
                     const contactMessages = await apiService.getMessages(userId, contactId, token.value);
