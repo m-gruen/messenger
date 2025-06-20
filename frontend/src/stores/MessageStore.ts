@@ -260,8 +260,6 @@ export const useMessageStore = defineStore('messages', () => {
         }, 100)
     }
 
-    // No longer needed - all messages are now stored locally
-
     /**
      * Fetch messages between current user and a contact
      */
@@ -272,8 +270,6 @@ export const useMessageStore = defineStore('messages', () => {
         activeContactId.value = contactUserId // Set active contact
 
         try {
-            // New approach: First check for any new messages on the server
-            let newMessagesFound = false;
             let messagesToAcknowledge: number[] = [];
 
             if (token.value) {
@@ -286,9 +282,6 @@ export const useMessageStore = defineStore('messages', () => {
                     );
 
                     if (serverMessages.length > 0) {
-                        newMessagesFound = true;
-
-                        // Process all messages to ensure valid dates
                         const processedMessages = serverMessages.map(ensureValidDate);
 
                         // Store the message IDs we need to acknowledge
@@ -624,6 +617,17 @@ export const useMessageStore = defineStore('messages', () => {
 
             // Clear displayed messages
             messages.value = [];
+            
+            // Reset active contact ID
+            activeContactId.value = null;
+            
+            // Reset pagination states
+            totalMessagePages.value = 0;
+            currentMessagePage.value = 0;
+            
+            // Clear any errors
+            error.value = undefined;
+            sendError.value = undefined;
 
             return true;
         } catch (error) {
