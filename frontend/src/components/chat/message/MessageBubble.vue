@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { getMessagePosition, getMessageContent, getEmojiMessageStyle, isImageMessage, isDocumentMessage, isAudioMessage, isCodeMessage } from './MessageUtils'
+import { messageContentService } from '@/services/message-content.service'
+import { useContactStore } from '@/stores/ContactStore'
 import MessageActions from './MessageActions.vue'
 import TextMessage from './TextMessage.vue'
 import ImageMessage from './ImageMessage.vue'
@@ -38,6 +40,65 @@ const messageType = computed(() => {
   if (isCodeMessage(content)) return 'code'
   return 'text'
 })
+
+const contactStore = useContactStore()
+
+// Determine if the message is a reply
+const parsedContent = computed(() => {
+  try {
+    return messageContentService.parseMessageContent(props.message.content)
+  } catch (e) {
+    return { type: 'text', content: props.message.content || '' }
+  }
+})
+
+const isReply = computed(() => {
+  return !!parsedContent.value.replyTo
+})
+
+const replyInfo = computed(() => {
+  if (!isReply.value) return null
+  return parsedContent.value.replyTo
+})
+
+// Get the reply sender name
+const replySenderName = computed(() => {
+  if (!replyInfo.value) return ''
+  // If the reply is to your own message
+  if (replyInfo.value.sender_uid === props.currentUserId) {
+    return 'You'
+  }
+  // Try to get the contact's name from the contact store
+  const contact = contactStore.contacts.find(c => c.contactUserId === replyInfo.value?.sender_uid)
+  return contact?.display_name || contact?.username || 'Unknown'
+})
+
+// Get the reply preview text
+const replyPreviewText = computed(() => {
+  if (!replyInfo.value) return ''
+  
+  try {
+    if (replyInfo.value.type === 'text') {
+      // For text messages, truncate if needed
+      const preview = replyInfo.value.preview || ''
+      return preview.substring(0, 50) + (preview.length > 50 ? '...' : '')
+    } else {
+      return `[${replyInfo.value.type.charAt(0).toUpperCase() + replyInfo.value.type.slice(1)}]`
+    }
+  } catch (e) {
+    return replyInfo.value.preview || ''
+  }
+})
+
+// Determine if this is an emoji-only message that should get special handling
+const isEmojiOnlyMessage = computed(() => {
+  return !!getEmojiMessageStyle(getMessageContent(props.message))
+})
+
+// For reply messages with emoji, we need to override the default emoji style
+const shouldForceBackground = computed(() => {
+  return isReply.value && isEmojiOnlyMessage.value
+})
 </script>
 
 <template>
@@ -46,14 +107,15 @@ const messageType = computed(() => {
       'other-message': !isOwnMessage
     }">
     <div class="message-bubble relative" :class="[
-      getEmojiMessageStyle(getMessageContent(message)) || 'px-3 py-2 shadow-sm',
+      (!shouldForceBackground && getEmojiMessageStyle(getMessageContent(message))) || 'px-3 py-2 shadow-sm',
       {
-        'bg-blue-600 text-white': message.sender_uid === currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
-        'bg-zinc-800 text-white': message.sender_uid !== currentUserId && !getEmojiMessageStyle(getMessageContent(message)),
+        'bg-blue-600 text-white': (message.sender_uid === currentUserId && (!getEmojiMessageStyle(getMessageContent(message)) || shouldForceBackground)),
+        'bg-zinc-800 text-white': (message.sender_uid !== currentUserId && (!getEmojiMessageStyle(getMessageContent(message)) || shouldForceBackground)),
         'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
-        'max-w-message': true
+        'max-w-message': true,
+        'with-reply': isReply
       },
-      !getEmojiMessageStyle(getMessageContent(message)) ? [
+      !getEmojiMessageStyle(getMessageContent(message)) || (isReply && isEmojiOnlyMessage) ? [
         getMessagePosition(message, minuteGroup) === 'single' ? 'message-bubble-rounded' : '',
         getMessagePosition(message, minuteGroup) === 'first' && message.sender_uid === currentUserId ?
           'message-bubble-rounded-top message-bubble-rounded-left message-bubble-bottom-left' : '',
@@ -69,6 +131,20 @@ const messageType = computed(() => {
           'message-bubble-rounded-bottom message-bubble-rounded-right message-bubble-top-right' : ''
       ] : []
     ]">
+      <!-- Reply box -->
+      <div v-if="isReply" class="reply-box bg-blue-800 mb-2 rounded-md p-2 text-white text-sm" 
+        :class="{'reply-box-own': isOwnMessage, 'reply-box-other': !isOwnMessage}">
+        <div class="flex items-start">
+          <div class="flex-1">
+            <div class="font-bold">{{ replySenderName }}</div>
+            <div class="text-white/80">
+              <em v-if="replyPreviewText.startsWith('[')">{{ replyPreviewText }}</em>
+              <template v-else>{{ replyPreviewText }}</template>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <TextMessage v-if="messageType === 'text'" :message="message" :showTimestamp="showTimestamp" />
       
       <ImageMessage 
@@ -131,6 +207,10 @@ const messageType = computed(() => {
   position: relative; /* Ensure position: relative is here for absolute positioning of children */
 }
 
+.message-bubble.with-reply {
+  padding-top: 8px;
+}
+
 .message-bubble:hover .message-actions {
   opacity: 1;
 }
@@ -179,5 +259,37 @@ const messageType = computed(() => {
   max-width: 100%;
   word-break: break-word;
   overflow-wrap: break-word;
+}
+
+/* Reply box styling */
+.reply-box {
+  border-width: 1px;
+  border-style: solid;
+  position: relative;
+}
+
+.reply-box-own {
+  border-color: #3b82f6; /* Blue border for your own messages */
+}
+
+.reply-box-other {
+  border-color: #000000; /* Black border for other people's messages */
+}
+
+/* Special styles for emoji messages with replies */
+.emoji-only.emoji-single, .emoji-only.emoji-few, .emoji-only.emoji-many {
+  font-size: 1.5rem;
+}
+
+.with-reply .emoji-only.emoji-single {
+  font-size: 2.5rem;
+}
+
+.with-reply .emoji-only.emoji-few {
+  font-size: 2rem;
+}
+
+.with-reply .emoji-only.emoji-many {
+  font-size: 1.5rem;
 }
 </style>
