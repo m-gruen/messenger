@@ -35,15 +35,31 @@ const closeOptionsMenu = () => {
     'message-actions-left': isOwnMessage,
     'message-actions-right': !isOwnMessage
   }">
-    <button class="message-action-button">
-      <Reply class="h-4 w-4" />
-    </button>
-    <button 
-      ref="optionsButtonRef" 
-      class="message-action-button" 
-      @click="toggleOptionsMenu">
-      <MoreHorizontal class="h-4 w-4" />
-    </button>
+    <!-- For own messages: Options first, then Reply -->
+    <template v-if="isOwnMessage">
+      <button 
+        ref="optionsButtonRef" 
+        class="message-action-button" 
+        @click="toggleOptionsMenu">
+        <MoreHorizontal class="h-4 w-4" />
+      </button>
+      <button class="message-action-button">
+        <Reply class="h-4 w-4" />
+      </button>
+    </template>
+    
+    <!-- For other users' messages: Reply first, then Options (original order) -->
+    <template v-else>
+      <button class="message-action-button">
+        <Reply class="h-4 w-4" />
+      </button>
+      <button 
+        ref="optionsButtonRef" 
+        class="message-action-button" 
+        @click="toggleOptionsMenu">
+        <MoreHorizontal class="h-4 w-4" />
+      </button>
+    </template>
     
     <!-- Options menu is now a separate component -->
     <MessageOptionsMenu 
