@@ -3,13 +3,13 @@ import { computed } from 'vue'
 import type { IMessage } from '@/models/message-model'
 import { getMessagePosition, getMessageContent, getEmojiMessageStyle, isImageMessage, isDocumentMessage, isAudioMessage, isCodeMessage } from './MessageUtils'
 import { messageContentService } from '@/services/message-content.service'
-import { useContactStore } from '@/stores/ContactStore'
 import MessageActions from './MessageActions.vue'
 import TextMessage from './TextMessage.vue'
 import ImageMessage from './ImageMessage.vue'
 import DocumentMessage from './DocumentMessage.vue'
 import AudioMessage from './AudioMessage.vue'
 import CodeMessage from './CodeMessage.vue'
+import ReplyBox from './ReplyBox.vue'
 
 const props = defineProps<{
   message: IMessage
@@ -41,8 +41,6 @@ const messageType = computed(() => {
   return 'text'
 })
 
-const contactStore = useContactStore()
-
 // Determine if the message is a reply
 const parsedContent = computed(() => {
   try {
@@ -58,36 +56,7 @@ const isReply = computed(() => {
 
 const replyInfo = computed(() => {
   if (!isReply.value) return null
-  return parsedContent.value.replyTo
-})
-
-// Get the reply sender name
-const replySenderName = computed(() => {
-  if (!replyInfo.value) return ''
-  // If the reply is to your own message
-  if (replyInfo.value.sender_uid === props.currentUserId) {
-    return 'You'
-  }
-  // Try to get the contact's name from the contact store
-  const contact = contactStore.contacts.find(c => c.contactUserId === replyInfo.value?.sender_uid)
-  return contact?.display_name || contact?.username || 'Unknown'
-})
-
-// Get the reply preview text
-const replyPreviewText = computed(() => {
-  if (!replyInfo.value) return ''
-  
-  try {
-    if (replyInfo.value.type === 'text') {
-      // For text messages, truncate if needed
-      const preview = replyInfo.value.preview || ''
-      return preview.substring(0, 50) + (preview.length > 50 ? '...' : '')
-    } else {
-      return `[${replyInfo.value.type.charAt(0).toUpperCase() + replyInfo.value.type.slice(1)}]`
-    }
-  } catch (e) {
-    return replyInfo.value.preview || ''
-  }
+  return parsedContent.value.replyTo || null
 })
 
 // Determine if this is an emoji-only message that should get special handling
@@ -132,18 +101,12 @@ const shouldForceBackground = computed(() => {
       ] : []
     ]">
       <!-- Reply box -->
-      <div v-if="isReply" class="reply-box bg-blue-800 mb-2 rounded-md p-2 text-white text-sm" 
-        :class="{'reply-box-own': isOwnMessage, 'reply-box-other': !isOwnMessage}">
-        <div class="flex items-start">
-          <div class="flex-1">
-            <div class="font-bold">{{ replySenderName }}</div>
-            <div class="text-white/80">
-              <em v-if="replyPreviewText.startsWith('[')">{{ replyPreviewText }}</em>
-              <template v-else>{{ replyPreviewText }}</template>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ReplyBox 
+        v-if="isReply" 
+        :replyInfo="replyInfo"
+        :isOwnMessage="isOwnMessage"
+        :currentUserId="currentUserId"
+      />
       
       <TextMessage v-if="messageType === 'text'" :message="message" :showTimestamp="showTimestamp" />
       
@@ -261,20 +224,7 @@ const shouldForceBackground = computed(() => {
   overflow-wrap: break-word;
 }
 
-/* Reply box styling */
-.reply-box {
-  border-width: 1px;
-  border-style: solid;
-  position: relative;
-}
-
-.reply-box-own {
-  border-color: #3b82f6; /* Blue border for your own messages */
-}
-
-.reply-box-other {
-  border-color: #000000; /* Black border for other people's messages */
-}
+/* No specific reply box styling here - moved to ReplyBox.vue */
 
 /* Special styles for emoji messages with replies */
 .emoji-only.emoji-single, .emoji-only.emoji-few, .emoji-only.emoji-many {
