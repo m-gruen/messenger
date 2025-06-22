@@ -76,10 +76,10 @@ const shouldForceBackground = computed(() => {
       'other-message': !isOwnMessage
     }">
     <div class="message-bubble relative" :class="[
-      (!shouldForceBackground && getEmojiMessageStyle(getMessageContent(message))) || 'px-3 py-2 shadow-sm',
+      (!shouldForceBackground && getEmojiMessageStyle(getMessageContent(message))) || 'px-3.5 py-2.5 shadow-md',
       {
-        'bg-blue-600 text-white': (message.sender_uid === currentUserId && (!getEmojiMessageStyle(getMessageContent(message)) || shouldForceBackground)),
-        'bg-zinc-800 text-white': (message.sender_uid !== currentUserId && (!getEmojiMessageStyle(getMessageContent(message)) || shouldForceBackground)),
+        'bg-gradient-to-r from-indigo-600 to-blue-600 text-white': (message.sender_uid === currentUserId && (!getEmojiMessageStyle(getMessageContent(message)) || shouldForceBackground)),
+        'bg-slate-800/90 text-indigo-100 border border-slate-700/50': (message.sender_uid !== currentUserId && (!getEmojiMessageStyle(getMessageContent(message)) || shouldForceBackground)),
         'mb-0.5': messageIndex < minuteGroup.messages.length - 1,
         'max-w-message': true,
         'with-reply': isReply

@@ -146,20 +146,20 @@ const messageGroups = computed(() => {
 
 <template>
   <div 
-    class="relative flex-1 overflow-y-auto p-4 bg-background/95 message-list-container custom-scrollbar"
+    class="relative flex-1 overflow-y-auto p-4 bg-black message-list-container custom-scrollbar"
     ref="messageListRef"
-    style="background-image: url('data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4-1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%239C92AC\' fill-opacity=\'0.05\' fill-rule=\'evenodd\'/%3E%3C/svg%3E');"
+    style="background: #000000; background-image: linear-gradient(to top, #000000, #27273f); background-size: 100% 100%;"
   >
     <!-- Notification for viewing older messages -->
     <div 
       v-if="isViewingOlderMessages"
-      class="fixed bg-zinc-900 text-white rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg older-messages-notification"
+      class="fixed bg-slate-900/90 border border-indigo-500/30 text-indigo-100 rounded-full px-4 py-2 z-20 flex items-center justify-between shadow-lg backdrop-blur-sm older-messages-notification"
       :style="{ opacity: notificationOpacity, bottom: '100px', left: '50%', transform: 'translateX(-50%)' }"
     >
       <span class="text-sm">You're Viewing Older Messages</span>
       <button 
         @click="scrollToLatest"
-        class="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full px-3 py-1 text-xs flex items-center"
+        class="ml-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-full px-3 py-1 text-xs flex items-center shadow-md transition-colors"
       >
         <span>Jump To Present</span>
         <ArrowDown class="h-3 w-3 ml-1" />
@@ -182,10 +182,15 @@ const messageGroups = computed(() => {
     
     <!-- Empty state -->
     <div v-else-if="messages.length === 0" class="flex flex-col items-center justify-center h-full text-center">
-      <div class="bg-card p-6 rounded-lg shadow-lg">
-        <MessageSquare class="h-12 w-12 mx-auto text-muted-foreground" />
-        <p class="mt-4 text-muted-foreground">No messages yet with {{ contactUsername }}</p>
-        <p class="mt-2 text-sm text-muted-foreground">Send a message to start the conversation</p>
+      <div class="relative">
+        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/20 to-blue-600/20 rounded-lg blur opacity-40"></div>
+        <div class="relative bg-slate-800/90 p-7 rounded-lg shadow-lg border border-indigo-500/20">
+          <div class="bg-indigo-900/40 p-3 rounded-full inline-flex mx-auto mb-2">
+            <MessageSquare class="h-12 w-12 text-indigo-300" />
+          </div>
+          <p class="mt-4 text-indigo-100 font-medium">No messages yet with {{ contactUsername }}</p>
+          <p class="mt-2 text-sm text-indigo-300/70">Send a message to start the conversation</p>
+        </div>
       </div>
     </div>
     
@@ -193,8 +198,8 @@ const messageGroups = computed(() => {
     <div v-else class="flex flex-col space-y-6">
       <div v-for="group in messageGroups" :key="group.dateValue">
         <!-- Date header -->
-        <div class="flex justify-center mb-4">
-          <div class="bg-muted/70 text-muted-foreground text-xs px-4 py-1 rounded-full">
+        <div class="flex justify-center mb-5">
+          <div class="bg-indigo-900/30 text-indigo-300 text-xs px-4 py-1.5 rounded-full border border-indigo-500/20 shadow-sm">
             {{ group.dateLabel }}
           </div>
         </div>

@@ -355,38 +355,45 @@ function cancelReply() {
 
     <!-- Image Preview Modal -->
     <div v-if="showImagePreview && previewImageSrc" 
-         class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+         class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center z-50"
          @click="closeImagePreview">
-      <span class="absolute top-4 right-4 cursor-pointer close-button" @click.stop="closeImagePreview">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <span class="absolute top-6 right-6 cursor-pointer close-button" @click.stop="closeImagePreview">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-100 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </span>
-      <img :src="previewImageSrc" class="max-w-full max-h-full object-contain" @click.stop />
+      <div class="relative max-w-3xl max-h-full">
+        <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/30 to-blue-600/30 rounded-lg blur-xl opacity-70"></div>
+        <div class="relative border-2 border-indigo-500/30 rounded-lg overflow-hidden shadow-2xl">
+          <img :src="previewImageSrc" class="max-w-full max-h-[85vh] object-contain bg-slate-900/80" @click.stop />
+        </div>
+      </div>
     </div>
 
     <!-- Code Preview Modal -->
     <div v-if="showCodePreview && previewCodeContent" 
-         class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
+         class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center z-50"
          @click="closeCodePreview">
-      <span class="absolute top-4 right-4 cursor-pointer close-button" @click.stop="closeCodePreview">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <span class="absolute top-6 right-6 cursor-pointer close-button" @click.stop="closeCodePreview">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-100 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
       </span>
-      <div class="w-4/5 max-h-[90vh] flex flex-col bg-zinc-900 overflow-auto" @click.stop>
-        <!-- Code info bar (optional) -->
-        <div class="bg-zinc-800 p-3 flex items-center">
-          <Code class="h-5 w-5 mr-2 text-blue-400" />
-          <div class="code-name font-medium truncate text-white">
+      <div class="w-4/5 max-h-[85vh] flex flex-col bg-slate-900 overflow-auto rounded-lg border border-indigo-500/30 shadow-xl" @click.stop>
+        <!-- Code info bar -->
+        <div class="bg-gradient-to-r from-indigo-950 to-slate-900 p-3 flex items-center border-b border-indigo-500/30">
+          <div class="bg-indigo-900/40 p-1.5 rounded-md mr-3">
+            <Code class="h-5 w-5 text-indigo-400" />
+          </div>
+          <div class="code-name font-medium truncate text-indigo-100">
             {{ previewCodeName }}
           </div>
-          <div class="code-language text-xs opacity-70 ml-2 text-white">
+          <div class="code-language text-xs ml-3 px-2 py-1 bg-indigo-900/40 rounded text-indigo-300">
             {{ previewCodeLanguage }}
           </div>
         </div>
         <!-- Code content -->
-        <pre class="m-0 p-6 bg-zinc-900 overflow-x-auto"><code v-html="previewCodeContent ? formatCode(previewCodeContent, previewCodeLanguage || '') : ''"></code></pre>
+        <pre class="m-0 p-6 bg-slate-900 overflow-x-auto"><code v-html="previewCodeContent ? formatCode(previewCodeContent, previewCodeLanguage || '') : ''"></code></pre>
       </div>
     </div>
   </div>

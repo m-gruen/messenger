@@ -70,7 +70,7 @@ watch(() => props.sendError, (error) => {
 
 <template>
   <div
-    class="fixed z-10 top-0 bottom-0 border-r border-border bg-background transition-all duration-300 ease-in-out flex flex-col"
+    class="fixed z-10 top-0 bottom-0 border-r border-indigo-900/30 bg-slate-900 transition-all duration-300 ease-in-out flex flex-col"
     :style="{
       left: leftPosition,
       width: width
@@ -80,9 +80,9 @@ watch(() => props.sendError, (error) => {
 
     <!-- Send Error Alert -->
     <div v-if="sendError"
-      class="mx-4 mt-2 p-3 bg-destructive/10 text-destructive text-sm rounded-md flex items-center justify-between">
+      class="mx-4 mt-2 p-3 bg-rose-900/30 text-rose-300 text-sm rounded-md flex items-center justify-between border border-rose-800/50">
       <span>{{ sendError }}</span>
-      <button @click="emit('clear-send-error')" class="ml-2 text-destructive hover:text-destructive/80"
+      <button @click="emit('clear-send-error')" class="ml-2 text-rose-300 hover:text-rose-100 transition-colors"
         aria-label="Dismiss error">
         ✕
       </button>

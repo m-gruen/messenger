@@ -51,16 +51,16 @@ function cancelReply() {
 </script>
 
 <template>
-  <div class="bg-blue-800 mb-2 rounded-md p-2 text-white text-sm relative">
+  <div class="bg-gradient-to-r from-indigo-900/80 to-blue-900/80 mb-3 rounded-md p-3 text-indigo-100 text-sm relative border border-indigo-500/30 shadow-md">
     <div class="flex items-start">
       <!-- Reply icon -->
-      <div class="mt-0.5 mr-2">
-        <CornerUpLeft class="h-4 w-4" />
+      <div class="mt-0.5 mr-3 bg-indigo-700/50 p-1.5 rounded-md">
+        <CornerUpLeft class="h-3.5 w-3.5" />
       </div>
       <!-- Reply content -->
       <div class="flex-1">
-        <div class="font-bold">{{ isOwnReply ? 'You' : props.contactName }}</div>
-        <div class="text-white/80">
+        <div class="font-semibold text-indigo-100">{{ isOwnReply ? 'You' : props.contactName }}</div>
+        <div class="text-indigo-200/80">
           <em v-if="getReplyPreviewText.startsWith('[')">{{ getReplyPreviewText }}</em>
           <template v-else>{{ getReplyPreviewText }}</template>
         </div>
@@ -68,7 +68,7 @@ function cancelReply() {
       <!-- Close button -->
       <button 
         @click="cancelReply" 
-        class="p-1 hover:bg-white/20 rounded-full"
+        class="p-1.5 hover:bg-indigo-700/50 rounded-full transition-colors"
         type="button"
         aria-label="Cancel reply">
         <X class="h-4 w-4" />
