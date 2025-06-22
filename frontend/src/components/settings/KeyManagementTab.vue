@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import KeyRecovery from '@/components/settings/KeyRecovery.vue';
-import { Key, ShieldCheck, Lock } from 'lucide-vue-next';
+import { Key, ShieldCheck } from 'lucide-vue-next';
 </script>
 
 <template>
