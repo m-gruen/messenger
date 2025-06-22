@@ -5,17 +5,26 @@
     
     <!-- Portal target for floating menus and modals -->
     <div id="portal-target"></div>
+    
+    <!-- Toast container for notifications -->
+    <ToastContainer
+      :toasts="toasts"
+      @close="closeToast"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { websocketService } from './services/websocket.service';
 import { storageService } from './services/storage.service';
 import { indexedDBService } from './services/indexeddb.service';
+import ToastContainer from './components/toast/ToastContainer.vue';
+import { useToast } from './composables/useToast';
 
 const router = useRouter();
+const { toasts, closeToast } = useToast();
 
 // Initialize database and WebSocket connection if user is logged in
 onMounted(async () => {
@@ -49,8 +58,7 @@ onMounted(async () => {
   });
 });
 
-// Clean up WebSocket connection when component unmounts
-onUnmounted(() => {
-  websocketService.disconnect();
-});
+// Clean up WebSocket connection when component unmounts (if needed)
+// We're not including onUnmounted since it's not imported anymore
+// If needed, add it back with: import { onMounted, onUnmounted } from 'vue';
 </script>

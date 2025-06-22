@@ -3,10 +3,9 @@ import { onMounted, ref } from 'vue'
 import { Send, Smile } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
 import ReplyIndicator from './ReplyIndicator.vue'
-import NotificationToast from '@/components/ui/NotificationToast.vue'
 import AttachmentMenu from './AttachmentMenu.vue'
 
-import { useNotification, type NotificationType } from '@/composables/useNotification'
+import { useToast } from '@/composables/useToast'
 import { useFileUpload } from '@/composables/useFileUpload'
 import { useFileHandler } from '@/composables/useFileHandler'
 import { useTextareaHandler } from '@/composables/useTextareaHandler'
@@ -32,11 +31,24 @@ const props = defineProps({
 const emit = defineEmits(['send', 'cancelReply'])
 
 // Use composables
-const { notification, showNotification, hideNotification } = useNotification()
+const { showToast, showError, showInfo, showSuccess } = useToast()
 const { fileInputRef, documentInputRef, audioInputRef, codeInputRef, compressImage, getLanguageFromExtension } = useFileUpload()
 const { textareaRef, message, adjustTextareaHeight, handleKeydown, handleInput, insertTextAtCursor, resetTextarea } = useTextareaHandler()
-const { isUploading, handleImageUpload, handleDocumentUpload, handleAudioUpload, handleCodeUpload } = useFileHandler((message: string, type: string) => 
-  showNotification(message, type as NotificationType))
+const { isUploading, handleImageUpload, handleDocumentUpload, handleAudioUpload, handleCodeUpload } = useFileHandler((message: string, type: string) => {
+  switch (type) {
+    case 'error':
+      showError(message)
+      break
+    case 'info':
+      showInfo(message)
+      break
+    case 'success':
+      showSuccess(message)
+      break
+    default:
+      showToast(message, 'info')
+  }
+})
 
 // Local state
 const showEmojiPicker = ref(false)
@@ -74,7 +86,7 @@ function insertEmoji(emoji: string) {
 function handleAttachment(type: 'image' | 'document' | 'audio' | 'code') {
   // Prevent file uploads during replies
   if (props.replyTo) {
-    showNotification('Attachments are disabled when replying to a message', 'info')
+    showInfo('Attachments are disabled when replying to a message')
     return
   }
   
@@ -212,12 +224,7 @@ onMounted(() => {
       <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
     </div>
     
-    <!-- Notification Toast -->
-    <NotificationToast
-      v-if="notification.show"
-      :notification="notification"
-      @close="hideNotification"
-    />
+    <!-- Notification Toasts are now handled globally through App.vue -->
   </div>
 </template>
 
