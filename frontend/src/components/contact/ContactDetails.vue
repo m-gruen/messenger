@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, defineProps, defineEmits } from 'vue';
-import { X, Shield } from "lucide-vue-next";
+import { X, Shield, Trash2, Download, Upload } from "lucide-vue-next";
 import type { Contact } from '@/models/contact-model';
 import { ContactStatus } from '@/models/contact-model';
 import { DateFormatService } from '@/services/date-format.service';
 import { useAuthStore } from '@/stores/AuthStore';
+import { useMessageStore } from '@/stores/MessageStore';
 import { apiService } from '@/services/api.service';
+import { indexedDBService } from '@/services/indexeddb.service';
 import type { User } from '@/models/user-model';
 
 const props = defineProps({
@@ -54,12 +56,22 @@ const props = defineProps({
 const emit = defineEmits(['close', 'remove', 'cancel-remove', 'block', 'unblock']);
 
 const authStore = useAuthStore();
+const messageStore = useMessageStore();
 const user = ref<User | null>(null);
 
 // Reintroduced refs for confirmation dialogs
 const showRemoveConfirmation = ref(false);
 const showBlockConfirmation = ref(false);
 const showUnblockConfirmation = ref(false);
+
+// Added refs for message management confirmation dialogs
+const showDeleteMessagesConfirmation = ref(false);
+const isDeletingMessages = ref(false);
+const isExportingMessages = ref(false);
+const isImportingMessages = ref(false);
+const messageActionSuccess = ref<string | null>(null);
+const messageActionError = ref<string | null>(null);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 
 // Fetch the user info for the contact
 async function fetchContactUser() {
@@ -86,6 +98,7 @@ function removeContact() {
     showRemoveConfirmation.value = true
     showBlockConfirmation.value = false
     showUnblockConfirmation.value = false
+    showDeleteMessagesConfirmation.value = false
   }
 }
 
@@ -102,6 +115,7 @@ function blockContact() {
     showBlockConfirmation.value = true
     showRemoveConfirmation.value = false
     showUnblockConfirmation.value = false
+    showDeleteMessagesConfirmation.value = false
   }
 }
 
@@ -113,6 +127,141 @@ function unblockContact() {
     showUnblockConfirmation.value = true
     showRemoveConfirmation.value = false
     showBlockConfirmation.value = false
+    showDeleteMessagesConfirmation.value = false
+  }
+}
+
+// New functions for message management
+async function deleteContactMessages() {
+  if (showDeleteMessagesConfirmation.value) {
+    showDeleteMessagesConfirmation.value = false
+    
+    // Implementation for deleting messages
+    isDeletingMessages.value = true
+    messageActionError.value = null
+    messageActionSuccess.value = null
+    
+    try {
+      // Use the message store function to delete messages for this contact
+      const success = await messageStore.deleteContactMessages(props.contact.contactUserId)
+      
+      if (success) {
+        messageActionSuccess.value = "Messages deleted successfully"
+      } else {
+        messageActionError.value = "Failed to delete messages"
+      }
+    } catch (error: any) {
+      messageActionError.value = error.message || "An error occurred while deleting messages"
+      console.error("Error deleting contact messages:", error)
+    } finally {
+      isDeletingMessages.value = false
+    }
+  } else {
+    showDeleteMessagesConfirmation.value = true
+    showRemoveConfirmation.value = false
+    showBlockConfirmation.value = false
+    showUnblockConfirmation.value = false
+  }
+}
+
+async function exportContactMessages() {
+  isExportingMessages.value = true
+  messageActionError.value = null
+  messageActionSuccess.value = null
+  
+  try {
+    if (!authStore.user?.uid) {
+      throw new Error("User not authenticated")
+    }
+    
+    // Create a specific key for this contact's messages
+    const contactKey = `messages_${authStore.user.uid}_${props.contact.contactUserId}`
+    
+    // Get all data from IndexedDB
+    const allData = await indexedDBService.exportAllMessages()
+    
+    // Extract only this contact's messages
+    const contactData: Record<string, any> = {}
+    if (allData[contactKey]) {
+      contactData[contactKey] = allData[contactKey]
+    }
+    
+    // Create the backup data structure
+    const backup = {
+      version: 2,
+      userId: authStore.user.uid,
+      contactId: props.contact.contactUserId,
+      timestamp: new Date().toISOString(),
+      data: contactData
+    }
+    
+    // Create a downloadable file
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `messages_${displayName.value.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    }, 100)
+    
+    messageActionSuccess.value = "Messages exported successfully"
+  } catch (error: any) {
+    messageActionError.value = error.message || "Failed to export messages"
+    console.error("Error exporting contact messages:", error)
+  } finally {
+    isExportingMessages.value = false
+  }
+}
+
+function openFileDialog() {
+  if (fileInputRef.value && !isImportingMessages.value) {
+    fileInputRef.value.click()
+  }
+}
+
+async function importContactMessages(event: Event) {
+  const fileInput = event.target as HTMLInputElement
+  if (!fileInput.files || fileInput.files.length === 0) {
+    return
+  }
+  
+  isImportingMessages.value = true
+  messageActionError.value = null
+  messageActionSuccess.value = null
+  
+  try {
+    const file = fileInput.files[0]
+    const text = await file.text()
+    const backup = JSON.parse(text)
+    
+    // Validate backup format
+    if (!backup.version || !backup.data) {
+      throw new Error("Invalid backup file format")
+    }
+    
+    // Import the messages
+    const importedCount = await indexedDBService.importMessages(backup.data)
+    
+    // Clear the file input
+    fileInput.value = ''
+    
+    // Refresh the messages display if this contact is currently active
+    if (messageStore.activeContactId === props.contact.contactUserId) {
+      await messageStore.fetchMessages(props.contact.contactUserId)
+    }
+    
+    messageActionSuccess.value = `Successfully imported ${importedCount} conversation(s)`
+  } catch (error: any) {
+    messageActionError.value = error.message || "Failed to import messages"
+    console.error("Error importing contact messages:", error)
+  } finally {
+    isImportingMessages.value = false
   }
 }
 
@@ -204,6 +353,10 @@ function formatStatusText(status: ContactStatus | string): string {
         {{ actionError }}
       </div>
 
+      <div v-if="messageActionError" class="bg-destructive/10 text-destructive p-4 rounded-md mb-4">
+        {{ messageActionError }}
+      </div>
+
       <div v-if="blockSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
         Contact blocked successfully!
       </div>
@@ -214,6 +367,10 @@ function formatStatusText(status: ContactStatus | string): string {
 
       <div v-if="removalSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
         Contact removed successfully!
+      </div>
+      
+      <div v-if="messageActionSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
+        {{ messageActionSuccess }}
       </div>
 
       <!-- Block/Unblock Confirmation -->
@@ -258,12 +415,31 @@ function formatStatusText(status: ContactStatus | string): string {
           </button>
         </div>
       </div>
+      
+      <!-- Delete Messages Confirmation -->
+      <div v-else-if="showDeleteMessagesConfirmation" class="mb-4">
+        <p class="text-white text-center mb-2">Are you sure you want to delete all messages with this contact?</p>
+        <p class="text-muted-foreground text-sm text-center mb-4">This will delete all message history with this contact from your device. This action cannot be undone.</p>
+        <div class="flex justify-center gap-4">
+          <button @click="deleteContactMessages" class="bg-red-900 hover:bg-red-800 text-white py-2 px-4 rounded-md">
+            Confirm
+          </button>
+          <button @click="showDeleteMessagesConfirmation = false"
+            class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
+            Cancel
+          </button>
+        </div>
+      </div>
 
       <!-- Loading Indicators -->
-      <div v-else-if="isRemoving || isBlocking || isUnblocking" class="flex justify-center items-center mb-4">
+      <div v-else-if="isRemoving || isBlocking || isUnblocking || isDeletingMessages || isExportingMessages || isImportingMessages" class="flex justify-center items-center mb-4">
         <div class="animate-spin w-6 h-6 border-3 border-primary border-t-transparent rounded-full"></div>
         <span class="ml-2 text-white">
-          {{ isRemoving ? 'Removing contact...' : isBlocking ? 'Blocking contact...' : 'Unblocking contact...' }}
+          {{ isRemoving ? 'Removing contact...' : 
+             isBlocking ? 'Blocking contact...' : 
+             isUnblocking ? 'Unblocking contact...' :
+             isDeletingMessages ? 'Deleting messages...' :
+             isExportingMessages ? 'Exporting messages...' : 'Importing messages...' }}
         </span>
       </div>
 
@@ -281,6 +457,45 @@ function formatStatusText(status: ContactStatus | string): string {
           <Shield class="h-5 w-5" />
           Unblock Contact
         </button>
+        
+        <!-- Message Management Section Header -->
+        <div class="border-t border-border pt-3 pb-1">
+          <h4 class="text-white text-sm font-semibold">Message Management</h4>
+        </div>
+        
+        <!-- Delete Messages Button -->
+        <button @click="deleteContactMessages" 
+          class="w-full bg-red-700 hover:bg-red-600 text-white py-3 rounded-md flex justify-center items-center gap-2">
+          <Trash2 class="h-5 w-5" />
+          Delete All Messages
+        </button>
+        
+        <!-- Export Messages Button -->
+        <button @click="exportContactMessages"
+          class="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-md flex justify-center items-center gap-2">
+          <Download class="h-5 w-5" />
+          Export Messages
+        </button>
+        
+        <!-- Import Messages Button -->
+        <button @click="openFileDialog"
+          class="w-full bg-green-700 hover:bg-green-600 text-white py-3 rounded-md flex justify-center items-center gap-2">
+          <Upload class="h-5 w-5" />
+          Import Messages
+        </button>
+        
+        <!-- Hidden file input for importing messages -->
+        <input 
+          ref="fileInputRef" 
+          type="file" 
+          accept=".json" 
+          class="hidden" 
+          @change="importContactMessages"
+        />
+        
+        <div class="border-t border-border pt-3 pb-1">
+          <h4 class="text-white text-sm font-semibold">Contact Management</h4>
+        </div>
 
         <!-- Remove Button -->
         <button @click="removeContact"
