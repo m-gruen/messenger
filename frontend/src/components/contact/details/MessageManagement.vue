@@ -18,6 +18,18 @@ const props = defineProps({
   showDeleteMessagesConfirmation: {
     type: Boolean,
     default: false
+  },
+  isDeletingMessages: {
+    type: Boolean,
+    default: false
+  },
+  isExportingMessages: {
+    type: Boolean,
+    default: false
+  },
+  isImportingMessages: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -102,18 +114,14 @@ async function exportContactMessages() {
     document.body.appendChild(a);
     a.click();
     
-    // Clean up
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 100);
-    
+    // Clean up immediately and emit success
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     emit('action-complete', 'Messages exported successfully');
+    
   } catch (error: any) {
     emit('action-error', error.message || "Failed to export messages");
     console.error("Error exporting contact messages:", error);
-  } finally {
-    emit('action-start', null);
   }
 }
 
@@ -156,8 +164,6 @@ async function importContactMessages(event: Event) {
   } catch (error: any) {
     emit('action-error', error.message || "Failed to import messages");
     console.error("Error importing contact messages:", error);
-  } finally {
-    emit('action-start', null);
   }
 }
 </script>
@@ -168,11 +174,12 @@ async function importContactMessages(event: Event) {
     <p class="text-white text-center mb-2">Are you sure you want to delete all messages with this contact?</p>
     <p class="text-muted-foreground text-sm text-center mb-4">This will delete all message history with this contact from your device. This action cannot be undone.</p>
     <div class="flex justify-center gap-4">
-      <button @click="confirmDeleteMessages" class="bg-red-900 hover:bg-red-800 text-white py-2 px-4 rounded-md">
-        Confirm
+      <button @click="confirmDeleteMessages" :disabled="isDeletingMessages" class="bg-red-900 hover:bg-red-800 disabled:opacity-50 text-white py-2 px-4 rounded-md">
+        <span v-if="isDeletingMessages">Deleting...</span>
+        <span v-else>Confirm</span>
       </button>
-      <button @click="$emit('hide-confirmations')"
-        class="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md">
+      <button @click="$emit('hide-confirmations')" :disabled="isDeletingMessages"
+        class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white py-2 px-4 rounded-md">
         Cancel
       </button>
     </div>
@@ -185,24 +192,26 @@ async function importContactMessages(event: Event) {
     </div>
     
     <!-- Delete Messages Button -->
-    <button @click="showDeleteConfirmation" 
-      class="w-full bg-red-700 hover:bg-red-600 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
+    <button @click="showDeleteConfirmation" :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
+      class="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
       <Trash2 class="h-5 w-5" />
       Delete All Messages
     </button>
     
     <!-- Export Messages Button -->
-    <button @click="exportContactMessages"
-      class="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
+    <button @click="exportContactMessages" :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
+      class="w-full bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
       <Download class="h-5 w-5" />
-      Export Messages
+      <span v-if="isExportingMessages">Exporting...</span>
+      <span v-else>Export Messages</span>
     </button>
     
     <!-- Import Messages Button -->
-    <button @click="openFileDialog"
-      class="w-full bg-green-700 hover:bg-green-600 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
+    <button @click="openFileDialog" :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
+      class="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
       <Upload class="h-5 w-5" />
-      Import Messages
+      <span v-if="isImportingMessages">Importing...</span>
+      <span v-else>Import Messages</span>
     </button>
     
     <!-- Hidden file input for importing messages -->

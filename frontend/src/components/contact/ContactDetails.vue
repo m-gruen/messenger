@@ -216,54 +216,41 @@ watch(() => props.actionError, (newVal) => {
 
     <!-- Actions Section -->
     <div class="px-4 py-6 space-y-4">
-      <!-- Error/Success Messages -->
-      <!-- Success/error messages now handled by toast system -->
+      <!-- Contact Actions Component -->
+      <ContactActions 
+        v-if="!showDeleteMessagesConfirmation"
+        :is-blocked="props.isBlocked"
+        :show-remove-confirmation="showRemoveConfirmation"
+        :show-block-confirmation="showBlockConfirmation"
+        :show-unblock-confirmation="showUnblockConfirmation"
+        :is-removing="props.isRemoving"
+        :is-blocking="props.isBlocking"
+        :is-unblocking="props.isUnblocking"
+        @remove="handleRemove"
+        @cancel-remove="handleCancelRemove"
+        @block="handleBlock"
+        @unblock="handleUnblock"
+        @show-remove-confirmation="showRemoveDialog"
+        @show-block-confirmation="showBlockDialog"
+        @show-unblock-confirmation="showUnblockDialog"
+        @hide-confirmations="hideAllDialogs"
+      />
 
-      <!-- Loading Indicators -->
-      <div v-if="props.isRemoving || props.isBlocking || props.isUnblocking || isDeletingMessages || isExportingMessages || isImportingMessages" 
-        class="flex justify-center items-center mb-4">
-        <div class="animate-spin w-6 h-6 border-3 border-primary border-t-transparent rounded-full"></div>
-        <span class="ml-2 text-white">
-          {{ props.isRemoving ? 'Removing contact...' : 
-             props.isBlocking ? 'Blocking contact...' : 
-             props.isUnblocking ? 'Unblocking contact...' :
-             isDeletingMessages ? 'Deleting messages...' :
-             isExportingMessages ? 'Exporting messages...' : 'Importing messages...' }}
-        </span>
-      </div>
-
-      <!-- Child Components (conditionally rendered based on state) -->
-      <div v-else>
-        <!-- Contact Actions Component -->
-        <ContactActions 
-          v-if="!showDeleteMessagesConfirmation"
-          :is-blocked="props.isBlocked"
-          :show-remove-confirmation="showRemoveConfirmation"
-          :show-block-confirmation="showBlockConfirmation"
-          :show-unblock-confirmation="showUnblockConfirmation"
-          @remove="handleRemove"
-          @cancel-remove="handleCancelRemove"
-          @block="handleBlock"
-          @unblock="handleUnblock"
-          @show-remove-confirmation="showRemoveDialog"
-          @show-block-confirmation="showBlockDialog"
-          @show-unblock-confirmation="showUnblockDialog"
-          @hide-confirmations="hideAllDialogs"
-        />
-
-        <!-- Message Management Component -->
-        <MessageManagement 
-          v-if="!showRemoveConfirmation && !showBlockConfirmation && !showUnblockConfirmation"
-          :contact="props.contact"
-          :display-name="user?.display_name || props.contact.display_name || props.contact.username"
-          :show-delete-messages-confirmation="showDeleteMessagesConfirmation"
-          @show-delete-confirmation="showDeleteMessagesDialog"
-          @hide-confirmations="hideAllDialogs"
-          @action-start="handleActionStart"
-          @action-complete="handleActionComplete"
-          @action-error="handleActionError"
-        />
-      </div>
+      <!-- Message Management Component -->
+      <MessageManagement 
+        v-if="!showRemoveConfirmation && !showBlockConfirmation && !showUnblockConfirmation"
+        :contact="props.contact"
+        :display-name="user?.display_name || props.contact.display_name || props.contact.username"
+        :show-delete-messages-confirmation="showDeleteMessagesConfirmation"
+        :is-deleting-messages="isDeletingMessages"
+        :is-exporting-messages="isExportingMessages"
+        :is-importing-messages="isImportingMessages"
+        @show-delete-confirmation="showDeleteMessagesDialog"
+        @hide-confirmations="hideAllDialogs"
+        @action-start="handleActionStart"
+        @action-complete="handleActionComplete"
+        @action-error="handleActionError"
+      />
     </div>
   </div>
 </template>
