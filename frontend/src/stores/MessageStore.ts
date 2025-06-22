@@ -715,6 +715,45 @@ export const useMessageStore = defineStore('messages', () => {
         return await storageService.optimizeMessageStorage(userId, contactId);
     }
 
+    // Function to forward a message to multiple recipients
+    async function forwardMessage(message: IMessage, recipientIds: number[]) {
+        // Clear any previous send errors
+        sendError.value = undefined;
+
+        if (recipientIds.length === 0) {
+            return;
+        }
+
+        try {
+            // Parse the message content
+            let contentObj = messageContentService.parseMessageContent(message.content);
+            
+            // Remove any replyTo information as we're forwarding the message
+            if (contentObj.replyTo) {
+                delete contentObj.replyTo;
+            }
+
+            // Forward to each recipient
+            const promises = recipientIds.map(async (recipientId) => {
+                try {
+                    return await sendMessage(recipientId, contentObj);
+                } catch (error) {
+                    console.error(`Error forwarding message to user ${recipientId}:`, error);
+                    throw error;
+                }
+            });
+
+            // Wait for all messages to be sent
+            await Promise.all(promises);
+            
+            return true;
+        } catch (error) {
+            console.error('Error forwarding message:', error);
+            sendError.value = error instanceof Error ? error.message : 'Failed to forward message';
+            return false;
+        }
+    }
+
     return {
         messages,
         isLoading,
@@ -735,6 +774,7 @@ export const useMessageStore = defineStore('messages', () => {
         totalMessagePages,
         currentMessagePage,
         optimizeMessageStorage,
-        deleteLocalMessage
+        deleteLocalMessage,
+        forwardMessage
     };
 });
