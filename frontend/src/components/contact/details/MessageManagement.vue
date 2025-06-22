@@ -221,16 +221,23 @@ async function importContactMessages(event: Event) {
 
 <template>
   <!-- Delete Messages Confirmation -->
-  <div v-if="showDeleteMessagesConfirmation" class="mb-4">
+  <div v-if="showDeleteMessagesConfirmation" class="mb-4 p-4 rounded-lg bg-slate-800/50 border border-slate-700/50">
     <p class="text-white text-center mb-2">Are you sure you want to delete all messages with this contact?</p>
-    <p class="text-muted-foreground text-sm text-center mb-4">This will delete all message history with this contact from your device. This action cannot be undone.</p>
+    <p class="text-indigo-200/70 text-sm text-center mb-4">This will delete all message history with this contact from your device. This action cannot be undone.</p>
     <div class="flex justify-center gap-4">
-      <button @click="confirmDeleteMessages" :disabled="isDeletingMessages" class="bg-red-900 hover:bg-red-800 disabled:opacity-50 text-white py-2 px-4 rounded-md">
+      <button 
+        @click="confirmDeleteMessages" 
+        :disabled="isDeletingMessages" 
+        class="bg-gradient-to-r from-rose-800 to-red-900 hover:from-rose-700 hover:to-red-800 disabled:opacity-50 text-white py-2 px-6 rounded-md shadow-sm transition-all duration-200"
+      >
         <span v-if="isDeletingMessages">Deleting...</span>
         <span v-else>Confirm</span>
       </button>
-      <button @click="$emit('hide-confirmations')" :disabled="isDeletingMessages"
-        class="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white py-2 px-4 rounded-md">
+      <button 
+        @click="$emit('hide-confirmations')" 
+        :disabled="isDeletingMessages"
+        class="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-slate-200 py-2 px-6 rounded-md shadow-sm transition-all"
+      >
         Cancel
       </button>
     </div>
@@ -238,63 +245,83 @@ async function importContactMessages(event: Event) {
   
   <!-- Message Management Buttons -->
   <div v-else>
-    <div class="border-t border-border pt-3 pb-1 mb-4">
-      <h4 class="text-white text-sm font-semibold">Message Storage</h4>
+    <div class="border-t border-indigo-900/30 pt-3 pb-2 mb-4">
+      <h4 class="text-indigo-100 text-sm font-medium">Message Storage</h4>
     </div>
     
     <!-- Storage Usage Overview -->
-    <div class="bg-card/30 rounded-lg border border-border/50 p-3 mb-4">
-      <div class="flex items-center gap-2 mb-2">
-        <HardDrive class="h-4 w-4 text-muted-foreground" />
-        <h4 class="text-white text-sm font-semibold">Storage Usage</h4>
+    <div class="bg-gradient-to-r from-slate-800/70 to-slate-900/70 rounded-lg border border-indigo-900/30 p-4 mb-5 shadow-sm">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="bg-indigo-900/30 p-1.5 rounded-md">
+          <HardDrive class="h-4 w-4 text-indigo-300" />
+        </div>
+        <h4 class="text-indigo-100 text-sm font-medium">Storage Usage</h4>
       </div>
       
       <div v-if="storageUsage.isLoading" class="flex items-center justify-center py-4">
-        <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
-        <span class="ml-2 text-sm text-muted-foreground">Loading...</span>
+        <div class="animate-spin rounded-full h-5 w-5 border-2 border-indigo-500 border-t-transparent"></div>
+        <span class="ml-2 text-sm text-indigo-300/70">Loading...</span>
       </div>
       
-      <div v-else class="space-y-2">
+      <div v-else class="space-y-2.5">
         <div class="flex items-center justify-between text-sm">
-          <span class="text-muted-foreground">Storage Used:</span>
-          <span class="text-white font-medium">{{ formatBytes(storageUsage.bytesUsed) }}</span>
+          <span class="text-indigo-300/70">Storage Used:</span>
+          <span class="text-white font-medium bg-indigo-900/30 px-2 py-0.5 rounded-md">{{ formatBytes(storageUsage.bytesUsed) }}</span>
         </div>
         <div class="flex items-center justify-between text-sm">
-          <span class="text-muted-foreground">Messages:</span>
-          <span class="text-white font-medium">{{ storageUsage.messagesCount.toLocaleString() }}</span>
+          <span class="text-indigo-300/70">Messages:</span>
+          <span class="text-white font-medium bg-indigo-900/30 px-2 py-0.5 rounded-md">{{ storageUsage.messagesCount.toLocaleString() }}</span>
         </div>
-        <div v-if="storageUsage.messagesCount === 0" class="text-xs text-muted-foreground text-center py-1">
+        <div v-if="storageUsage.messagesCount === 0" class="text-xs text-indigo-300/50 text-center py-1 rounded-md bg-indigo-900/20 mt-1">
           No messages stored for this contact
         </div>
       </div>
     </div>
     
-    <div class="border-t border-border pt-3 pb-1">
-      <h4 class="text-white text-sm font-semibold">Message Management</h4>
+    <div class="border-t border-indigo-900/30 pt-3 pb-2">
+      <h4 class="text-indigo-100 text-sm font-medium">Message Management</h4>
     </div>
     
     <!-- Delete Messages Button -->
-    <button @click="showDeleteConfirmation" :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
-      class="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
-      <Trash2 class="h-5 w-5" />
-      Delete All Messages
-    </button>
+    <div class="relative group mt-3">
+      <div class="absolute inset-0 bg-gradient-to-r from-rose-700/20 to-red-800/20 rounded-md blur opacity-70 group-hover:opacity-100 transition duration-200"></div>
+      <button 
+        @click="showDeleteConfirmation" 
+        :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
+        class="relative w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-750 hover:to-slate-850 border border-rose-800/50 disabled:opacity-50 text-rose-100 py-3 rounded-md flex justify-center items-center gap-2 shadow-sm transition-all"
+      >
+        <Trash2 class="h-5 w-5" />
+        Delete All Messages
+      </button>
+    </div>
     
     <!-- Export Messages Button -->
-    <button @click="exportContactMessages" :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
-      class="w-full bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
-      <Download class="h-5 w-5" />
-      <span v-if="isExportingMessages">Exporting...</span>
-      <span v-else>Export Messages</span>
-    </button>
+    <div class="relative group mt-3">
+      <div class="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-indigo-700/20 rounded-md blur opacity-70 group-hover:opacity-100 transition duration-200"></div>
+      <button 
+        @click="exportContactMessages" 
+        :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
+        class="relative w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-750 hover:to-slate-850 border border-blue-700/50 disabled:opacity-50 text-blue-100 py-3 rounded-md flex justify-center items-center gap-2 shadow-sm transition-all"
+      >
+        <Download class="h-5 w-5" />
+        <span v-if="isExportingMessages">Exporting...</span>
+        <span v-else>Export Messages</span>
+      </button>
+    </div>
     
     <!-- Import Messages Button -->
-    <button @click="openFileDialog" :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
-      class="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-md flex justify-center items-center gap-2 mt-3">
-      <Upload class="h-5 w-5" />
-      <span v-if="isImportingMessages">Importing...</span>
-      <span v-else>Import Messages</span>
-    </button>
+    <div class="relative group mt-3">
+      <div class="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-green-700/20 rounded-md blur opacity-70 group-hover:opacity-100 transition duration-200"></div>
+      <button 
+        @click="openFileDialog" 
+        :disabled="isDeletingMessages || isExportingMessages || isImportingMessages"
+        class="relative w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-750 hover:to-slate-850 border border-emerald-700/50 disabled:opacity-50 text-emerald-100 py-3 rounded-md flex justify-center items-center gap-2 shadow-sm transition-all"
+      >
+        <Upload class="h-5 w-5" />
+        <span v-if="isImportingMessages">Importing...</span>
+        <span v-else>Import Messages</span>
+      </button>
+    </div>
     
     <!-- Hidden file input for importing messages -->
     <input 

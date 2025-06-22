@@ -22,17 +22,17 @@ const profilePicture = computed(() => props.user?.profile_picture || null);
 function getStatusColorClass(status: ContactStatus | string): string {
   switch (status) {
     case ContactStatus.ACCEPTED:
-      return 'bg-green-500';
+      return 'bg-emerald-500';
     case ContactStatus.INCOMING_REQUEST:
     case ContactStatus.OUTGOING_REQUEST:
-      return 'bg-yellow-500';
+      return 'bg-amber-400';
     case ContactStatus.REJECTED:
     case ContactStatus.BLOCKED:
-      return 'bg-red-500';
+      return 'bg-rose-500';
     case ContactStatus.DELETED:
-      return 'bg-gray-500';
+      return 'bg-slate-500';
     default:
-      return 'bg-blue-500';
+      return 'bg-indigo-500';
   }
 }
 
@@ -55,30 +55,34 @@ function formatStatusText(status: ContactStatus | string): string {
 </script>
 
 <template>
-  <div class="flex flex-col items-center py-6 px-4">
-    <!-- Avatar Circle -->
-    <div
-      class="w-32 h-32 rounded-full bg-white flex items-center justify-center text-black text-6xl font-medium mb-4 overflow-hidden">
-      <template v-if="profilePicture">
-        <img :src="'data:image/jpeg;base64,' + profilePicture" class="w-32 h-32 object-cover rounded-full" alt="Profile Picture" />
-      </template>
-      <template v-else>
-        {{ displayName.charAt(0).toUpperCase() }}
-      </template>
+  <div class="flex flex-col items-center py-7 px-4">
+    <!-- Avatar Circle with Gradient Border -->
+    <div class="relative">
+      <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-full blur opacity-50"></div>
+      <div class="relative w-32 h-32 rounded-full bg-gradient-to-br from-indigo-950 to-slate-800 flex items-center justify-center text-indigo-100 text-6xl font-medium overflow-hidden border-2 border-indigo-500/30">
+        <template v-if="profilePicture">
+          <img :src="'data:image/jpeg;base64,' + profilePicture" class="w-32 h-32 object-cover" alt="Profile Picture" />
+        </template>
+        <template v-else>
+          {{ displayName.charAt(0).toUpperCase() }}
+        </template>
+      </div>
     </div>
 
     <!-- Username and Display Name -->
-    <h3 class="text-2xl font-medium text-white mt-2">{{ displayName }}</h3>
-    <p class="text-sm text-muted-foreground mt-1" v-if="user?.username || contact.display_name">@{{ user?.username || contact.username }}</p>
+    <div class="mt-5 text-center">
+      <h3 class="text-2xl font-medium text-white">{{ displayName }}</h3>
+      <p class="text-sm text-indigo-300/80 mt-1" v-if="user?.username || contact.display_name">@{{ user?.username || contact.username }}</p>
+    </div>
 
-    <!-- Status -->
-    <div class="mt-2 flex items-center">
-      <span class="inline-flex h-3 w-3 rounded-full mr-2" :class="getStatusColorClass(contact.status)"></span>
-      <span class="text-white">{{ formatStatusText(contact.status) }}</span>
+    <!-- Status with glowing indicator -->
+    <div class="mt-3 flex items-center justify-center px-4 py-1 rounded-full bg-slate-800/50 border border-slate-700/50">
+      <span class="inline-flex h-3 w-3 rounded-full mr-2 shadow-glow" :class="getStatusColorClass(contact.status)"></span>
+      <span class="text-indigo-100">{{ formatStatusText(contact.status) }}</span>
     </div>
 
     <!-- Added Date -->
-    <p class="text-muted-foreground text-sm mt-4">
+    <p class="text-indigo-300/50 text-sm mt-4">
       Added: {{ DateFormatService.formatCreationDate(contact.createdAt) }}
     </p>
   </div>

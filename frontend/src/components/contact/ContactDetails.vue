@@ -196,23 +196,23 @@ watch(() => props.actionError, (newVal) => {
 
 <template>
   <div v-if="show"
-    class="fixed top-0 right-0 bottom-0 z-10 w-80 bg-black overflow-y-auto transform transition-all duration-300 ease-in-out shadow-xl">
+    class="fixed top-0 right-0 bottom-0 z-10 w-80 bg-slate-900 overflow-y-auto transform transition-all duration-300 ease-in-out shadow-xl">
     <!-- Header with Close Button -->
-    <div class="p-4 border-b border-border">
+    <div class="p-4 border-b border-border/20 bg-gradient-to-r from-slate-900 to-slate-800">
       <div class="flex items-center justify-between">
         <h2 class="text-2xl font-semibold text-white">Contact Details</h2>
-        <button @click="emit('close')" class="rounded-full p-1 hover:bg-accent/20">
+        <button @click="emit('close')" class="rounded-full p-1.5 hover:bg-slate-700/50 transition-colors">
           <X class="h-6 w-6 text-white" />
         </button>
       </div>
-      <p class="text-sm text-muted-foreground mt-1">View and manage contact details</p>
+      <p class="text-sm text-indigo-200/70 mt-1">View and manage contact details</p>
     </div>
 
     <!-- Contact Info Component -->
     <ContactInfo :contact="props.contact" :user="user" />
 
     <!-- Divider -->
-    <div class="border-t border-border mx-4 my-2"></div>
+    <div class="border-t border-indigo-900/30 mx-4 my-2"></div>
 
     <!-- Actions Section -->
     <div class="px-4 py-6 space-y-4">

@@ -138,3 +138,8 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Add shadow glow effect for status indicators */
+.shadow-glow {
+  box-shadow: 0 0 8px currentColor;
+}
