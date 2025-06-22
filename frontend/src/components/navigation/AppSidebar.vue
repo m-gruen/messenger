@@ -126,13 +126,23 @@ function closeChat() {
   showChat.value = false
   selectedContact.value = null
 }
+
+function closeAllPanels() {
+  // Close all panels and chat
+  showContacts.value = false
+  showRequests.value = false
+  showSearch.value = false
+  showUserSettings.value = false
+  closeChat()
+}
 </script>
 
 <template>
   <div class="flex">
     <!-- Left Sidebar Navigation -->
     <SidebarNavigation :collapsed="sidebarCollapsed" @toggle-collapsed="toggleSidebar" @toggle-contacts="toggleContacts"
-      @toggle-requests="toggleRequests" @toggle-search="toggleSearch" @toggle-settings="toggleUserSettings" />
+      @toggle-requests="toggleRequests" @toggle-search="toggleSearch" @toggle-settings="toggleUserSettings" 
+      @home-clicked="closeAllPanels" />
 
     <!-- Contacts List Panel -->
     <div v-if="showContacts"

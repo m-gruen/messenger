@@ -1,21 +1,25 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, onMounted } from 'vue'
+import { defineEmits, ref, onMounted } from 'vue'
 import { Home, Search, Settings, ChevronRight, ChevronLeft, UserPlus, MessageCircle } from "lucide-vue-next"
 
-const props = defineProps({
+// Define props directly with defineProps (no need to assign to a variable)
+defineProps({
   collapsed: {
     type: Boolean,
     default: false
   }
 })
 
-const emit = defineEmits(['toggle-collapsed', 'toggle-contacts', 'toggle-requests', 'toggle-search', 'toggle-settings'])
+const emit = defineEmits(['toggle-collapsed', 'toggle-contacts', 'toggle-requests', 'toggle-search', 'toggle-settings', 'home-clicked'])
 
 // Track which item is active
 const activeItem = ref('')
 
 const items = [
-  { id: 'home', title: "Home", url: "#", icon: Home },
+  { id: 'home', title: "Home", url: "#", icon: Home, action: () => {
+    activeItem.value = 'home'
+    emit('home-clicked')
+  }},
   { id: 'contacts', title: "Contacts", url: "#", icon: MessageCircle, action: () => {
     activeItem.value = 'contacts'
     emit('toggle-contacts')
