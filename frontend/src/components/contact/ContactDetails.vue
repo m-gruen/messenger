@@ -3,7 +3,6 @@ import { ref, onMounted, watch } from 'vue';
 import { X } from "lucide-vue-next";
 import type { Contact } from '@/models/contact-model';
 import { useAuthStore } from '@/stores/AuthStore';
-import { useMessageStore } from '@/stores/MessageStore';
 import { apiService } from '@/services/api.service';
 import type { User } from '@/models/user-model';
 
@@ -59,7 +58,6 @@ const emit = defineEmits(['close', 'remove', 'cancel-remove', 'block', 'unblock'
 
 // State
 const authStore = useAuthStore();
-const messageStore = useMessageStore();
 const user = ref<User | null>(null);
 
 // Confirmation dialogs state
