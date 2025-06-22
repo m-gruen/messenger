@@ -16,10 +16,6 @@
       <p>Searching...</p>
     </div>
     
-    <div v-else-if="error" class="search-error">
-      <p>{{ error }}</p>
-    </div>
-    
     <div v-else-if="searchResults.length > 0" class="search-results">
       <div v-for="user in searchResults" :key="user.uid" class="search-result-item">
         <div class="flex items-center gap-3">
@@ -64,11 +60,13 @@ import { useAuthStore } from '@/stores/AuthStore';
 import { useContactStore } from '@/stores/ContactStore';
 import { ContactStatus } from '@/models/contact-model';
 import type { User } from '@/models/user-model';
+import { useToast } from '@/composables/useToast';
 
 const authStore = useAuthStore();
 const contactStore = useContactStore();
 const currentUserId = computed(() => authStore.user?.uid || 0);
 const token = computed(() => authStore.user?.token || '');
+const { showError, showSuccess, showInfo } = useToast();
 
 const searchQuery = ref('');
 const searchResults = ref<User[]>([]);
@@ -85,7 +83,7 @@ onMounted(async () => {
 
 async function handleSearch() {
   if (!searchQuery.value.trim()) {
-    error.value = "Please enter a search term";
+    showError("Please enter a search term");
     return;
   }
   
@@ -98,7 +96,9 @@ async function handleSearch() {
     // Filter out the current user from results
     searchResults.value = searchResults.value.filter(user => user.uid !== currentUserId.value);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to search users';
+    const errorMessage = err instanceof Error ? err.message : 'Failed to search users';
+    error.value = errorMessage; // Keep for display in template
+    showError(errorMessage);
     console.error('Error searching users:', err);
   } finally {
     loading.value = false;
@@ -131,7 +131,7 @@ async function handleUserAction(userId: number) {
 
 async function addNewContact(userId: number) {
   if (!currentUserId.value) {
-    error.value = 'You must be logged in to add contacts';
+    showError('You must be logged in to add contacts');
     return;
   }
   
@@ -143,8 +143,10 @@ async function addNewContact(userId: number) {
     }
     
     await contactStore.addContact(userId, user.username);
+    showSuccess(`Contact request sent to ${user.username}`);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to add contact';
+    const errorMessage = err instanceof Error ? err.message : 'Failed to add contact';
+    showError(errorMessage);
     console.error('Error adding contact:', err);
   } finally {
     setPendingOperation(userId, false);
@@ -155,8 +157,10 @@ async function acceptIncomingRequest(userId: number) {
   try {
     setPendingOperation(userId, true);
     await contactStore.acceptContactRequest(userId);
+    showSuccess('Contact request accepted');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to accept request';
+    const errorMessage = err instanceof Error ? err.message : 'Failed to accept request';
+    showError(errorMessage);
     console.error('Error accepting request:', err);
   } finally {
     setPendingOperation(userId, false);
@@ -167,8 +171,10 @@ async function cancelOutgoingRequest(userId: number) {
   try {
     setPendingOperation(userId, true);
     await contactStore.cancelOutgoingRequest(userId);
+    showInfo('Contact request cancelled');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to cancel request';
+    const errorMessage = err instanceof Error ? err.message : 'Failed to cancel request';
+    showError(errorMessage);
     console.error('Error canceling request:', err);
   } finally {
     setPendingOperation(userId, false);

@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import type { IImageMessageContent, IDocumentMessageContent, IAudioMessageContent, ICodeMessageContent } from '@/models/message-model'
 
+// Using the more generic notification handler to maintain compatibility with both old and new systems
 export function useFileHandler(showNotification: (message: string, type: string) => void) {
     const isUploading = ref(false)
 

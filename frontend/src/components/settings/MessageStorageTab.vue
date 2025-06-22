@@ -6,14 +6,14 @@ import { indexedDBService } from '@/services/indexeddb.service';
 import { useMessageStore } from '@/stores/MessageStore';
 import { useContactStore } from '@/stores/ContactStore';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
+import { useToast } from '@/composables/useToast';
 
 const UserId = storageService.getUser()!.uid;
 const messageStore = useMessageStore();
 const contactStore = useContactStore();
+const { showToast, showError, showSuccess, showInfo } = useToast();
 
 // UI state
-const updateError = ref<string | null>(null);
-const updateSuccess = ref<string | null>(null);
 const showClearMessagesConfirmation = ref(false);
 const isDownloadingMessages = ref(false);
 const isDeletingMessages = ref(false);
@@ -91,7 +91,6 @@ async function backupMessages() {
     if (isDownloadingMessages.value) return;
 
     isDownloadingMessages.value = true;
-    updateError.value = null;
 
     try {
         // First make sure we have all messages from the server
@@ -123,12 +122,13 @@ async function backupMessages() {
             URL.revokeObjectURL(url);
         }, 100);
 
-        updateSuccess.value = "Messages backed up successfully";
+        showSuccess("Messages backed up successfully");
         
         // Refresh storage usage
         await loadStorageUsage();
     } catch (error: any) {
-        updateError.value = error.message || "Failed to backup messages";
+        const errorMsg = error.message || "Failed to backup messages";
+        showError(errorMsg);
     } finally {
         isDownloadingMessages.value = false;
     }
@@ -151,7 +151,6 @@ async function restoreMessages(event: Event) {
     console.log('File selected:', fileInput.files[0].name);
 
     isDownloadingMessages.value = true;
-    updateError.value = null;
 
     try {
         const file = fileInput.files[0];
@@ -182,7 +181,8 @@ async function restoreMessages(event: Event) {
             restoredCount = await indexedDBService.importMessages(backup.data);
         }
 
-        updateSuccess.value = `Successfully restored backup with ${restoredCount} conversation(s)`;
+        const successMsg = `Successfully restored backup with ${restoredCount} conversation(s)`;
+        showSuccess(successMsg);
 
         // Reset the file input
         fileInput.value = '';
@@ -190,7 +190,8 @@ async function restoreMessages(event: Event) {
         // Refresh storage usage
         await loadStorageUsage();
     } catch (error: any) {
-        updateError.value = error.message || "Failed to restore backup";
+        const errorMsg = error.message || "Failed to restore backup";
+        showError(errorMsg);
     } finally {
         isDownloadingMessages.value = false;
     }
@@ -201,19 +202,19 @@ async function clearLocalMessages() {
     if (isDeletingMessages.value) return;
 
     isDeletingMessages.value = true;
-    updateError.value = null;
     showClearMessagesConfirmation.value = false;
 
     try {
         // Use our deleteAllMessages method from the MessageStore
         await messageStore.deleteAllMessages();
 
-        updateSuccess.value = "All local messages deleted successfully";
+        showSuccess("All local messages deleted successfully");
         
         // Refresh storage usage
         await loadStorageUsage();
     } catch (error: any) {
-        updateError.value = error.message || "Failed to delete messages";
+        const errorMsg = error.message || "Failed to delete messages";
+        showError(errorMsg);
     } finally {
         isDeletingMessages.value = false;
     }
@@ -234,14 +235,7 @@ onMounted(async () => {
 
         <!-- Main content -->
         <div class="bg-card rounded-lg shadow-md">
-            <!-- Error/Success Messages -->
-            <div v-if="updateError" class="p-4 bg-destructive/10 text-destructive border-l-4 border-destructive">
-                {{ updateError }}
-            </div>
-            <div v-if="updateSuccess"
-                class="p-4 bg-green-100 dark:bg-green-900/10 text-green-800 dark:text-green-400 border-l-4 border-green-500">
-                {{ updateSuccess }}
-            </div>
+            <!-- Error/Success Messages are now handled by the toast system -->
 
             <div class="p-6">
                 <h2 class="text-xl font-medium mb-4">MESSAGE STORAGE</h2>

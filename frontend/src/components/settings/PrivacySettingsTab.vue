@@ -3,10 +3,12 @@ import { ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { storageService } from '@/services/storage.service';
 import { apiService } from '@/services/api.service';
+import { useToast } from '@/composables/useToast';
 
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
+const { showToast, showError, showSuccess, showInfo } = useToast();
 
 // Form fields
 const shadowMode = ref(user.value?.shadow_mode || false);
@@ -14,8 +16,6 @@ const fullNameSearch = ref(user.value?.full_name_search || false);
 
 // UI state
 const isUpdating = ref(false);
-const updateError = ref<string | null>(null);
-const updateSuccess = ref<string | null>(null);
 
 // Track original values to detect changes
 const originalValues = ref({
@@ -45,8 +45,6 @@ watch(user, (newUser) => {
 async function updatePrivacySettings(): Promise<void> {
   try {
     isUpdating.value = true;
-    updateError.value = null;
-    updateSuccess.value = null;
 
     // Handle other profile updates
     if (hasUnsavedChanges.value) {
@@ -74,19 +72,19 @@ async function updatePrivacySettings(): Promise<void> {
           fullNameSearch: updatedUser.full_name_search || false,
         };
 
-        updateSuccess.value = "Privacy settings updated successfully";
+        showSuccess("Privacy settings updated successfully");
       } catch (error: any) {
-        updateError.value = error.message || "Failed to update privacy settings";
+        showError(error.message || "Failed to update privacy settings");
         isUpdating.value = false;
         return;
       }
-    } else if (!updateSuccess.value) {
-      updateSuccess.value = "No changes to update";
+    } else {
+      showInfo("No changes to update");
     }
 
     isUpdating.value = false;
   } catch (error: any) {
-    updateError.value = error.message || "An unexpected error occurred";
+    showError(error.message || "An unexpected error occurred");
     isUpdating.value = false;
   }
 }
@@ -94,8 +92,6 @@ async function updatePrivacySettings(): Promise<void> {
 function resetForm() {
   shadowMode.value = originalValues.value.shadowMode;
   fullNameSearch.value = originalValues.value.fullNameSearch;
-  updateError.value = null;
-  updateSuccess.value = null;
 }
 
 </script>
@@ -104,15 +100,7 @@ function resetForm() {
   <div>
     <!-- Main content -->
     <div class="bg-card rounded-lg shadow-md">
-      <!-- Error/Success Messages -->
-      <div v-if="updateError"
-        class="p-4 bg-destructive/10 text-destructive border-l-4 border-destructive">
-        {{ updateError }}
-      </div>
-      <div v-if="updateSuccess"
-        class="p-4 bg-green-100 dark:bg-green-900/10 text-green-800 dark:text-green-400 border-l-4 border-green-500">
-        {{ updateSuccess }}
-      </div>
+      <!-- Error/Success Messages are now handled by the toast system -->
 
       <!-- Privacy Settings Section -->
       <div class="p-6 border-b dark:border-gray-700">

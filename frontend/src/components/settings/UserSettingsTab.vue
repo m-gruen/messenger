@@ -7,12 +7,14 @@ import { apiService } from '@/services/api.service';
 import { useRouter } from 'vue-router';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useMessageStore } from '@/stores/MessageStore';
+import { useToast } from '@/composables/useToast';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
 const messageStore = useMessageStore();
+const { showToast, showError, showSuccess, showInfo } = useToast();
 
 // Form fields
 const username = ref(user.value?.username || '');
@@ -24,8 +26,6 @@ const confirmPassword = ref('');
 // UI state
 const isUpdating = ref(false);
 const isDeleting = ref(false);
-const updateError = ref<string | null>(null);
-const updateSuccess = ref<string | null>(null);
 const isEditingUsername = ref(false);
 const isEditingDisplayName = ref(false);
 const showPasswordModal = ref(false);
@@ -94,8 +94,6 @@ function resetForm() {
     currentPassword.value = '';
     newPassword.value = '';
     confirmPassword.value = '';
-    updateError.value = null;
-    updateSuccess.value = null;
     isEditingUsername.value = false;
     isEditingDisplayName.value = false;
     showPasswordModal.value = false;
@@ -127,8 +125,6 @@ watch(user, (newUser) => {
 async function updateProfile(): Promise<void> {
     try {
         isUpdating.value = true;
-        updateError.value = null;
-        updateSuccess.value = null;
         const userData: any = {};
         if (username.value && username.value !== user.value?.username) {
             userData.username = username.value;
@@ -145,7 +141,7 @@ async function updateProfile(): Promise<void> {
             userData.profilePicture = null;
         }
         if (Object.keys(userData).length === 0) {
-            updateSuccess.value = 'No changes to update';
+            showInfo('No changes to update');
             isUpdating.value = false;
             return;
         }
@@ -161,9 +157,9 @@ async function updateProfile(): Promise<void> {
                 username: updatedUser.username || '',
                 displayName: updatedUser.display_name || '',
             };
-            updateSuccess.value = 'Profile updated successfully';
+            showSuccess('Profile updated successfully');
         } catch (error: any) {
-            updateError.value = error.message || 'Failed to update profile';
+            showError(error.message || 'Failed to update profile');
             isUpdating.value = false;
             return;
         }
@@ -171,7 +167,7 @@ async function updateProfile(): Promise<void> {
         isEditingUsername.value = false;
         isEditingDisplayName.value = false;
     } catch (error: any) {
-        updateError.value = error.message || 'An unexpected error occurred';
+        showError(error.message || 'An unexpected error occurred');
         isUpdating.value = false;
     }
 }
@@ -179,17 +175,16 @@ async function updateProfile(): Promise<void> {
 async function updatePassword(): Promise<void> {
     try {
         if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-            updateError.value = "All password fields are required";
+            showError("All password fields are required");
             return;
         }
 
         if (newPassword.value !== confirmPassword.value) {
-            updateError.value = "New passwords don't match";
+            showError("New passwords don't match");
             return;
         }
 
         isUpdating.value = true;
-        updateError.value = null;
 
         try {
             const passwordResponse = await apiService.updatePassword(
@@ -208,15 +203,15 @@ async function updatePassword(): Promise<void> {
             newPassword.value = '';
             confirmPassword.value = '';
 
-            updateSuccess.value = "Password updated successfully";
+            showSuccess("Password updated successfully");
             showPasswordModal.value = false;
         } catch (error: any) {
-            updateError.value = error.message || "Failed to update password. Current password may be incorrect.";
+            showError(error.message || "Failed to update password. Current password may be incorrect.");
         } finally {
             isUpdating.value = false;
         }
     } catch (error: any) {
-        updateError.value = error.message || "An unexpected error occurred";
+        showError(error.message || "An unexpected error occurred");
         isUpdating.value = false;
     }
 }
@@ -224,13 +219,12 @@ async function updatePassword(): Promise<void> {
 async function deleteUserAccount(): Promise<void> {
     try {
         isDeleting.value = true;
-        updateError.value = null;
         showDeleteConfirmation.value = false;
 
         try {
             await apiService.deleteUser(UserId, token);
 
-            updateSuccess.value = "Account deleted successfully. Redirecting...";
+            showSuccess("Account deleted successfully. Redirecting...");
 
             // Use setTimeout to allow the user to see the success message
             setTimeout(() => {
@@ -244,11 +238,11 @@ async function deleteUserAccount(): Promise<void> {
                 router.push({ name: 'login' });
             }, 1500);
         } catch (error: any) {
-            updateError.value = error.message || "Failed to delete account";
+            showError(error.message || "Failed to delete account");
             isDeleting.value = false;
         }
     } catch (error: any) {
-        updateError.value = error.message || "An unexpected error occurred";
+        showError(error.message || "An unexpected error occurred");
         isDeleting.value = false;
     }
 }
@@ -286,11 +280,11 @@ function handlePictureChange(event: Event) {
     if (!input.files || !input.files.length) return;
     const file = input.files[0];
     if (!file.type.startsWith('image/')) {
-        updateError.value = 'Please select an image file';
+        showError('Please select an image file');
         return;
     }
     if (file.size > 5 * 1024 * 1024) {
-        updateError.value = 'Image size should not exceed 5MB';
+        showError('Image size should not exceed 5MB');
         return;
     }
     isUploadingPicture.value = true;
@@ -299,7 +293,7 @@ function handlePictureChange(event: Event) {
             profilePicturePreview.value = dataUrl;
         })
         .catch(() => {
-            updateError.value = 'Failed to process image. Try a smaller image.';
+            showError('Failed to process image. Try a smaller image.');
         })
         .finally(() => {
             isUploadingPicture.value = false;
@@ -373,11 +367,7 @@ function compressImage(file: File): Promise<string> {
                     <p class="text-muted-foreground text-center mb-6">Enter your current password and a new password.
                     </p>
 
-                    <!-- Error message -->
-                    <div v-if="updateError"
-                        class="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm border-l-4 border-destructive">
-                        {{ updateError }}
-                    </div>
+                    <!-- Error messages are now handled by the toast system -->
 
                     <form @submit.prevent="updatePassword" class="space-y-4">
                         <div>
@@ -421,14 +411,6 @@ function compressImage(file: File): Promise<string> {
 
         <!-- Main content -->
         <div class="bg-card rounded-lg shadow-md">
-            <!-- Error/Success Messages -->
-            <div v-if="updateError" class="p-4 bg-destructive/10 text-destructive border-l-4 border-destructive">
-                {{ updateError }}
-            </div>
-            <div v-if="updateSuccess"
-                class="p-4 bg-green-100 dark:bg-green-900/10 text-green-800 dark:text-green-400 border-l-4 border-green-500">
-                {{ updateSuccess }}
-            </div>
 
             <!-- User Profile Header -->
             <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">

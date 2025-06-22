@@ -5,6 +5,7 @@ import type { Contact } from '@/models/contact-model';
 import { useAuthStore } from '@/stores/AuthStore';
 import { apiService } from '@/services/api.service';
 import type { User } from '@/models/user-model';
+import { useToast } from '@/composables/useToast';
 
 // Import child components
 import ContactInfo from './details/ContactInfo.vue';
@@ -59,6 +60,7 @@ const emit = defineEmits(['close', 'remove', 'cancel-remove', 'block', 'unblock'
 // State
 const authStore = useAuthStore();
 const user = ref<User | null>(null);
+const { showToast, showError, showSuccess, showInfo } = useToast();
 
 // Confirmation dialogs state
 const showRemoveConfirmation = ref(false);
@@ -70,8 +72,6 @@ const showDeleteMessagesConfirmation = ref(false);
 const isDeletingMessages = ref(false);
 const isExportingMessages = ref(false);
 const isImportingMessages = ref(false);
-const messageActionSuccess = ref<string | null>(null);
-const messageActionError = ref<string | null>(null);
 
 // Fetch contact user data
 async function fetchContactUser() {
@@ -144,9 +144,6 @@ function hideOtherDialogs(except: string) {
 
 // Handle message action events
 function handleActionStart(action: string | null) {
-  messageActionSuccess.value = null;
-  messageActionError.value = null;
-  
   if (action === 'delete') isDeletingMessages.value = true;
   else if (action === 'export') isExportingMessages.value = true;
   else if (action === 'import') isImportingMessages.value = true;
@@ -158,18 +155,43 @@ function handleActionStart(action: string | null) {
 }
 
 function handleActionComplete(message: string) {
-  messageActionSuccess.value = message;
+  showSuccess(message);
   isDeletingMessages.value = false;
   isExportingMessages.value = false;
   isImportingMessages.value = false;
 }
 
 function handleActionError(error: string) {
-  messageActionError.value = error;
+  showError(error);
   isDeletingMessages.value = false;
   isExportingMessages.value = false;
   isImportingMessages.value = false;
 }
+
+// Watch for changes in action state props and show toast messages accordingly
+watch(() => props.blockSuccess, (newVal) => {
+  if (newVal) {
+    showSuccess('Contact blocked successfully!');
+  }
+});
+
+watch(() => props.unblockSuccess, (newVal) => {
+  if (newVal) {
+    showSuccess('Contact unblocked successfully!');
+  }
+});
+
+watch(() => props.removalSuccess, (newVal) => {
+  if (newVal) {
+    showSuccess('Contact removed successfully!');
+  }
+});
+
+watch(() => props.actionError, (newVal) => {
+  if (newVal) {
+    showError(newVal);
+  }
+});
 </script>
 
 <template>
@@ -195,29 +217,7 @@ function handleActionError(error: string) {
     <!-- Actions Section -->
     <div class="px-4 py-6 space-y-4">
       <!-- Error/Success Messages -->
-      <div v-if="props.actionError" class="bg-destructive/10 text-destructive p-4 rounded-md mb-4">
-        {{ props.actionError }}
-      </div>
-
-      <div v-if="messageActionError" class="bg-destructive/10 text-destructive p-4 rounded-md mb-4">
-        {{ messageActionError }}
-      </div>
-
-      <div v-if="props.blockSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
-        Contact blocked successfully!
-      </div>
-
-      <div v-if="props.unblockSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
-        Contact unblocked successfully!
-      </div>
-
-      <div v-if="props.removalSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
-        Contact removed successfully!
-      </div>
-      
-      <div v-if="messageActionSuccess" class="bg-success/10 text-green-500 p-4 rounded-md mb-4">
-        {{ messageActionSuccess }}
-      </div>
+      <!-- Success/error messages now handled by toast system -->
 
       <!-- Loading Indicators -->
       <div v-if="props.isRemoving || props.isBlocking || props.isUnblocking || isDeletingMessages || isExportingMessages || isImportingMessages" 
