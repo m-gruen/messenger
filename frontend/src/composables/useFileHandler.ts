@@ -22,6 +22,8 @@ export function useFileHandler(showNotification: (message: string, type: string)
         // Check if file is an image
         if (!file.type.startsWith('image/')) {
             showNotification('Please select an image file', 'error')
+            // Reset file input to allow re-selection
+            input.value = ''
             return
         }
 
@@ -29,6 +31,8 @@ export function useFileHandler(showNotification: (message: string, type: string)
         const MAX_SIZE = 5 * 1024 * 1024 // 5MB
         if (file.size > MAX_SIZE) {
             showNotification('Image size should not exceed 5MB', 'error')
+            // Reset file input to allow re-selection
+            input.value = ''
             return
         }
 
@@ -81,6 +85,8 @@ export function useFileHandler(showNotification: (message: string, type: string)
         const MAX_SIZE = 10 * 1024 * 1024 // 10MB
         if (file.size > MAX_SIZE) {
             showNotification('Document size should not exceed 10MB', 'error')
+            // Reset file input to allow re-selection
+            input.value = ''
             return
         }
 
@@ -145,6 +151,8 @@ export function useFileHandler(showNotification: (message: string, type: string)
         const MAX_SIZE = 10 * 1024 * 1024 // 10MB
         if (file.size > MAX_SIZE) {
             showNotification('Audio size should not exceed 10MB', 'error')
+            // Reset file input to allow re-selection
+            input.value = ''
             return
         }
 
@@ -235,6 +243,8 @@ export function useFileHandler(showNotification: (message: string, type: string)
         const MAX_SIZE = 10 * 1024 * 1024 // 10MB
         if (file.size > MAX_SIZE) {
             showNotification('Code file size should not exceed 10MB', 'error')
+            // Reset file input to allow re-selection
+            input.value = ''
             return
         }
 

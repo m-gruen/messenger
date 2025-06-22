@@ -10,24 +10,32 @@ export function useFileUpload() {
     // Trigger file input clicks
     function triggerFileUpload() {
         if (fileInputRef.value) {
+            // Clear the input first to ensure change event fires even for the same file
+            fileInputRef.value.value = ''
             fileInputRef.value.click()
         }
     }
 
     function triggerDocumentUpload() {
         if (documentInputRef.value) {
+            // Clear the input first to ensure change event fires even for the same file
+            documentInputRef.value.value = ''
             documentInputRef.value.click()
         }
     }
 
     function triggerAudioUpload() {
         if (audioInputRef.value) {
+            // Clear the input first to ensure change event fires even for the same file
+            audioInputRef.value.value = ''
             audioInputRef.value.click()
         }
     }
 
     function triggerCodeUpload() {
         if (codeInputRef.value) {
+            // Clear the input first to ensure change event fires even for the same file
+            codeInputRef.value.value = ''
             codeInputRef.value.click()
         }
     }

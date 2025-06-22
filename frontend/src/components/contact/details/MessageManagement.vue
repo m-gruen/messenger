@@ -127,6 +127,8 @@ async function exportContactMessages() {
 
 function openFileDialog() {
   if (fileInputRef.value) {
+    // Clear the input first to ensure change event fires even for the same file
+    fileInputRef.value.value = '';
     fileInputRef.value.click();
   }
 }

@@ -74,6 +74,8 @@ function formatBytes(bytes: number): string {
 function openFileDialog() {
     // Only open if not currently in a download/upload operation
     if (fileInputRef.value && !isDownloadingMessages.value) {
+        // Clear the input first to ensure change event fires even for the same file
+        fileInputRef.value.value = '';
         fileInputRef.value.click();
         console.log('File dialog opened');
     } else {

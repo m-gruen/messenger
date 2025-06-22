@@ -281,10 +281,14 @@ function handlePictureChange(event: Event) {
     const file = input.files[0];
     if (!file.type.startsWith('image/')) {
         showError('Please select an image file');
+        // Reset file input to allow re-selection
+        input.value = '';
         return;
     }
     if (file.size > 5 * 1024 * 1024) {
         showError('Image size should not exceed 5MB');
+        // Reset file input to allow re-selection
+        input.value = '';
         return;
     }
     isUploadingPicture.value = true;
