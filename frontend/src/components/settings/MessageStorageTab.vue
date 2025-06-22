@@ -7,6 +7,7 @@ import { useMessageStore } from '@/stores/MessageStore';
 import { useContactStore } from '@/stores/ContactStore';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useToast } from '@/composables/useToast';
+import { Database, Save, UploadCloud, Trash2, HardDrive, ShieldCheck, RefreshCw, User } from 'lucide-vue-next';
 
 const UserId = storageService.getUser()!.uid;
 const messageStore = useMessageStore();
@@ -236,114 +237,170 @@ onMounted(async () => {
             confirmLabel="Delete Messages" confirmVariant="destructive" @confirm="clearLocalMessages" />
 
         <!-- Main content -->
-        <div class="bg-card rounded-lg shadow-md">
+        <div class="bg-card rounded-xl shadow-lg">
             <!-- Error/Success Messages are now handled by the toast system -->
 
             <div class="p-6">
-                <h2 class="text-xl font-medium mb-4">MESSAGE STORAGE</h2>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="bg-gradient-to-r from-blue-500 to-cyan-400 p-2 rounded-lg">
+                        <Database class="h-6 w-6 text-white" />
+                    </div>
+                    <h2 class="text-2xl font-semibold">Message Storage</h2>
+                </div>
 
-                <div class="space-y-6">
+                <div class="space-y-8">
                     <!-- Message Storage Info -->
-                    <div
-                        class="bg-blue-50 dark:bg-blue-900/20 p-3 text-sm rounded-md text-blue-800 dark:text-blue-300">
-                        <p class="mb-1 font-medium">End-to-End Encrypted Messages</p>
-                        <p>Messages are encrypted end-to-end and stored on your device. Messages are only kept on
-                            the server until they are delivered to your contact.</p>
+                    <div class="bg-gradient-to-r from-indigo-500/10 to-blue-500/10 border border-blue-500/20 p-4 rounded-lg overflow-hidden relative">
+                        <div class="flex items-start gap-4">
+                            <ShieldCheck class="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
+                            <div>
+                                <p class="font-medium text-blue-800 dark:text-blue-300">End-to-End Encrypted Messages</p>
+                                <p class="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                                    Messages are encrypted end-to-end and stored on your device. Messages are only kept on
+                                    the server until they are delivered to your contact.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="absolute -bottom-4 -right-4 h-20 w-20 rounded-full bg-blue-500/10"></div>
+                        <div class="absolute -bottom-6 -right-10 h-24 w-24 rounded-full bg-blue-400/5"></div>
                     </div>
                     
                     <!-- Storage Usage Display -->
-                    <div class="bg-card/50 rounded-lg border p-4 mb-4">
-                        <h3 class="text-lg font-medium mb-2">Storage Usage</h3>
+                    <div class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/40 dark:to-slate-900/40 rounded-xl border p-5 shadow-inner">
+                        <div class="flex items-center justify-between mb-5">
+                            <div class="flex items-center gap-3">
+                                <div class="bg-gradient-to-br from-emerald-500 to-teal-600 p-2 rounded-lg">
+                                    <HardDrive class="h-5 w-5 text-white" />
+                                </div>
+                                <h3 class="text-lg font-medium">Storage Usage</h3>
+                            </div>
+                            <button 
+                                @click="loadStorageUsage" 
+                                class="flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 p-1 px-2 rounded-md transition-colors">
+                                <RefreshCw class="h-3.5 w-3.5" />
+                                <span>Refresh</span>
+                            </button>
+                        </div>
                         
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="font-medium">Total Storage Used:</div>
+                        <div class="flex items-center justify-between px-3 py-3 mb-5 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
+                            <div class="font-medium flex items-center gap-2">
+                                <span>Total Storage Used:</span>
+                            </div>
                             <div v-if="isLoadingStorageData" class="text-sm text-muted-foreground">Loading...</div>
-                            <div v-else class="text-lg font-bold">{{ formatBytes(totalStorageUsage) }}</div>
+                            <div v-else class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ formatBytes(totalStorageUsage) }}</div>
                         </div>
                         
                         <div v-if="isLoadingStorageData" class="flex justify-center py-8">
-                            <div class="animate-spin rounded-full h-6 w-6 border-2 border-primary"></div>
+                            <div class="animate-spin rounded-full h-8 w-8 border-3 border-teal-500 border-t-transparent"></div>
                         </div>
                         
-                        <div v-else-if="storageUsageByContact.length === 0" class="text-center py-4 text-muted-foreground">
-                            No message storage data available
+                        <div v-else-if="storageUsageByContact.length === 0" class="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                            <Database class="h-12 w-12 text-slate-300 dark:text-slate-600 mb-2" />
+                            <span>No message storage data available</span>
                         </div>
                         
-                        <div v-else class="space-y-4">
-                            <h4 class="text-sm font-medium text-muted-foreground mb-2">Storage by Contact</h4>
+                        <div v-else class="space-y-5">
+                            <h4 class="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                                <User class="h-4 w-4" />
+                                <span>Storage by Contact</span>
+                            </h4>
                             
-                            <div v-for="contact in storageUsageByContact" :key="contact.contactId" class="mb-3">
-                                <div class="flex items-center justify-between text-sm mb-1">
-                                    <div class="font-medium truncate max-w-[60%]">
-                                        {{ contact.displayName }}
+                            <div class="space-y-4">
+                                <div v-for="contact in storageUsageByContact" :key="contact.contactId" 
+                                    class="bg-white dark:bg-slate-800/80 rounded-lg p-3 shadow-sm">
+                                    <div class="flex items-center justify-between text-sm mb-2">
+                                        <div class="font-medium truncate max-w-[60%] flex items-center gap-2">
+                                            <div class="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                                                {{ contact.displayName.charAt(0).toUpperCase() }}
+                                            </div>
+                                            <span>{{ contact.displayName }}</span>
+                                        </div>
+                                        <div class="font-mono text-slate-500 dark:text-slate-400 text-xs">
+                                            {{ formatBytes(contact.bytesUsed) }} ({{ contact.percentage.toFixed(1) }}%)
+                                        </div>
                                     </div>
-                                    <div class="text-muted-foreground text-xs">
-                                        {{ formatBytes(contact.bytesUsed) }} ({{ contact.percentage.toFixed(1) }}%)
+                                    
+                                    <!-- Bar chart -->
+                                    <div class="h-3 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                                        <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500" 
+                                            :style="{ width: `${contact.percentage}%` }"></div>
+                                    </div>
+                                    
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1">
+                                        <Database class="h-3 w-3" />
+                                        <span>{{ contact.messagesCount }} messages</span>
                                     </div>
                                 </div>
-                                
-                                <!-- Bar chart -->
-                                <div class="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
-                                    <div class="h-full bg-primary" 
-                                         :style="{ width: `${contact.percentage}%` }"></div>
-                                </div>
-                                
-                                <div class="text-xs text-muted-foreground mt-1">
-                                    {{ contact.messagesCount }} messages
-                                </div>
-                            </div>
-                            
-                            <div class="text-xs text-right mt-2 text-muted-foreground">
-                                <button @click="loadStorageUsage" class="underline">Refresh</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Message Backup Button -->
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 dark:text-gray-200">Backup Messages</div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                    <!-- Action Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Message Backup Button -->
+                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl border border-green-200 dark:border-green-800/30 p-4 shadow-sm">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="bg-gradient-to-br from-green-500 to-emerald-600 p-2 rounded-lg">
+                                    <Save class="h-5 w-5 text-white" />
+                                </div>
+                                <div class="font-medium text-green-800 dark:text-emerald-200">Backup Messages</div>
+                            </div>
+                            <p class="text-sm text-green-700 dark:text-emerald-300/70 mb-4">
                                 Export all your messages as a backup file that you can restore later.
                             </p>
+                            <Button class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white" 
+                                @click="backupMessages" 
+                                :disabled="isDownloadingMessages">
+                                <Save class="h-4 w-4 mr-2" v-if="!isDownloadingMessages" />
+                                <span v-if="isDownloadingMessages">Backing up...</span>
+                                <span v-else>Backup Messages</span>
+                            </Button>
                         </div>
-                        <Button variant="outline" @click="backupMessages" :disabled="isDownloadingMessages">
-                            <span v-if="isDownloadingMessages">Backing up...</span>
-                            <span v-else>Backup</span>
-                        </Button>
-                    </div>
 
-                    <!-- Restore Messages Button -->
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 dark:text-gray-200">Restore Messages</div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                        <!-- Restore Messages Button -->
+                        <div class="bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-900/20 dark:to-sky-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4 shadow-sm">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="bg-gradient-to-br from-blue-500 to-sky-600 p-2 rounded-lg">
+                                    <UploadCloud class="h-5 w-5 text-white" />
+                                </div>
+                                <div class="font-medium text-blue-800 dark:text-blue-200">Restore Messages</div>
+                            </div>
+                            <p class="text-sm text-blue-700 dark:text-blue-300/70 mb-4">
                                 Import messages from a previous backup.
                             </p>
+                            <label class="cursor-pointer block w-full">
+                                <input type="file" accept=".json" class="hidden" @change="restoreMessages"
+                                    :disabled="isDownloadingMessages" ref="fileInputRef" />
+                                <Button class="w-full bg-gradient-to-r from-blue-500 to-sky-600 hover:from-blue-600 hover:to-sky-700 text-white" 
+                                    type="button" 
+                                    :disabled="isDownloadingMessages"
+                                    @click="openFileDialog">
+                                    <UploadCloud class="h-4 w-4 mr-2" />
+                                    Restore Backup
+                                </Button>
+                            </label>
                         </div>
-                        <label class="cursor-pointer">
-                            <input type="file" accept=".json" class="hidden" @change="restoreMessages"
-                                :disabled="isDownloadingMessages" ref="fileInputRef" />
-                            <Button variant="outline" type="button" :disabled="isDownloadingMessages"
-                                @click="openFileDialog">
-                                Restore
-                            </Button>
-                        </label>
-                    </div>
 
-                    <!-- Delete All Messages -->
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 dark:text-gray-200">Delete Message History</div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                        <!-- Delete All Messages -->
+                        <div class="bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl border border-red-200 dark:border-red-800/30 p-4 shadow-sm">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="bg-gradient-to-br from-red-500 to-rose-600 p-2 rounded-lg">
+                                    <Trash2 class="h-5 w-5 text-white" />
+                                </div>
+                                <div class="font-medium text-red-800 dark:text-red-200">Delete Message History</div>
+                            </div>
+                            <p class="text-sm text-red-700 dark:text-red-300/70 mb-4">
                                 Permanently delete all message history from this device. This cannot be undone.
                             </p>
+                            <Button variant="destructive" 
+                                class="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700"
+                                @click="openClearMessagesConfirmation"
+                                :disabled="isDeletingMessages">
+                                <Trash2 class="h-4 w-4 mr-2" v-if="!isDeletingMessages" />
+                                <span v-if="isDeletingMessages">Deleting...</span>
+                                <span v-else>Delete All Messages</span>
+                            </Button>
                         </div>
-                        <Button variant="destructive" @click="openClearMessagesConfirmation"
-                            :disabled="isDeletingMessages">
-                            <span v-if="isDeletingMessages">Deleting...</span>
-                            <span v-else>Delete All</span>
-                        </Button>
                     </div>
                 </div>
             </div>
@@ -367,5 +424,29 @@ onMounted(async () => {
 }
 .animate-spin {
     animation: spin 1s linear infinite;
+}
+
+/* Border for spinner */
+.border-3 {
+    border-width: 3px;
+}
+
+/* Custom gradients for cards */
+.from-indigo-500\/10 {
+    --tw-gradient-from: rgb(99 102 241 / 0.1);
+}
+
+.to-blue-500\/10 {
+    --tw-gradient-to: rgb(59 130 246 / 0.1);
+}
+
+/* Card hover effects */
+.shadow-sm {
+    transition: all 0.2s ease;
+}
+
+.shadow-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 </style>
