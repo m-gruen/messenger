@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { Trash2, Copy, X } from 'lucide-vue-next'
+import { Trash2, Copy, X, Forward } from 'lucide-vue-next'
 import { useMessageStore } from '@/stores/MessageStore'
 import { getMessageContent } from './MessageUtils'
 import type { IMessage } from '@/models/message-model'
@@ -16,6 +16,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'close': []
+  'forward': [message: IMessage]
 }>()
 
 const messageStore = useMessageStore()
@@ -33,6 +34,13 @@ const deleteMessage = async (event: Event) => {
     await messageStore.deleteLocalMessage(props.message.mid)
     closeOptionsMenu()
   }
+}
+
+// Forward message handler
+const forwardMessage = (event: Event) => {
+  event.stopPropagation()
+  emit('forward', props.message)
+  closeOptionsMenu()
 }
 
 // Copy message text handler
@@ -91,6 +99,12 @@ onBeforeUnmount(() => {
           <span>Delete message</span>
         </div>
         <X class="h-4 w-4 options-menu-close" @click.stop="closeOptionsMenu" />
+      </button>
+      <button class="options-menu-item" @click="forwardMessage">
+        <div class="flex items-center">
+          <Forward class="h-4 w-4 mr-2" />
+          <span>Forward message</span>
+        </div>
       </button>
       <button v-if="isTextMessage" class="options-menu-item" @click="copyMessageText">
         <div class="flex items-center">

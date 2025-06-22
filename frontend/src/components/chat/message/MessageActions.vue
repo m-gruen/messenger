@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Reply, MoreHorizontal } from 'lucide-vue-next'
 import type { IMessage } from '@/models/message-model'
 import MessageOptionsMenu from './MessageOptionsMenu.vue'
+import ForwardDialog from '@/components/ForwardDialog.vue'
 
 const { isOwnMessage, message, isTextMessage } = defineProps<{
   isOwnMessage: boolean,
@@ -15,6 +16,7 @@ const emit = defineEmits<{
 }>()
 
 const showOptionsMenu = ref(false)
+const showForwardDialog = ref(false)
 const optionsButtonRef = ref<HTMLElement | null>(null)
 const buttonRect = ref<DOMRect | null>(null)
 
@@ -36,6 +38,14 @@ const closeOptionsMenu = () => {
 const handleReply = (event: Event) => {
   event.stopPropagation()
   emit('reply', message)
+}
+
+const handleForward = (_forwardMessage: IMessage) => {
+  showForwardDialog.value = true
+}
+
+const handleForwardComplete = (contactIds: number[]) => {
+  console.log(`Message forwarded to ${contactIds.length} contacts`)
 }
 </script>
 
@@ -83,6 +93,14 @@ const handleReply = (event: Event) => {
       :anchor-rect="buttonRect"
       :is-own-message="isOwnMessage"
       @close="closeOptionsMenu"
+      @forward="handleForward"
+    />
+    
+    <!-- Forward Dialog -->
+    <ForwardDialog
+      v-model:show="showForwardDialog"
+      :message="message"
+      @forward="handleForwardComplete"
     />
   </div>
 </template>
