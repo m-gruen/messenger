@@ -25,8 +25,8 @@
       <span class="ml-2">Loading contacts...</span>
     </div>
 
-    <div v-else-if="contactStore.error" class="bg-destructive/10 text-destructive p-4 rounded-md">
-      {{ contactStore.error }}
+    <div v-else-if="localError" class="bg-destructive/10 text-destructive p-4 rounded-md">
+      {{ localError }}
     </div>
 
     <div v-else-if="filteredContacts.length === 0" class="text-muted-foreground p-4">
@@ -76,6 +76,7 @@ const emit = defineEmits<{
 
 const contactStore = useContactStore();
 const activeFilter = ref('all');
+const localError = ref<string | null>(null);
 
 // Filtered contacts based on the selected filter
 const filteredContacts = computed(() => {
@@ -89,16 +90,27 @@ const filteredContacts = computed(() => {
 
 onMounted(async () => {
   if (props.visible) {
-    await contactStore.fetchAllContacts();
+    await fetchContacts();
   }
 });
 
 // Re-fetch contacts when the component becomes visible
 watch(() => props.visible, async (isVisible) => {
   if (isVisible) {
-    await contactStore.fetchAllContacts();
+    await fetchContacts();
   }
 });
+
+// Local function to fetch contacts and handle errors locally
+async function fetchContacts() {
+  localError.value = null;
+  try {
+    await contactStore.fetchAllContacts();
+  } catch (err) {
+    localError.value = err instanceof Error ? err.message : 'Failed to load contacts';
+    console.error('Error fetching contacts in ContactList:', err);
+  }
+}
 
 function selectContact(contact: Contact) {
   emit('select', contact);
