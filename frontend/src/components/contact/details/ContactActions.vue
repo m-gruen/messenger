@@ -125,7 +125,7 @@ function showUnblockConfirmation() {
 
   <!-- Action Buttons -->
   <div v-else class="flex flex-col gap-3">
-    <div class="border-t border-border pt-3 pb-1">
+    <div class="pt-3 pb-1">
       <h4 class="text-white text-sm font-semibold">Contact Management</h4>
     </div>
     <!-- Block/Unblock Button -->

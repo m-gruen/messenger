@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Trash2, Download, Upload } from "lucide-vue-next";
+import { ref, onMounted } from 'vue';
+import { Trash2, Download, Upload, HardDrive } from "lucide-vue-next";
 import { useAuthStore } from '@/stores/AuthStore';
 import { useMessageStore } from '@/stores/MessageStore';
 import { indexedDBService } from '@/services/indexeddb.service';
@@ -46,6 +46,51 @@ const authStore = useAuthStore();
 const messageStore = useMessageStore();
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
+// Storage usage state
+const storageUsage = ref<{
+  bytesUsed: number;
+  messagesCount: number;
+  isLoading: boolean;
+}>({
+  bytesUsed: 0,
+  messagesCount: 0,
+  isLoading: false
+});
+
+// Load storage usage for this specific contact
+async function loadContactStorageUsage() {
+  if (!authStore.user?.uid) return;
+  
+  storageUsage.value.isLoading = true;
+  
+  try {
+    const contactUsage = await indexedDBService.getStorageUsageByContact(authStore.user.uid);
+    const thisContactUsage = contactUsage.find(usage => usage.contactId === props.contact.contactUserId);
+    
+    if (thisContactUsage) {
+      storageUsage.value.bytesUsed = thisContactUsage.bytesUsed;
+      storageUsage.value.messagesCount = thisContactUsage.messagesCount;
+    } else {
+      storageUsage.value.bytesUsed = 0;
+      storageUsage.value.messagesCount = 0;
+    }
+  } catch (error) {
+    console.error('Failed to load contact storage usage:', error);
+    storageUsage.value.bytesUsed = 0;
+    storageUsage.value.messagesCount = 0;
+  } finally {
+    storageUsage.value.isLoading = false;
+  }
+}
+
+// Format bytes to human-readable format
+function formatBytes(bytes: number): string {
+  return indexedDBService.formatBytes(bytes);
+}
+
+// Load storage data when component mounts
+onMounted(loadContactStorageUsage);
+
 function showDeleteConfirmation() {
   emit('show-delete-confirmation');
 }
@@ -64,6 +109,8 @@ async function deleteContactMessages() {
     
     if (success) {
       emit('action-complete', 'Messages deleted successfully');
+      // Refresh storage usage after deletion
+      await loadContactStorageUsage();
     } else {
       emit('action-error', 'Failed to delete messages');
     }
@@ -163,6 +210,8 @@ async function importContactMessages(event: Event) {
     }
     
     emit('action-complete', `Successfully imported ${importedCount} conversation(s)`);
+    // Refresh storage usage after import
+    await loadContactStorageUsage();
   } catch (error: any) {
     emit('action-error', error.message || "Failed to import messages");
     console.error("Error importing contact messages:", error);
@@ -189,6 +238,37 @@ async function importContactMessages(event: Event) {
   
   <!-- Message Management Buttons -->
   <div v-else>
+    <div class="border-t border-border pt-3 pb-1 mb-4">
+      <h4 class="text-white text-sm font-semibold">Message Storage</h4>
+    </div>
+    
+    <!-- Storage Usage Overview -->
+    <div class="bg-card/30 rounded-lg border border-border/50 p-3 mb-4">
+      <div class="flex items-center gap-2 mb-2">
+        <HardDrive class="h-4 w-4 text-muted-foreground" />
+        <h4 class="text-white text-sm font-semibold">Storage Usage</h4>
+      </div>
+      
+      <div v-if="storageUsage.isLoading" class="flex items-center justify-center py-4">
+        <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent"></div>
+        <span class="ml-2 text-sm text-muted-foreground">Loading...</span>
+      </div>
+      
+      <div v-else class="space-y-2">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">Storage Used:</span>
+          <span class="text-white font-medium">{{ formatBytes(storageUsage.bytesUsed) }}</span>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">Messages:</span>
+          <span class="text-white font-medium">{{ storageUsage.messagesCount.toLocaleString() }}</span>
+        </div>
+        <div v-if="storageUsage.messagesCount === 0" class="text-xs text-muted-foreground text-center py-1">
+          No messages stored for this contact
+        </div>
+      </div>
+    </div>
+    
     <div class="border-t border-border pt-3 pb-1">
       <h4 class="text-white text-sm font-semibold">Message Management</h4>
     </div>
