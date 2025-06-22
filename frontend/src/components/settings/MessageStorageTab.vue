@@ -11,7 +11,7 @@ import { useToast } from '@/composables/useToast';
 const UserId = storageService.getUser()!.uid;
 const messageStore = useMessageStore();
 const contactStore = useContactStore();
-const { showToast, showError, showSuccess, showInfo } = useToast();
+const { showError, showSuccess } = useToast();
 
 // UI state
 const showClearMessagesConfirmation = ref(false);

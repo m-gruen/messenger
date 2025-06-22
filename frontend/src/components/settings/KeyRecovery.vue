@@ -9,7 +9,7 @@ import { useToast } from '@/composables/useToast';
 const authStore = useAuthStore();
 const user = computed(() => authStore.user);
 const token = computed(() => authStore.token);
-const { showToast, showError, showSuccess, showInfo } = useToast();
+const { showError, showSuccess, showInfo } = useToast();
 
 const isLoading = ref(false);
 const importKey = ref('');

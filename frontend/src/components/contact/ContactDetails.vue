@@ -60,7 +60,7 @@ const emit = defineEmits(['close', 'remove', 'cancel-remove', 'block', 'unblock'
 // State
 const authStore = useAuthStore();
 const user = ref<User | null>(null);
-const { showToast, showError, showSuccess, showInfo } = useToast();
+const { showError, showSuccess } = useToast();
 
 // Confirmation dialogs state
 const showRemoveConfirmation = ref(false);

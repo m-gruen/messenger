@@ -8,7 +8,7 @@ import { useToast } from '@/composables/useToast';
 const user = ref(storageService.getUser());
 const token = storageService.getToken()!;
 const UserId = storageService.getUser()!.uid;
-const { showToast, showError, showSuccess, showInfo } = useToast();
+const { showError, showSuccess, showInfo } = useToast();
 
 // Form fields
 const shadowMode = ref(user.value?.shadow_mode || false);
