@@ -8,6 +8,7 @@ import { useRouter } from 'vue-router';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { useMessageStore } from '@/stores/MessageStore';
 import { useToast } from '@/composables/useToast';
+import { User, Camera, Pencil, Lock, Trash2, Save, XCircle, Check, Loader2 } from 'lucide-vue-next';
 
 const router = useRouter();
 const user = ref(storageService.getUser());
@@ -353,52 +354,88 @@ function compressImage(file: File): Promise<string> {
     <div>
         <!-- Password Update Modal -->
         <div v-if="showPasswordModal"
-            class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div class="bg-card rounded-lg max-w-md w-full relative border border-border shadow-xl">
+            class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="bg-gradient-to-b from-card to-card/90 rounded-xl max-w-md w-full relative border border-violet-300/20 dark:border-violet-800/30 shadow-xl overflow-hidden">
+                <!-- Modal Top Accent -->
+                <div class="h-1.5 w-full bg-gradient-to-r from-violet-500 to-purple-600"></div>
+                
                 <!-- Close button -->
                 <button @click="closePasswordModal"
-                    class="absolute top-4 right-4 text-muted-foreground hover:text-foreground" aria-label="Close">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="h-5 w-5">
-                        <path d="M18 6 6 18"></path>
-                        <path d="m6 6 12 12"></path>
-                    </svg>
+                    class="absolute top-4 right-4 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors" 
+                    aria-label="Close">
+                    <XCircle class="h-6 w-6" />
                 </button>
 
-                <div class="p-6">
-                    <h2 class="text-xl font-bold text-center">Update your password</h2>
-                    <p class="text-muted-foreground text-center mb-6">Enter your current password and a new password.
+                <div class="p-8">
+                    <div class="flex items-center gap-3 mb-6 justify-center">
+                        <div class="bg-gradient-to-r from-violet-500 to-purple-600 p-2.5 rounded-lg shadow-lg">
+                            <Lock class="h-6 w-6 text-white" />
+                        </div>
+                        <h2 class="text-2xl font-bold">Change Password</h2>
+                    </div>
+                    
+                    <p class="text-slate-600 dark:text-slate-400 text-center mb-8">
+                        Enter your current password and set a new secure password.
                     </p>
 
                     <!-- Error messages are now handled by the toast system -->
 
-                    <form @submit.prevent="updatePassword" class="space-y-4">
+                    <form @submit.prevent="updatePassword" class="space-y-5">
                         <div>
-                            <label for="current-password-modal" class="block text-sm font-medium mb-1">Current
-                                Password</label>
-                            <Input id="current-password-modal" v-model="currentPassword" type="password" placeholder=""
-                                class="w-full" />
+                            <label for="current-password-modal" class="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                                Current Password
+                            </label>
+                            <Input 
+                                id="current-password-modal" 
+                                v-model="currentPassword" 
+                                type="password" 
+                                placeholder="••••••••••••"
+                                class="w-full border-2 border-slate-300 dark:border-slate-700 focus:border-violet-500 focus:ring focus:ring-violet-500/30" 
+                            />
                         </div>
 
                         <div>
-                            <label for="new-password-modal" class="block text-sm font-medium mb-1">New Password</label>
-                            <Input id="new-password-modal" v-model="newPassword" type="password" placeholder=""
-                                class="w-full" />
+                            <label for="new-password-modal" class="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                                New Password
+                            </label>
+                            <Input 
+                                id="new-password-modal" 
+                                v-model="newPassword" 
+                                type="password" 
+                                placeholder="••••••••••••"
+                                class="w-full border-2 border-slate-300 dark:border-slate-700 focus:border-violet-500 focus:ring focus:ring-violet-500/30"  
+                            />
                         </div>
 
                         <div>
-                            <label for="confirm-password-modal" class="block text-sm font-medium mb-1">Confirm New
-                                Password</label>
-                            <Input id="confirm-password-modal" v-model="confirmPassword" type="password" placeholder=""
-                                class="w-full" />
+                            <label for="confirm-password-modal" class="block text-sm font-medium mb-1.5 text-slate-700 dark:text-slate-300">
+                                Confirm New Password
+                            </label>
+                            <Input 
+                                id="confirm-password-modal" 
+                                v-model="confirmPassword" 
+                                type="password" 
+                                placeholder="••••••••••••"
+                                class="w-full border-2 border-slate-300 dark:border-slate-700 focus:border-violet-500 focus:ring focus:ring-violet-500/30" 
+                            />
                         </div>
 
-                        <div class="flex justify-end gap-3 mt-6">
-                            <Button variant="outline" @click="closePasswordModal" type="button">
+                        <div class="flex justify-end gap-3 mt-8">
+                            <Button 
+                                variant="outline" 
+                                @click="closePasswordModal" 
+                                type="button"
+                                class="border-slate-300 dark:border-slate-700">
+                                <XCircle class="h-4 w-4 mr-2" />
                                 Cancel
                             </Button>
-                            <Button variant="default" :disabled="isUpdating" type="submit">
+                            <Button 
+                                variant="default" 
+                                :disabled="isUpdating" 
+                                type="submit"
+                                class="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700">
+                                <Loader2 class="h-4 w-4 mr-2 animate-spin" v-if="isUpdating" />
+                                <Check class="h-4 w-4 mr-2" v-else />
                                 <span v-if="isUpdating">Updating...</span>
                                 <span v-else>Update Password</span>
                             </Button>
@@ -414,134 +451,213 @@ function compressImage(file: File): Promise<string> {
             confirmLabel="Delete Account" confirmVariant="destructive" @confirm="deleteUserAccount" />
 
         <!-- Main content -->
-        <div class="bg-card rounded-lg shadow-md">
-
+        <div class="bg-card rounded-xl shadow-lg overflow-hidden">
+            
             <!-- User Profile Header -->
-            <div class="bg-indigo-600 dark:bg-indigo-800 rounded-t-lg p-6">
-                <div class="flex items-center gap-5">
-                    <!-- User avatar or profile picture -->
-                    <div class="relative h-20 w-20">
-                        <template v-if="profilePicturePreview || profilePicture">
-                            <img :src="profilePicturePreview || (profilePicture ? 'data:image/jpeg;base64,' + profilePicture : undefined)"
-                                class="h-20 w-20 rounded-full object-cover border-4 border-white shadow"
-                                alt="Profile Picture" />
-                            <button @click="removeProfilePicture"
-                                class="absolute top-0 right-0 bg-black/60 text-white rounded-full p-1 hover:bg-black/80"
-                                title="Remove picture">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none"
-                                    viewBox="0 0 24 24">
-                                    <path stroke="currentColor" stroke-width="2" d="M18 6 6 18m0-12 12 12" />
-                                </svg>
-                            </button>
-                        </template>
-                        <template v-else>
-                            <div class="h-20 w-20 rounded-full flex items-center justify-center text-2xl font-bold text-white"
-                                :style="{ backgroundColor: avatarBackground }">
-                                {{ userInitial }}
-                            </div>
-                        </template>
+            <div class="relative bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-800 dark:to-blue-800 p-8">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mt-20 -mr-20"></div>
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full -mb-32 -ml-32"></div>
+                
+                <div class="relative flex items-start gap-8">
+                    <!-- User avatar or profile picture with animation -->
+                    <div class="relative">
+                        <div class="h-28 w-28 rounded-xl overflow-hidden shadow-lg transform transition-all duration-300 hover:scale-105">
+                            <template v-if="profilePicturePreview || profilePicture">
+                                <img :src="profilePicturePreview || (profilePicture ? 'data:image/jpeg;base64,' + profilePicture : undefined)"
+                                    class="h-28 w-28 object-cover"
+                                    alt="Profile Picture" />
+                            </template>
+                            <template v-else>
+                                <div class="h-28 w-28 flex items-center justify-center text-3xl font-bold text-white"
+                                    :style="{ backgroundColor: avatarBackground }">
+                                    {{ userInitial }}
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Remove button -->
+                        <button v-if="profilePicturePreview || profilePicture"
+                            @click="removeProfilePicture"
+                            class="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80 backdrop-blur-sm transition-colors"
+                            title="Remove picture">
+                            <XCircle class="h-5 w-5" />
+                        </button>
+                        
                         <!-- Upload button -->
                         <button @click="openPictureDialog"
-                            class="absolute bottom-0 right-0 bg-indigo-700 text-white rounded-full p-1.5 hover:bg-indigo-800 border-2 border-white shadow"
+                            class="absolute -bottom-2 -right-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white rounded-full p-2.5 hover:from-indigo-600 hover:to-blue-700 border-2 border-white/90 shadow-lg transition-all duration-200 hover:scale-110"
                             title="Change picture">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
-                                viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-width="2"
-                                    d="M12 16v-4m0 0V8m0 4h4m-4 0H8m12 4v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4" />
-                            </svg>
+                            <Camera class="h-5 w-5" />
                         </button>
                         <input ref="pictureInputRef" type="file" accept="image/*" class="hidden"
                             @change="handlePictureChange" />
                     </div>
-                    <!-- User info -->
-                    <div class="flex-1">
-                        <h1 class="text-2xl font-bold text-white">{{ DisplayName || username }}</h1>
-                        <p class="text-indigo-200">@{{ username }}</p>
+                    
+                    <!-- User info with animations -->
+                    <div class="flex-1 py-3">
+                        <div class="flex flex-col gap-1">
+                            <h1 class="text-3xl font-bold text-white">{{ DisplayName || username }}</h1>
+                            <p class="text-indigo-200 flex items-center gap-1.5">
+                                <User class="h-4 w-4" />
+                                <span>@{{ username }}</span>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- User Account Section -->
-            <div class="p-6 border-b dark:border-gray-700">
-                <h2 class="text-xl font-medium mb-4 text-gray-800 dark:text-gray-200">MY ACCOUNT</h2>
-
-                <div class="space-y-6">
-                    <!-- Username -->
-                    <div>
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">Username</div>
-                                <div class="text-gray-800 dark:text-gray-200">{{ username }}</div>
-                            </div>
-                            <Button variant="ghost" size="sm" @click="isEditingUsername = !isEditingUsername">
-                                Edit
-                            </Button>
-                        </div>
-
-                        <!-- Inline username edit -->
-                        <div v-if="isEditingUsername" class="mt-3">
-                            <Input v-model="username" placeholder="Username" class="w-full border-2
-                            border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
-                        </div>
+            <div class="p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="bg-gradient-to-r from-indigo-500 to-blue-500 p-2 rounded-lg">
+                        <User class="h-6 w-6 text-white" />
                     </div>
-
-                    <!-- Display Name -->
-                    <div>
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <div class="text-sm text-gray-500 dark:text-gray-400">Display Name</div>
-                                <div class="text-gray-800 dark:text-gray-200">{{ DisplayName || "Not set" }}</div>
-                            </div>
-                            <Button variant="ghost" size="sm" @click="isEditingDisplayName = !isEditingDisplayName">
-                                Edit
-                            </Button>
-                        </div>
-
-                        <!-- Inline display name edit -->
-                        <div v-if="isEditingDisplayName" class="mt-3">
-                            <Input v-model="DisplayName" placeholder="Display Name" class="w-full border-2
-                            border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700" />
-                        </div>
-                    </div>
-
-                    <!-- Password -->
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">Password</div>
-                            <div class="text-gray-800 dark:text-gray-200">••••••••••••</div>
-                        </div>
-                        <Button variant="ghost" size="sm" @click="openPasswordModal">
-                            Change Password
-                        </Button>
-                    </div>
+                    <h2 class="text-2xl font-semibold">Account Settings</h2>
                 </div>
 
-                <!-- Delete account section -->
-                <div class="mt-6">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 dark:text-gray-200">Delete Account</div>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Permanently delete your account. This action cannot be undone.
-                            </p>
+                <!-- Settings Cards -->
+                <div class="space-y-8">
+                    <!-- Account info card -->
+                    <div class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/40 dark:to-slate-900/40 rounded-xl border p-5 shadow-sm">
+                        <h3 class="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-200">Profile Information</h3>
+
+                        <div class="space-y-5">
+                            <!-- Username -->
+                            <div class="bg-white dark:bg-slate-800/80 rounded-lg p-4 shadow-sm">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="text-sm font-medium text-indigo-600 dark:text-indigo-400">Username</div>
+                                        <div class="mt-1 font-medium">{{ username }}</div>
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        class="bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300"
+                                        @click="isEditingUsername = !isEditingUsername">
+                                        <Pencil class="h-4 w-4 mr-1" />
+                                        {{ isEditingUsername ? 'Cancel' : 'Edit' }}
+                                    </Button>
+                                </div>
+
+                                <!-- Inline username edit -->
+                                <div v-if="isEditingUsername" class="mt-4">
+                                    <Input 
+                                        v-model="username" 
+                                        placeholder="Username" 
+                                        class="w-full border-2 border-indigo-300 dark:border-indigo-700 focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-800" 
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Display Name -->
+                            <div class="bg-white dark:bg-slate-800/80 rounded-lg p-4 shadow-sm">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="text-sm font-medium text-blue-600 dark:text-blue-400">Display Name</div>
+                                        <div class="mt-1 font-medium">{{ DisplayName || "Not set" }}</div>
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        class="bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/50 text-blue-700 dark:text-blue-300"
+                                        @click="isEditingDisplayName = !isEditingDisplayName">
+                                        <Pencil class="h-4 w-4 mr-1" />
+                                        {{ isEditingDisplayName ? 'Cancel' : 'Edit' }}
+                                    </Button>
+                                </div>
+
+                                <!-- Inline display name edit -->
+                                <div v-if="isEditingDisplayName" class="mt-4">
+                                    <Input 
+                                        v-model="DisplayName" 
+                                        placeholder="Display Name" 
+                                        class="w-full border-2 border-blue-300 dark:border-blue-700 focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-800"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="bg-white dark:bg-slate-800/80 rounded-lg p-4 shadow-sm">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <div class="text-sm font-medium text-violet-600 dark:text-violet-400">Password</div>
+                                        <div class="mt-1 font-medium">••••••••••••</div>
+                                    </div>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        class="bg-violet-100 hover:bg-violet-200 dark:bg-violet-900/30 dark:hover:bg-violet-800/50 text-violet-700 dark:text-violet-300"
+                                        @click="openPasswordModal">
+                                        <Lock class="h-4 w-4 mr-1" />
+                                        Change Password
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                        <Button variant="destructive" @click="openDeleteConfirmation" :disabled="isDeleting">
-                            <span v-if="isDeleting">Deleting...</span>
-                            <span v-else>Delete Account</span>
-                        </Button>
+                    </div>
+
+                    <!-- Danger Zone Card -->
+                    <div class="bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-900/20 dark:to-red-900/20 rounded-xl border border-rose-200 dark:border-rose-800/30 p-5">
+                        <h3 class="flex items-center gap-2 text-lg font-semibold mb-4 text-rose-800 dark:text-rose-300">
+                            <Trash2 class="h-5 w-5" />
+                            Danger Zone
+                        </h3>
+                        
+                        <div class="bg-white/80 dark:bg-slate-900/50 rounded-lg p-5 border border-rose-200 dark:border-rose-800/20">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <div class="font-medium text-rose-700 dark:text-rose-400">Delete Account</div>
+                                    <p class="text-sm text-rose-600/80 dark:text-rose-400/80 mt-1">
+                                        Permanently delete your account. This action cannot be undone.
+                                    </p>
+                                </div>
+                                <Button 
+                                    variant="destructive" 
+                                    class="bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700"
+                                    @click="openDeleteConfirmation" 
+                                    :disabled="isDeleting">
+                                    <Trash2 class="h-4 w-4 mr-2" v-if="!isDeleting" />
+                                    <Loader2 class="h-4 w-4 mr-2 animate-spin" v-else />
+                                    <span v-if="isDeleting">Deleting...</span>
+                                    <span v-else>Delete Account</span>
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Save changes button -->
-            <div class="p-6 border-t border-border">
-                <Button variant="default" @click="updateProfile" :disabled="isUpdating || !hasUnsavedChanges">
-                    <span v-if="isUpdating">Saving...</span>
-                    <span v-else>Save Changes</span>
-                </Button>
-                <Button v-if="hasUnsavedChanges" variant="ghost" @click="resetForm" class="ml-2">
-                    Reset
-                </Button>
+            <div class="p-6 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800/60 dark:to-slate-900/60 border-t">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-slate-600 dark:text-slate-400">
+                        <div v-if="hasUnsavedChanges" class="flex items-center gap-1">
+                            <div class="h-2 w-2 rounded-full bg-blue-500 animate-pulse"></div>
+                            <span>You have unsaved changes</span>
+                        </div>
+                        <div v-else>&nbsp;</div>
+                    </div>
+                    <div class="flex gap-3 ml-auto">
+                        <Button 
+                            v-if="hasUnsavedChanges" 
+                            variant="outline" 
+                            @click="resetForm" 
+                            class="border-slate-300">
+                            <XCircle class="h-4 w-4 mr-2" />
+                            Cancel
+                        </Button>
+                        <Button 
+                            variant="default"
+                            class="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700"
+                            @click="updateProfile" 
+                            :disabled="isUpdating || !hasUnsavedChanges">
+                            <Loader2 class="h-4 w-4 mr-2 animate-spin" v-if="isUpdating" />
+                            <Save class="h-4 w-4 mr-2" v-else />
+                            <span v-if="isUpdating">Saving...</span>
+                            <span v-else>Save Changes</span>
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -553,25 +669,59 @@ function compressImage(file: File): Promise<string> {
     /* Discord green */
 }
 
-/* Switch animation */
+/* Animations */
 .transform {
-    transition: transform 150ms ease-in-out;
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.animate-pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Gradients and shadows */
+.shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.shadow-sm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Input field styling */
 input,
 select {
     border-width: 2px !important;
+    transition: all 0.2s ease-in-out !important;
 }
 
 .dark input,
 .dark select {
     color: white !important;
-    background-color: #2D3748 !important;
+    background-color: #1F2937 !important;
 }
 
 /* Remove extra margins to prevent unexpected spacing */
 .max-w-3xl {
     margin-top: 0;
+}
+
+/* Backdrop blur for modal */
+.backdrop-blur-sm {
+    backdrop-filter: blur(4px);
 }
 </style>
