@@ -108,9 +108,11 @@ onBeforeUnmount(() => {
   transform: translateY(-100%); /* Position above */
   margin-top: -10px; /* Add some space above the trigger button */
   width: 200px;
-  background-color: #2A2A2A;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  background-color: #101016;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
   z-index: 9999; /* Make sure it's above everything */
   overflow: hidden;
   animation: slideIn 0.15s ease-out;
@@ -138,18 +140,20 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 14px;
   width: 100%;
   text-align: left;
   background: transparent;
   border: none;
-  color: white;
+  color: rgba(224, 231, 255, 0.9);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.15s ease;
+  font-size: 0.9rem;
 }
 
 .options-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(79, 70, 229, 0.2);
+  color: white;
 }
 
 @keyframes slideIn {

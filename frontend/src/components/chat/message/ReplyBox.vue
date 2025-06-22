@@ -44,12 +44,19 @@ const replyPreviewText = computed(() => {
 </script>
 
 <template>
-  <div class="reply-box bg-blue-800 mb-2 rounded-md p-2 text-white text-sm" 
-      :class="{'reply-box-own': isOwnMessage, 'reply-box-other': !isOwnMessage}">
+  <div class="bg-gradient-to-r from-indigo-900/80 to-blue-900/80 mb-2 rounded-md p-2.5 text-indigo-100 text-sm relative border border-indigo-500/30 shadow-md">
     <div class="flex items-start">
+      <!-- Reply icon -->
+      <div class="mt-0.5 mr-3 bg-indigo-700/50 p-1.5 rounded-md">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5">
+          <polyline points="9 14 4 9 9 4"></polyline>
+          <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+        </svg>
+      </div>
+      <!-- Reply content -->
       <div class="flex-1">
-        <div class="font-bold">{{ replySenderName }}</div>
-        <div class="text-white/80">
+        <div class="font-semibold text-indigo-100">{{ replySenderName }}</div>
+        <div class="text-indigo-200/80">
           <em v-if="replyPreviewText.startsWith('[')">{{ replyPreviewText }}</em>
           <template v-else>{{ replyPreviewText }}</template>
         </div>
@@ -59,18 +66,5 @@ const replyPreviewText = computed(() => {
 </template>
 
 <style scoped>
-/* Reply box styling */
-.reply-box {
-  border-width: 1px;
-  border-style: solid;
-  position: relative;
-}
-
-.reply-box-own {
-  border-color: #3b82f6; /* Blue border for your own messages */
-}
-
-.reply-box-other {
-  border-color: #000000; /* Black border for other people's messages */
-}
+/* Additional styles if needed */
 </style>

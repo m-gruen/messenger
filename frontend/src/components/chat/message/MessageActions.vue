@@ -114,15 +114,18 @@ const handleReply = (event: Event) => {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.1);
-  transition: background-color 0.15s ease;
-  color: white;
+  background-color: rgba(79, 70, 229, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  transition: all 0.15s ease;
+  color: rgba(224, 231, 255, 0.9);
   padding: 0;
-  border: none;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   cursor: pointer;
 }
 
 .message-action-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 </style>
