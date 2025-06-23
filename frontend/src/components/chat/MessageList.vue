@@ -146,9 +146,8 @@ const messageGroups = computed(() => {
 
 <template>
   <div 
-    class="relative flex-1 overflow-y-auto p-4 bg-black message-list-container custom-scrollbar"
+    class="relative flex-1 overflow-y-auto p-4 message-list-container custom-scrollbar bg-gradient-to-b from-slate-50 to-card dark:from-slate-900/50 dark:to-card"
     ref="messageListRef"
-    style="background: #000000; background-image: linear-gradient(to top, #000000, #27273f); background-size: 100% 100%;"
   >
     <!-- Notification for viewing older messages -->
     <div 
