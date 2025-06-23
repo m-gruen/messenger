@@ -11,7 +11,6 @@ import type { Contact } from '@/models/contact-model';
 import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
 import ChatPanel from '@/components/chat/ChatPanel.vue'
-import { ArrowLeft } from 'lucide-vue-next'
 
 // Get user ID from storage service
 const user = storageService.getUser()
