@@ -278,15 +278,31 @@ export class MessageContentService {
         try {
             const decodedCode = this.decodeHtmlEntities(code);
             
+            let highlighted;
             if (language && hljs.getLanguage(language)) {
-                return hljs.highlight(decodedCode, { language }).value;
+                highlighted = hljs.highlight(decodedCode, { language }).value;
             } else {
-                return hljs.highlightAuto(decodedCode).value;
+                highlighted = hljs.highlightAuto(decodedCode).value;
             }
+            
+            // Wrap in a div to prevent code from breaking the layout
+            return highlighted;
         } catch (e) {
             console.error('Error highlighting code:', e);
-            return code;
+            return this.escapeHtml(code);
         }
+    }
+    
+    /**
+     * Escape HTML to prevent XSS in case highlighting fails
+     */
+    private escapeHtml(unsafe: string): string {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 
     /**

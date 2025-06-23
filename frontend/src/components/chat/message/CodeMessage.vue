@@ -47,8 +47,8 @@ const emit = defineEmits<{
           </a>
         </div>
       </div>
-      <div class="code-content p-0 overflow-x-auto">
-        <pre class="text-sm m-0 p-4 bg-zinc-900"><code v-html="formatCode(getCodeContent(message), getCodeLanguage(message))"></code></pre>
+      <div class="code-content p-0">
+        <pre class="text-sm m-0 p-4"><code v-html="formatCode(getCodeContent(message), getCodeLanguage(message))"></code></pre>
       </div>
       <span
         v-if="showTimestamp"
@@ -95,11 +95,37 @@ const emit = defineEmits<{
 .code-content {
   max-height: 300px;
   position: relative;
+  overflow: auto;
+  background-color: #18181B; /* Consistent bg color for zinc-900 */
 }
 
 .code-content pre {
   margin: 0;
   padding: 1rem;
+  background-color: transparent; /* Remove background from pre, use parent bg */
+  min-width: 100%; /* Ensures background extends with content */
+  box-sizing: border-box;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+.code-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.code-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom-right-radius: 12px;
+}
+
+.code-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+}
+
+.code-content::-webkit-scrollbar-corner {
+  background-color: #18181B; /* Match code background */
 }
 
 .code-download-button {
