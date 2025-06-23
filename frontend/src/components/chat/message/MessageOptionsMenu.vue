@@ -127,9 +127,8 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(8px);
-  z-index: 9999; /* Make sure it's above everything */
+  z-index: 100; /* Make sure it's above everything */
   overflow: hidden;
-  animation: slideIn 0.15s ease-out;
 }
 
 /* Left and right positioning for own vs other messages */
@@ -168,16 +167,5 @@ onBeforeUnmount(() => {
 .options-menu-item:hover {
   background-color: rgba(79, 70, 229, 0.2);
   color: white;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-90%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(-100%);
-  }
 }
 </style>

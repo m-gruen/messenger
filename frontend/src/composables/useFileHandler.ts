@@ -28,9 +28,9 @@ export function useFileHandler(showNotification: (message: string, type: string)
         }
 
         // Check initial file size
-        const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+        const MAX_SIZE = 10 * 1024 * 1024 // 10MB
         if (file.size > MAX_SIZE) {
-            showNotification('Image size should not exceed 5MB', 'error')
+            showNotification('Image size should not exceed 10MB', 'error')
             // Reset file input to allow re-selection
             input.value = ''
             return

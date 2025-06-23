@@ -80,11 +80,16 @@ export function getImageSize(message: IMessage): string {
 /**
  * Format audio duration for display
  */
-export function formatAudioTime(seconds: number): string {
-  if (isNaN(seconds)) return '0:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`
+export function formatAudioTime(seconds: number | undefined | null): string {
+  // Handle invalid input values
+  if (seconds === undefined || seconds === null || isNaN(seconds) || !isFinite(seconds) || seconds < 0) {
+    return '0:00';
+  }
+  
+  // Format time as minutes:seconds
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
 /**

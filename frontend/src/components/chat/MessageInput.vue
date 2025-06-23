@@ -1,16 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Send, Smile } from "lucide-vue-next"
+import { Send, Smile, Mic } from "lucide-vue-next"
 import EmojiPicker from './EmojiPicker.vue'
 import ReplyIndicator from './ReplyIndicator.vue'
 import AttachmentMenu from './AttachmentMenu.vue'
+import AudioRecorder from './AudioRecorder.vue'
 
 import { useToast } from '@/composables/useToast'
 import { useFileUpload } from '@/composables/useFileUpload'
 import { useFileHandler } from '@/composables/useFileHandler'
 import { useTextareaHandler } from '@/composables/useTextareaHandler'
 
-import type { ITextMessageContent, IMessage } from '@/models/message-model'
+import type { ITextMessageContent, IMessage, IAudioMessageContent } from '@/models/message-model'
 // messageContentService is now used in ReplyIndicator component
 
 const props = defineProps({
@@ -52,6 +53,7 @@ const { isUploading, handleImageUpload, handleDocumentUpload, handleAudioUpload,
 
 // Local state
 const showEmojiPicker = ref(false)
+const showAudioRecorder = ref(false)
 
 // Send message on form submit
 function sendMessage() {
@@ -80,6 +82,89 @@ function toggleEmojiPicker() {
 function insertEmoji(emoji: string) {
   insertTextAtCursor(emoji)
   showEmojiPicker.value = false
+}
+
+// Audio recorder handlers
+function toggleAudioRecorder() {
+  // Prevent audio recording during replies
+  if (props.replyTo) {
+    showInfo('Audio recording is disabled when replying to a message')
+    return
+  }
+  
+  showAudioRecorder.value = !showAudioRecorder.value
+}
+
+async function handleAudioRecorded(audioBlob: Blob, duration: number) {
+  isUploading.value = true
+  
+  try {
+    // Log info about the blob
+    console.log('Processing audio blob:', {
+      type: audioBlob.type,
+      size: audioBlob.size,
+      duration: duration
+    })
+    
+    // Convert to base64 for message content
+    const base64Data = await blobToBase64(audioBlob)
+    
+    // Make sure the base64 data is valid
+    if (!base64Data || base64Data.length < 100) {
+      throw new Error('Invalid audio data')
+    }
+    
+    // Get mimetype from blob, use a generic audio format if not available
+    let format = audioBlob.type
+    if (!format) {
+      // Determine format extension from blob type or default to mp3
+      const ext = audioBlob.type.includes('webm') ? 'webm' : 
+                 audioBlob.type.includes('ogg') ? 'ogg' : 
+                 audioBlob.type.includes('wav') ? 'wav' : 'mp3'
+      format = `audio/${ext}`
+    }
+    
+    // Create filename with timestamp and proper extension
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const ext = format.split('/')[1]?.split(';')[0] || 'webm'
+    const filename = `voice-message-${timestamp}.${ext}`
+    
+    // Ensure duration is valid (prevent NaN, undefined, or Infinity)
+    const validDuration = duration > 0 && isFinite(duration) ? duration : 0
+    
+    // Create an audio message content object
+    const messageContent: IAudioMessageContent = {
+      type: 'audio',
+      format: format,
+      content: base64Data.split(',')[1] || base64Data, // Remove the data URL prefix if present
+      name: filename,
+      duration: validDuration
+    }
+    
+    console.log('Sending audio message:', {
+      format: messageContent.format,
+      contentLength: messageContent.content.length,
+      name: messageContent.name,
+      duration: messageContent.duration
+    })
+    
+    emit('send', messageContent)
+  } catch (error) {
+    console.error('Failed to process audio recording:', error)
+    showError('Failed to send audio message. Please try again.')
+  } finally {
+    isUploading.value = false
+  }
+}
+
+// Helper function to convert Blob to base64
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
 }
 
 // Attachment menu handlers
@@ -191,6 +276,17 @@ onMounted(() => {
         @select="handleAttachment"
       />
       
+      <!-- Audio Recording Button -->
+      <button 
+        type="button" 
+        @click="toggleAudioRecorder"
+        class="p-2 text-indigo-300/80 hover:text-indigo-100 rounded-full hover:bg-slate-700/60 transition-colors"
+        aria-label="Record audio message"
+        :disabled="isUploading || !!props.replyTo"
+      >
+        <Mic class="h-5 w-5" />
+      </button>
+      
       <!-- Emoji Picker -->
       <EmojiPicker :is-open="showEmojiPicker" @select="insertEmoji" @close="showEmojiPicker = false" />
       
@@ -230,6 +326,12 @@ onMounted(() => {
         <div class="text-indigo-100 font-medium">Uploading...</div>
       </div>
     </div>
+    
+    <!-- Audio Recorder -->
+    <AudioRecorder 
+      v-model:show="showAudioRecorder"
+      @send="handleAudioRecorded"
+    />
     
     <!-- Notification Toasts are now handled globally through App.vue -->
   </div>

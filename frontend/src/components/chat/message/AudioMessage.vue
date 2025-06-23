@@ -23,25 +23,68 @@ function getAudioDurationFromMessage(): number {
 
 // Initial setup for audio duration
 onMounted(() => {
+  // Get the duration from the message content
   const initialDuration = getAudioDurationFromMessage()
+  console.log('Audio message initial duration:', initialDuration, 'for message:', props.message.mid)
+  
   if (initialDuration > 0) {
     audioState.value.duration = initialDuration
+  }
+  
+  // Try to load the audio to get accurate duration
+  const audioElement = document.querySelector(`audio[data-message-id="${props.message.mid}"]`) as HTMLAudioElement
+  if (audioElement) {
+    // Force a reload to make sure metadata is loaded
+    const currentSrc = audioElement.src
+    audioElement.src = ''
+    audioElement.src = currentSrc
+    audioElement.load()
   }
 })
 
 function toggleAudioPlayback(): void {
   const audio = document.querySelector(`audio[data-message-id="${props.message.mid}"]`) as HTMLAudioElement
-  if (!audio) return
+  if (!audio) {
+    console.error('Audio element not found');
+    return;
+  }
+
+  // Debug info
+  console.log('Audio element status:', {
+    paused: audio.paused,
+    currentTime: audio.currentTime,
+    duration: audio.duration,
+    readyState: audio.readyState,
+    networkState: audio.networkState,
+    src: audio.src ? audio.src.substring(0, 50) + '...' : 'none'
+  });
 
   if (audio.paused) {
     // Stop any other playing audio first
-    document.querySelectorAll('audio').forEach(a => a.pause())
+    document.querySelectorAll('audio').forEach(a => a.pause());
+    
+    // Use promise to handle playback errors
     audio.play()
-    audioState.value.messageId = props.message.mid
-    audioState.value.isPlaying = true
+      .then(() => {
+        audioState.value.messageId = props.message.mid;
+        audioState.value.isPlaying = true;
+        console.log('Audio playback started successfully');
+      })
+      .catch(error => {
+        console.error('Error starting audio playback:', error);
+        audioState.value.isPlaying = false;
+        
+        // If the audio fails to play, try to reload it
+        const currentSrc = audio.src;
+        setTimeout(() => {
+          audio.src = '';
+          audio.src = currentSrc;
+          audio.load();
+        }, 100);
+      });
   } else {
-    audio.pause()
-    audioState.value.isPlaying = false
+    audio.pause();
+    audioState.value.isPlaying = false;
   }
 }
 
@@ -54,21 +97,56 @@ function handleTimeUpdate(event: Event): void {
 
 function handleAudioMetadata(event: Event): void {
   const audio = event.target as HTMLAudioElement
-  if (audio && audio.duration) {
+  if (audio) {
+    // Log audio metadata for debugging
+    console.log('Audio metadata loaded:', {
+      messageId: props.message.mid,
+      duration: audio.duration,
+      readyState: audio.readyState,
+      audioSrc: audio.src ? audio.src.substring(0, 50) + '...' : 'none'
+    })
+    
+    // Ensure duration is valid and use it
+    const validDuration = isFinite(audio.duration) && !isNaN(audio.duration) ? audio.duration : 0;
+    
     // Always update duration for the current message's audio element
-    audioState.value.duration = audio.duration
+    if (validDuration > 0) {
+      audioState.value.duration = validDuration;
+    } else {
+      // If duration from metadata is invalid, fall back to the one from message
+      const fallbackDuration = getAudioDurationFromMessage();
+      if (fallbackDuration > 0) {
+        audioState.value.duration = fallbackDuration;
+      }
+    }
     
     // If this is the active audio, update the message state
     if (props.message.mid === audioState.value.messageId) {
-      audioState.value.currentTime = audio.currentTime
+      audioState.value.currentTime = audio.currentTime;
     }
   }
 }
 
 function handleAudioEnded(): void {
   if (audioState.value.messageId === props.message.mid) {
-    audioState.value.isPlaying = false
-    audioState.value.currentTime = 0
+    audioState.value.isPlaying = false;
+    audioState.value.currentTime = 0;
+  }
+}
+
+function handleAudioError(event: Event): void {
+  console.error('Audio playback error:', event);
+  if (audioState.value.messageId === props.message.mid) {
+    audioState.value.isPlaying = false;
+  }
+  
+  // In case of error, try to get duration from the message content as fallback
+  const fallbackDuration = getAudioDurationFromMessage();
+  if (fallbackDuration > 0) {
+    audioState.value.duration = fallbackDuration;
+  } else {
+    // Default to 0 if no duration is available
+    audioState.value.duration = 0;
   }
 }
 
@@ -120,10 +198,13 @@ function getAudioFilename(message: IMessage): string {
         :src="getAudioSource(message) || ''" 
         :data-message-id="message.mid" 
         preload="metadata"
+        crossorigin="anonymous"
         class="hidden" 
         @timeupdate="handleTimeUpdate($event)"
         @loadedmetadata="handleAudioMetadata($event)" 
+        @canplaythrough="handleAudioMetadata($event)"
         @ended="handleAudioEnded()"
+        @error="handleAudioError($event)"
       ></audio>
       <div class="custom-audio-player">
         <button 
