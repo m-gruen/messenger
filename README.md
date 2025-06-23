@@ -10,7 +10,13 @@
 
 ## Introduction
 
-This project implements a self-hosted end-to-end encrypted messaging application. Which was built as a part of the WMC course at the HTLBLA Leonding in 2025. The goal of this project was to prove the government wrong and show that if a group of students is able to build something like this, criminals can too.
+In recent years, governments have repeatedly called for backdoors in end-to-end encrypted messaging services to enable surveillance. With this project, we aim to demonstrate two key points:
+
+1. Backdoors undermine security – Once a backdoor exists, it’s not only accessible to governments, but also to malicious actors. This fundamentally breaks the promise of secure communication.
+
+2. Strong encryption is accessible to everyone – We want to show that even a group of students is capable of building a secure, end-to-end encrypted messaging service. This highlights that, if encryption is outlawed or weakened, those with criminal intent can still create their own tools — meaning only law-abiding users would be left unprotected.
+
+Our goal is to raise awareness of the risks of mandated backdoors and emphasize the importance of preserving privacy and security for everyone.
 
 ## Features
 
