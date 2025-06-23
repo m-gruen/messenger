@@ -5,6 +5,7 @@ import UserSearch from '@/components/UserSearch.vue'
 import ContactRequests from '@/components/ContactRequests.vue'
 import ContactList from '@/components/contact/ContactList.vue'
 import UserSettings from '@/components/UserSettings.vue'
+import HomePage from '@/HomePage.vue'
 import type { Contact } from '@/models/contact-model';
 import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
@@ -204,6 +205,14 @@ function closeAllPanels() {
       @close="closeChat" 
       class="transition-all duration-300" 
     />
+    
+    <!-- Home Page - Display when no other panels are active -->
+    <div 
+      v-if="!showContacts && !showRequests && !showSearch && !showUserSettings && !showChat"
+      class="fixed top-0 bottom-0 right-0 transition-all duration-300"
+      :style="{ left: sidebarWidth }">
+      <HomePage />
+    </div>
   </div>
 </template>
 
