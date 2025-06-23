@@ -6,6 +6,7 @@ import ContactRequests from '@/components/ContactRequests.vue'
 import ContactList from '@/components/contact/ContactList.vue'
 import UserSettings from '@/components/UserSettings.vue'
 import HomePage from '@/HomePage.vue'
+import SideInfoPanel from '@/components/SideInfoPanel.vue'
 import type { Contact } from '@/models/contact-model';
 import { storageService } from '@/services/storage.service';
 import { useContactStore } from '@/stores/ContactStore';
@@ -52,6 +53,13 @@ const chatLeftPosition = computed(() => {
 
 const chatWidth = computed(() => {
   return `calc(100vw - ${chatLeftPosition.value})`
+})
+
+// Determine which panel type is active for the info panel
+const activePanelType = computed(() => {
+  if (showSearch.value) return 'search'
+  if (showRequests.value) return 'requests'
+  return 'none'
 })
 
 onMounted(async () => {
@@ -212,6 +220,14 @@ function closeAllPanels() {
       class="fixed top-0 bottom-0 right-0 transition-all duration-300"
       :style="{ left: sidebarWidth }">
       <HomePage />
+    </div>
+
+    <!-- Info Panel - Display helpful information when search or requests are open -->
+    <div 
+      v-if="(showSearch || showRequests) && !showChat"
+      class="fixed top-0 bottom-0 right-0 transition-all duration-300"
+      :style="{ left: `calc(${sidebarWidth} + ${activePanelWidth})` }">
+      <SideInfoPanel :active-panel-type="activePanelType" />
     </div>
   </div>
 </template>
