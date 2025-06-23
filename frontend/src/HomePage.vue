@@ -36,13 +36,15 @@ const initCanvas = () => {
 
   // Create the balls
   const createBalls = () => {
+    if (!canvas.value) return; // Add early return if canvas is null
+    
     balls.length = 0; // Clear any existing balls
     const ballCount = Math.floor(window.innerWidth / 100); // Adjust number based on screen size
     
     for (let i = 0; i < ballCount; i++) {
       const radius = Math.random() * 40 + 20; // Random size between 20-60
-      const x = Math.random() * (canvas.value!.width - radius * 2) + radius;
-      const y = Math.random() * (canvas.value!.height - radius * 2) + radius;
+      const x = Math.random() * (canvas.value.width - radius * 2) + radius;
+      const y = Math.random() * (canvas.value.height - radius * 2) + radius;
       const dx = (Math.random() - 0.5) * 1.5; // Random horizontal velocity
       const dy = (Math.random() - 0.5) * 1.5; // Random vertical velocity
       const color = colors[Math.floor(Math.random() * colors.length)];
