@@ -1,4 +1,5 @@
-# Self-Hosted End-to-End Messenger
+# Nexus
+> A self-hosted end-to-end encrypted messaging application
 
 ## Team Members
 
