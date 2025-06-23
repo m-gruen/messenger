@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({
   activePanelType: {
@@ -7,6 +7,15 @@ const props = defineProps({
     required: true,
     validator: (value: string) => ['search', 'requests', 'contacts', 'none'].includes(value)
   }
+});
+
+// State for collapsible tips section
+const showTips = ref(false);
+
+// Reset showTips when panel type changes
+watch(() => props.activePanelType, () => {
+  // Auto-collapse tips when panel changes
+  showTips.value = false;
 });
 
 const panelTitle = computed(() => {
@@ -86,14 +95,24 @@ const getIllustrations = computed(() => {
         <p class="description">{{ panelDescription }}</p>
       </div>
 
-      <div v-if="panelTips.length > 0" class="tips-container">
-        <h3 class="tips-title">Tips</h3>
-        <ul class="tips-list">
-          <li v-for="(tip, index) in panelTips" :key="index" class="tip-item">
-            <span class="tip-bullet">•</span>
-            <span class="tip-text">{{ tip }}</span>
-          </li>
-        </ul>
+      <div v-if="panelTips.length > 0" class="tips-section">
+        <!-- Tips header with toggle button -->
+        <div class="tips-header" @click="showTips = !showTips">
+          <h3 class="tips-title">Tips</h3>
+          <button class="tips-toggle" :class="{ 'is-expanded': showTips }" aria-label="Toggle tips visibility">
+            <span class="toggle-icon">{{ showTips ? '−' : '+' }}</span>
+          </button>
+        </div>
+        
+        <!-- Collapsible tips content -->
+        <div v-if="showTips" class="tips-container">
+          <ul class="tips-list">
+            <li v-for="(tip, index) in panelTips" :key="index" class="tip-item">
+              <span class="tip-bullet">•</span>
+              <span class="tip-text">{{ tip }}</span>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div class="security-note">
@@ -182,24 +201,78 @@ const getIllustrations = computed(() => {
   margin: 0 auto;
 }
 
-.tips-container {
+.tips-section {
   background-color: rgba(99, 102, 241, 0.05);
   border-radius: 12px;
-  padding: 1.5rem;
   border-left: 4px solid #6366f1;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.tips-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tips-header:hover {
+  background-color: rgba(99, 102, 241, 0.08);
 }
 
 .tips-title {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #4f46e5;
-  margin-bottom: 1rem;
+  margin: 0;
+}
+
+.tips-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tips-toggle:hover {
+  background-color: rgba(99, 102, 241, 0.2);
+}
+
+.toggle-icon {
+  line-height: 1;
+  font-size: 16px;
+}
+
+.tips-container {
+  padding: 0 1.5rem 1.5rem;
+  animation: slideDown 0.3s ease-out;
 }
 
 .tips-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tip-item {
@@ -281,8 +354,21 @@ const getIllustrations = computed(() => {
   color: #9ca3af;
 }
 
-:global(.dark) .tips-container {
+:global(.dark) .tips-section {
   background-color: rgba(99, 102, 241, 0.1);
+}
+
+:global(.dark) .tips-header:hover {
+  background-color: rgba(99, 102, 241, 0.15);
+}
+
+:global(.dark) .tips-toggle {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+}
+
+:global(.dark) .tips-toggle:hover {
+  background-color: rgba(99, 102, 241, 0.3);
 }
 
 :global(.dark) .security-note {
