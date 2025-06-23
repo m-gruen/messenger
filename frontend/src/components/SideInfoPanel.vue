@@ -5,7 +5,7 @@ const props = defineProps({
   activePanelType: {
     type: String,
     required: true,
-    validator: (value: string) => ['search', 'requests', 'none'].includes(value)
+    validator: (value: string) => ['search', 'requests', 'contacts', 'none'].includes(value)
   }
 });
 
@@ -15,6 +15,8 @@ const panelTitle = computed(() => {
       return 'Finding New Contacts';
     case 'requests':
       return 'Contact Requests';
+    case 'contacts':
+      return 'Your Secure Connections';
     default:
       return 'Welcome to Nexus';
   }
@@ -26,6 +28,8 @@ const panelDescription = computed(() => {
       return 'Search for users by their username to connect with them securely on Nexus. Adding contacts is the first step to encrypted communication.';
     case 'requests':
       return 'Review and manage incoming contact requests from other users. Accept requests from people you know and trust.';
+    case 'contacts':
+      return 'Select a contact to start a secure, end-to-end encrypted conversation. Your messages are protected and only visible to you and your contact.';
     default:
       return 'End-to-end encrypted messaging for secure communications.';
   }
@@ -47,6 +51,13 @@ const panelTips = computed(() => {
         'Messages from unaccepted contacts won\'t be delivered',
         'You\'ll be notified when contacts accept your requests'
       ];
+    case 'contacts':
+      return [
+        'Click on a contact to begin a secure conversation',
+        'Verify security keys with your contacts for maximum security',
+        'All messages are end-to-end encrypted',
+        'You can manage contact details and preferences in each chat'
+      ];
     default:
       return [];
   }
@@ -55,6 +66,7 @@ const panelTips = computed(() => {
 const illustrations = {
   search: ['🔍', '👥'],
   requests: ['✉️', '✓'],
+  contacts: ['💬', '🔐'],
   none: ['🔒']
 };
 
@@ -93,6 +105,9 @@ const getIllustrations = computed(() => {
           </span>
           <span v-else-if="activePanelType === 'requests'">
             For maximum security, confirm contact requests through a separate communication channel when possible.
+          </span>
+          <span v-else-if="activePanelType === 'contacts'">
+            Your messages are secured with end-to-end encryption. Remember to verify security keys with your contacts for maximum protection.
           </span>
           <span v-else>
             Nexus encrypts your messages end-to-end so only you and your contacts can read them.

@@ -59,6 +59,7 @@ const chatWidth = computed(() => {
 const activePanelType = computed(() => {
   if (showSearch.value) return 'search'
   if (showRequests.value) return 'requests'
+  if (showContacts.value) return 'contacts'
   return 'none'
 })
 
@@ -222,9 +223,9 @@ function closeAllPanels() {
       <HomePage />
     </div>
 
-    <!-- Info Panel - Display helpful information when search or requests are open -->
+    <!-- Info Panel - Display helpful information when panels are open but no chat is active -->
     <div 
-      v-if="(showSearch || showRequests) && !showChat"
+      v-if="(showSearch || showRequests || (showContacts && !showChat)) && !showChat"
       class="fixed top-0 bottom-0 right-0 transition-all duration-300"
       :style="{ left: `calc(${sidebarWidth} + ${activePanelWidth})` }">
       <SideInfoPanel :active-panel-type="activePanelType" />
