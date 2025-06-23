@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineEmits, ref, onMounted } from 'vue'
 import { Home, Search, Settings, ChevronRight, ChevronLeft, UserPlus, MessageCircle } from "lucide-vue-next"
+import NexusLogo from './NexusLogo.vue'
 
 // Define props directly with defineProps (no need to assign to a variable)
 defineProps({
@@ -66,13 +67,7 @@ onMounted(() => {
     <div class="flex h-full flex-col">
       <!-- App Logo/Header -->
       <div class="p-4 flex justify-center items-center border-b border-border/50">
-        <div :class="[
-          'font-bold transition-all duration-300 overflow-hidden whitespace-nowrap',
-          collapsed ? 'text-base w-0' : 'text-lg w-full bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent'
-        ]">
-          Messenger
-        </div>
-        <div v-if="collapsed" class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">M</div>
+        <NexusLogo :collapsed="collapsed" />
       </div>
 
       <div class="p-2">
