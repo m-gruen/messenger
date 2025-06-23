@@ -54,7 +54,8 @@ onMounted(() => {
     'fixed inset-y-0 left-0 z-20 transition-all duration-300 ease-in-out border-r border-border',
     'bg-gradient-to-b from-slate-50 to-sidebar dark:from-slate-900/50 dark:to-sidebar',
     collapsed ? 'w-16' : 'w-[var(--sidebar-width)]'
-  ]">
+  ]"
+  :data-collapsed="collapsed">
     <!-- Toggle Sidebar Button -->
     <button @click="toggleSidebar"
       class="absolute -right-3 top-5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white rounded-full p-1 shadow-lg z-50 hover:shadow-indigo-300/40 dark:hover:shadow-indigo-700/30 transition-all duration-200"
@@ -81,8 +82,8 @@ onMounted(() => {
                 :title="item.title"
                 :data-tooltip="item.title"
                 :class="[
-                  'flex items-center gap-3 overflow-hidden rounded-lg text-left transition-all duration-200',
-                  collapsed ? 'px-2 py-3 justify-center' : 'px-3 py-2.5',
+                  'flex items-center overflow-hidden rounded-lg text-left transition-all duration-200',
+                  collapsed ? 'px-0 py-3 justify-center' : 'px-3 py-2.5 gap-3',
                   activeItem === item.id 
                     ? 'bg-gradient-to-r from-indigo-500/10 to-violet-500/10 text-indigo-700 dark:text-indigo-300 font-medium shadow-sm' 
                     : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
@@ -92,7 +93,7 @@ onMounted(() => {
                   :is="item.icon" 
                   :class="[
                     'flex-shrink-0 transition-all',
-                    collapsed ? 'h-6 w-6 mx-auto' : 'h-5 w-5',
+                    collapsed ? 'h-6 w-6' : 'h-5 w-5',
                     activeItem === item.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'
                   ]" 
                 />
@@ -139,5 +140,16 @@ onMounted(() => {
 [data-collapsed=true] [data-tooltip]:hover::after {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
+}
+
+/* Fix for icon alignment in collapsed mode */
+[data-collapsed=true] a {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+[data-collapsed=true] a svg {
+  margin: 0 auto;
 }
 </style>
