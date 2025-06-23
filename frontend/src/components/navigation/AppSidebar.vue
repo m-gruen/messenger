@@ -187,19 +187,8 @@ function closeAllPanels() {
     <div v-if="showUserSettings"
       class="panel-container fixed z-10 top-0 bottom-0 overflow-hidden bg-gradient-to-b from-slate-50 to-card dark:from-slate-900/50 dark:to-card transition-all duration-300 ease-in-out shadow-sm"
       :style="{ left: sidebarWidth, right: '0' }">
-      <!-- Back button header -->
-      <div class="p-4 border-b border-border/50 flex items-center sticky top-0 bg-opacity-90 backdrop-blur-sm z-50">
-        <button @click="toggleUserSettings" 
-          class="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mr-3"
-          aria-label="Return to application">
-          <ArrowLeft class="h-5 w-5 text-slate-700 dark:text-slate-300" />
-        </button>
-        <h1 class="text-lg font-medium bg-gradient-to-r from-violet-700 to-indigo-600 dark:from-violet-500 dark:to-indigo-400 bg-clip-text text-transparent">
-          User Settings
-        </h1>
-      </div>
 
-      <div class="h-[calc(100vh-64px)] overflow-y-auto">
+      <div class="h-screen w-full overflow-y-auto">
         <UserSettings />
       </div>
     </div>

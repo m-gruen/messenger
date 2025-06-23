@@ -2,8 +2,8 @@
   <div class="contact-list-container">
     <!-- Header with Gradient -->
     <div class="p-6 border-b border-border/50 bg-gradient-to-b from-slate-50 to-card dark:from-slate-900/50 dark:to-card">
-      <h2 class="text-xl font-bold mb-1 bg-gradient-to-r from-indigo-700 to-violet-700 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">Contacts</h2>
-      <p class="text-sm text-slate-600 dark:text-slate-400">Connect and chat with friends</p>
+      <h2 class="text-xl font-bold mb-1 bg-gradient-to-r from-violet-700 to-indigo-600 dark:from-violet-500 dark:to-indigo-400 bg-clip-text text-transparent">Contacts</h2>
+      <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Connect and chat with friends</p>
       
       <!-- Search Input -->
       <div class="relative mt-4 mb-4">

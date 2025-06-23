@@ -1,9 +1,9 @@
 <template>
   <div class="h-full flex flex-col">
     <!-- Header with Gradient -->
-    <div class="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-b border-border/50 p-6">
-      <h2 class="text-xl font-bold bg-gradient-to-r from-indigo-700 to-violet-700 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">Contact Requests</h2>
-      <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Manage connection requests</p>
+    <div class="bg-gradient-to-b from-slate-50 to-card dark:from-slate-900/50 dark:to-card border-b border-border/50 p-6">
+      <h2 class="text-xl font-bold mb-1 bg-gradient-to-r from-violet-700 to-indigo-600 dark:from-violet-500 dark:to-indigo-400 bg-clip-text text-transparent">Contact Requests</h2>
+      <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Manage connection requests</p>
       
       <!-- Tabs -->
       <div class="flex mt-5 bg-slate-100/80 dark:bg-slate-800/50 backdrop-blur-sm rounded-lg p-1 shadow-inner">
