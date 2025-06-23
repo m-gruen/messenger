@@ -39,12 +39,18 @@ function confirmLogout() {
   <div class="w-full h-full flex">
     <!-- Settings sidebar -->
     <div class="w-72 bg-gradient-to-b from-slate-50 to-card dark:from-slate-900/50 dark:to-card border-r border-slate-200 dark:border-slate-800 flex flex-col h-full">
-      <!-- Header -->
-      <div class="p-6">
-        <h2 class="text-xl font-bold bg-gradient-to-r from-violet-700 to-indigo-600 dark:from-violet-500 dark:to-indigo-400 bg-clip-text text-transparent">
-          Settings
+      <!-- Nexus Logo Header -->
+      <div class="p-6 pb-2 border-b border-slate-200 dark:border-slate-800/70">
+        <div class="flex items-center justify-center mb-4">
+          <div class="nexus-logo-container">
+            <img src="/nexus_logo.png" alt="Nexus" class="nexus-settings-logo" />
+            <div class="logo-glow"></div>
+          </div>
+        </div>
+        <h2 class="text-xl font-bold bg-gradient-to-r from-violet-700 to-indigo-600 dark:from-violet-500 dark:to-indigo-400 bg-clip-text text-transparent text-center mb-1">
+          Nexus Settings
         </h2>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 text-center">
           Manage your account and preferences
         </p>
       </div>
@@ -211,5 +217,55 @@ function confirmLogout() {
 .blur-3xl {
   --tw-blur: blur(64px);
   filter: var(--tw-blur);
+}
+
+/* Nexus Logo Styling */
+.nexus-logo-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.nexus-settings-logo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 10;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  animation: pulse 3s infinite ease-in-out;
+}
+
+.logo-glow {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  opacity: 0.2;
+  filter: blur(10px);
+  z-index: 5;
+  animation: glow 3s infinite alternate ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes glow {
+  0% { 
+    opacity: 0.2;
+    transform: scale(0.95);
+  }
+  100% { 
+    opacity: 0.3;
+    transform: scale(1.15);
+  }
 }
 </style>
