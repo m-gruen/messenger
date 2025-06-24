@@ -6,7 +6,11 @@
         <p class="text-muted-foreground mt-2">Sign up to start messaging securely</p>
       </div>
       
-      <form @submit.prevent="handleRegister" class="space-y-4">
+      <form @submit.prevent="handleRegister" class="space-y-4" autocomplete="off">
+        <!-- Add hidden fields to trick browser autofill -->
+        <input type="text" style="display:none" />
+        <input type="password" style="display:none" />
+        
         <div class="space-y-2">
           <label for="username" class="text-sm font-medium">Username</label>
           <input
@@ -15,6 +19,7 @@
             type="text"
             placeholder="Choose a username"
             class="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            autocomplete="off"
             required
           />
         </div>
