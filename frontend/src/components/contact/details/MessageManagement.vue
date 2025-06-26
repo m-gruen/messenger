@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Trash2, Download, Upload, HardDrive } from "lucide-vue-next";
 import { useAuthStore } from '@/stores/AuthStore';
 import { useMessageStore } from '@/stores/MessageStore';
@@ -90,6 +90,9 @@ function formatBytes(bytes: number): string {
 
 // Load storage data when component mounts
 onMounted(loadContactStorageUsage);
+
+// Watch for contact changes and reload storage usage
+watch(() => props.contact?.contactUserId, loadContactStorageUsage);
 
 function showDeleteConfirmation() {
   emit('show-delete-confirmation');
