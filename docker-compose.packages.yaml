@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: nexus_packages_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - nexus_packages_db:/var/lib/postgresql/data
+    ports:
+      - ${DB_PORT}:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/m-gruen/nexus-backend:latest
+    container_name: nexus_packages_backend
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      - DB_HOST=postgres
+      - BACKEND_PORT=${BACKEND_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+    ports:
+      - ${BACKEND_PORT}:${BACKEND_PORT}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    image: ghcr.io/m-gruen/nexus-frontend:latest
+    container_name: nexus_packages_frontend
+    environment:
+      FRONTEND_PORT: ${FRONTEND_PORT}
+      BACKEND_PORT: ${BACKEND_PORT}
+      BACKEND_HOST: backend
+    ports:
+      - ${FRONTEND_PORT}:80
+    depends_on:
+      - backend
+
+volumes:
+  nexus_packages_db:
