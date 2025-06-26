@@ -1,5 +1,5 @@
 const backendPort = import.meta.env.BACKEND_PORT;
-const backendHost = 'localhost';
+const backendHost = import.meta.env.BACKEND_HOST || 'localhost';
 
 export function getBackendUrl(): string {
     if (!backendPort) {
