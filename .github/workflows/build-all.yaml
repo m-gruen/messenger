@@ -78,8 +78,8 @@ jobs:
     - name: Build application
       working-directory: ./frontend
       env:
-        FRONTEND_PORT: 3000
-        BACKEND_PORT: 8080
+        FRONTEND_PORT: 8080
+        BACKEND_PORT: 3000
       run: npm run build
 
     - name: Set up Docker Buildx
@@ -102,5 +102,5 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
-          FRONTEND_PORT=3000
-          BACKEND_PORT=8080
+          FRONTEND_PORT=8080
+          BACKEND_PORT=3000
